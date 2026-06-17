@@ -52,9 +52,9 @@ function doPost(e) {
 
   var json = JSON.stringify(result);
   if (action === 'admin_upload_image') {
-    var safeJson = json.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    var safeJson = json.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\x3c');
     return ContentService.createTextOutput(
-      '<html><body><script>try{window.parent.postMessage(' + safeJson + ',"*");}catch(e){}</script></body></html>'
+      '<script>try{window.top.postMessage(' + safeJson + ',"*");}catch(e){document.title="ERROR";}</script>'
     ).setMimeType(ContentService.MimeType.HTML);
   }
   if (callback) {
