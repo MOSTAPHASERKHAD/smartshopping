@@ -15,6 +15,7 @@ function doGet(e) {
     case 'admin_list': result = adminListProducts(); break;
     case 'admin_orders': result = adminListOrders(); break;
     case 'admin_settings': result = getSettings(); break;
+    case 'upload_image': result = adminUploadImageGet(params); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -254,4 +255,22 @@ function getOrCreateFolderId() {
   var folder = DriveApp.createFolder('SmartKiosk_Images');
   props.setProperty('smartkiosk_images_folder', folder.getId());
   return folder.getId();
+}
+
+function adminUploadImageGet(params) {
+  var base64 = params.base64;
+  var fileName = params.fileName || 'image.jpg';
+  var num = params.num || '1';
+  if (!base64) return { error: 'No image data' };
+
+  try {
+    var blob = Utilities.newBlob(Utilities.base64Decode(base64), 'image/jpeg', fileName);
+    var folder = DriveApp.getFolderById(getOrCreateFolderId());
+    var file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    var url = 'https://drive.google.com/uc?id=' + file.getId() + '&export=view';
+    return { url: url, _num: num };
+  } catch(ex) {
+    return { error: ex.toString() };
+  }
 }

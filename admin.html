@@ -229,14 +229,6 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
 </div>
 </div>
 
-<iframe name="uploadFrame" id="uploadFrame" style="display:none"></iframe>
-<form id="uploadForm" method="POST" target="uploadFrame" style="display:none">
-  <input type="hidden" name="action" value="admin_upload_image">
-  <input type="hidden" name="imageData" id="uf_data">
-  <input type="hidden" name="fileName" id="uf_name">
-  <input type="hidden" name="mimeType" id="uf_type">
-  <input type="hidden" name="num" id="uf_num">
-</form>
 
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbwskq2YiSllZpzpg5qxcnC7LslWlQRJIvt4_6VqPm-nPyOEbG3oNeQI0WMvjJpgP2LJbA/exec';
@@ -471,29 +463,46 @@ function saveProduct(e) {
     if (done === filesToUpload.length) doSave(urls);
   }
 
-  window._uploadHandler = function(e) {
-    try {
-      var data = JSON.parse(e.data);
-      if (data.url) {
-        urls[data._num] = data.url;
-        toast('تم رفع الصورة ' + data._num);
-      }
-    } catch(ex) {}
-    checkDone();
-  };
-  window.addEventListener('message', window._uploadHandler);
-
   filesToUpload.forEach(function(f) {
     toast('جاري رفع الصورة ' + f.num + '...');
     var reader = new FileReader();
     reader.onload = function(ev) {
-      var base64 = ev.target.result.split(',')[1];
-      document.getElementById('uf_data').value = base64;
-      document.getElementById('uf_name').value = f.file.name;
-      document.getElementById('uf_type').value = f.file.type;
-      document.getElementById('uf_num').value = f.num;
-      document.getElementById('uploadForm').action = API_URL;
-      document.getElementById('uploadForm').submit();
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement('canvas');
+        var maxW = 600, maxH = 600;
+        var w = img.width, h = img.height;
+        if (w > maxW) { h = h * maxW / w; w = maxW; }
+        if (h > maxH) { w = w * maxH / h; h = maxH; }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        var base64 = dataUrl.split(',')[1];
+
+        var cbName = 'upl_' + Date.now() + '_' + f.num;
+        var script = document.createElement('script');
+        window[cbName] = function(resp) {
+          delete window[cbName];
+          document.head.removeChild(script);
+          if (resp && resp.url) {
+            urls[f.num] = resp.url;
+            toast('تم رفع الصورة ' + f.num);
+          } else {
+            toast('فشل رفع الصورة ' + f.num + ': ' + (resp && resp.error || 'خطأ'));
+          }
+          checkDone();
+        };
+        script.src = API_URL + '?action=upload_image&num=' + f.num + '&fileName=' + encodeURIComponent(f.file.name) + '&base64=' + encodeURIComponent(base64) + '&callback=' + cbName;
+        script.onerror = function() {
+          delete window[cbName];
+          if (script.parentNode) document.head.removeChild(script);
+          toast('خطأ في رفع الصورة ' + f.num);
+          checkDone();
+        };
+        document.head.appendChild(script);
+      };
+      img.src = ev.target.result;
     };
     reader.readAsDataURL(f.file);
   });
