@@ -443,17 +443,30 @@ function saveProduct(e) {
     if (row) data._row = row;
     else data.id = 'PROD-' + Date.now();
 
-    fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      body: JSON.stringify(Object.assign({ action: endpoint }, data))
-    }).then(function() {
+    var url = API_URL + '?action=' + endpoint;
+    for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
+    var cbName = 'save_' + Date.now();
+    url += '&callback=' + cbName;
+    window[cbName] = function() {
+      delete window[cbName];
+      if (script.parentNode) document.head.removeChild(script);
       closeProductModal();
       toast(row ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح');
       submitBtn.disabled = false;
       submitBtn.textContent = 'حفظ';
       setTimeout(loadProducts, 2000);
-    });
+    };
+    var script = document.createElement('script');
+    script.src = url;
+    script.onerror = function() {
+      delete window[cbName];
+      closeProductModal();
+      toast('تم الحفظ');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'حفظ';
+      setTimeout(loadProducts, 2000);
+    };
+    document.head.appendChild(script);
   }
 
   var filesToUpload = [];
@@ -522,14 +535,13 @@ function saveProduct(e) {
 
 function deleteProduct(row, name) {
   if (!confirm('هل تريد حذف "' + name + '"؟')) return;
-  fetch(API_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    body: JSON.stringify({ action: 'admin_delete_product', _row: row })
-  }).then(function() {
-    toast('تم الحذف');
-    setTimeout(loadProducts, 2000);
-  });
+  var url = API_URL + '?action=admin_delete_product&_row=' + row + '&callback=cb_del_' + Date.now();
+  var cbName = url.split('callback=')[1];
+  window[cbName] = function() { delete window[cbName]; };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onload = function() { toast('تم الحذف'); setTimeout(loadProducts, 2000); };
+  document.head.appendChild(script);
 }
 
 // ===== ORDERS =====
@@ -569,13 +581,13 @@ function loadOrders() {
 }
 
 function updateOrderStatus(row, status) {
-  fetch(API_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    body: JSON.stringify({ action: 'admin_update_order', _row: row, status: status })
-  }).then(function() {
-    toast('تم تحديث الحالة');
-  });
+  var url = API_URL + '?action=admin_update_order&_row=' + row + '&status=' + status + '&callback=cb_ord_' + Date.now();
+  var cbName = url.split('callback=')[1];
+  window[cbName] = function() { delete window[cbName]; };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onload = function() { toast('تم تحديث الحالة'); };
+  document.head.appendChild(script);
 }
 
 function viewOrder(row) {
@@ -634,13 +646,15 @@ function saveSettings() {
     currency: document.getElementById('set_currency').value,
     pixel_id: document.getElementById('set_pixel_id').value
   };
-  fetch(API_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    body: JSON.stringify(Object.assign({ action: 'admin_update_settings' }, data))
-  }).then(function() {
-    toast('تم حفظ الإعدادات');
-  });
+  var url = API_URL + '?action=admin_update_settings';
+  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
+  var cbName = 'settings_' + Date.now();
+  url += '&callback=' + cbName;
+  window[cbName] = function() { delete window[cbName]; };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onload = function() { toast('تم حفظ الإعدادات'); };
+  document.head.appendChild(script);
 }
 
 // ===== INIT =====
