@@ -37,7 +37,12 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  var params = JSON.parse(e.postData.contents);
+  var params;
+  try {
+    params = JSON.parse(e.postData.contents);
+  } catch(ex) {
+    params = e.parameter || {};
+  }
   var action = params.action || '';
   var callback = params.callback || '';
 

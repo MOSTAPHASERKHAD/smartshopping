@@ -229,6 +229,14 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
 </div>
 </div>
 
+<iframe name="uploadFrame" id="uploadFrame" style="display:none"></iframe>
+<form id="uploadForm" method="POST" target="uploadFrame" style="display:none">
+  <input type="hidden" name="action" value="admin_upload_image">
+  <input type="hidden" name="imageData" id="uf_data">
+  <input type="hidden" name="fileName" id="uf_name">
+  <input type="hidden" name="mimeType" id="uf_type">
+</form>
+
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbyCeBGqVVg396qfeSY6Wp4SL81H2iWAAoiEUWmOHQRnvjMiy0UEGrjt5qAaWzxq5RvQfA/exec';
 var allProducts = [];
@@ -456,22 +464,34 @@ function saveProduct(e) {
 
   var urls = {};
   var done = 0;
+
   filesToUpload.forEach(function(f) {
     toast('جاري رفع الصورة ' + f.num + '...');
     var reader = new FileReader();
     reader.onload = function(ev) {
       var base64 = ev.target.result.split(',')[1];
-      fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'admin_upload_image', imageData: base64, fileName: f.file.name, mimeType: f.file.type })
-      }).then(function(r) { return r.text(); }).then(function(text) {
-        try { var d = JSON.parse(text); urls[f.num] = d.url || ''; } catch(ex) {}
+      var form = document.getElementById('uploadForm');
+      document.getElementById('uf_data').value = base64;
+      document.getElementById('uf_name').value = f.file.name;
+      document.getElementById('uf_type').value = f.file.type;
+      form.action = API_URL;
+
+      var frame = document.getElementById('uploadFrame');
+      var handler = function() {
+        try {
+          var text = frame.contentDocument ? frame.contentDocument.body.textContent : '';
+          if (text) {
+            var d = JSON.parse(text);
+            urls[f.num] = d.url || '';
+          }
+        } catch(ex) {}
+        frame.removeEventListener('load', handler);
         done++;
+        toast('تم رفع الصورة ' + f.num);
         if (done === filesToUpload.length) doSave(urls);
-      }).catch(function() {
-        done++;
-        if (done === filesToUpload.length) doSave(urls);
-      });
+      };
+      frame.addEventListener('load', handler);
+      form.submit();
     };
     reader.readAsDataURL(f.file);
   });
