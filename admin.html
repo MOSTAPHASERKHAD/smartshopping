@@ -465,33 +465,34 @@ function saveProduct(e) {
   var urls = {};
   var done = 0;
 
+  function checkDone() {
+    done++;
+    if (done === filesToUpload.length) doSave(urls);
+  }
+
+  window._uploadHandler = function(e) {
+    try {
+      var data = JSON.parse(e.data);
+      if (data.url) {
+        urls[data._num] = data.url;
+        toast('تم رفع الصورة ' + data._num);
+      }
+    } catch(ex) {}
+    checkDone();
+  };
+  window.addEventListener('message', window._uploadHandler);
+
   filesToUpload.forEach(function(f) {
     toast('جاري رفع الصورة ' + f.num + '...');
     var reader = new FileReader();
     reader.onload = function(ev) {
       var base64 = ev.target.result.split(',')[1];
-      var form = document.getElementById('uploadForm');
       document.getElementById('uf_data').value = base64;
       document.getElementById('uf_name').value = f.file.name;
       document.getElementById('uf_type').value = f.file.type;
-      form.action = API_URL;
-
-      var frame = document.getElementById('uploadFrame');
-      var handler = function() {
-        try {
-          var text = frame.contentDocument ? frame.contentDocument.body.textContent : '';
-          if (text) {
-            var d = JSON.parse(text);
-            urls[f.num] = d.url || '';
-          }
-        } catch(ex) {}
-        frame.removeEventListener('load', handler);
-        done++;
-        toast('تم رفع الصورة ' + f.num);
-        if (done === filesToUpload.length) doSave(urls);
-      };
-      frame.addEventListener('load', handler);
-      form.submit();
+      document.getElementById('uf_num').value = f.num;
+      document.getElementById('uploadForm').action = API_URL;
+      document.getElementById('uploadForm').submit();
     };
     reader.readAsDataURL(f.file);
   });
