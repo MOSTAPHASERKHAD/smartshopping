@@ -487,75 +487,43 @@ function saveProduct(e) {
     saved = true;
     doSave(u);
   }
-  var done = 0;
 
-  function checkDone() {
-    done++;
-    if (done === filesToUpload.length) doSave(urls);
-  }
+  setTimeout(function() { doSaveOnce(urls); }, 20000);
 
-  var uploadCount = 0;
-  window._uploadListener = function(e) {
-    try {
-      var resp = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-      if (resp && resp.url && resp._num) {
-        urls[resp._num] = resp.url;
-        toast('تم رفع الصورة ' + resp._num);
-        uploadCount++;
-        if (uploadCount >= filesToUpload.length) {
-          window.removeEventListener('message', window._uploadListener);
-          doSaveOnce(urls);
-        }
-      }
-    } catch(ex) {}
-  };
-  window.addEventListener('message', window._uploadListener);
-
-  setTimeout(function() { doSaveOnce(urls); }, 15000);
-
-  filesToUpload.forEach(function(f) {
+  var queue = filesToUpload.slice();
+  function processNext() {
+    if (queue.length === 0) { doSaveOnce(urls); return; }
+    var f = queue.shift();
     toast('جاري رفع الصورة ' + f.num + '...');
     var reader = new FileReader();
     reader.onload = function(ev) {
       var img = new Image();
       img.onload = function() {
         var canvas = document.createElement('canvas');
-        var maxW = 600, maxH = 600;
+        var maxW = 400, maxH = 400;
         var w = img.width, h = img.height;
         if (w > maxW) { h = h * maxW / w; w = maxW; }
         if (h > maxH) { w = w * maxH / h; h = maxH; }
-        canvas.width = w;
-        canvas.height = h;
+        canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        var dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-        var base64 = dataUrl.split(',')[1];
-
-        var iframe = document.createElement('iframe');
-        iframe.name = 'upload_iframe_' + f.num;
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-
-        var form = document.createElement('form');
-        form.method = 'POST';
-        form.target = iframe.name;
-        form.action = API_URL;
-
-        var fields = { action: 'admin_upload_image', imageData: base64, fileName: f.file.name, mimeType: 'image/jpeg', num: String(f.num) };
-        for (var k in fields) {
-          var inp = document.createElement('input');
-          inp.type = 'hidden';
-          inp.name = k;
-          inp.value = fields[k];
-          form.appendChild(inp);
-        }
-
-        document.body.appendChild(form);
-        form.submit();
+        var base64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+        var cb = 'upl_' + Date.now();
+        window[cb] = function(r) {
+          delete window[cb];
+          if (r && r.url) { urls[f.num] = r.url; toast('تم رفع الصورة ' + f.num); }
+          else { toast('خطأ في الصورة ' + f.num + (r && r.error ? ': ' + r.error : '')); }
+          processNext();
+        };
+        var s = document.createElement('script');
+        s.src = API_URL + '?action=upload_image&num=' + f.num + '&fileName=' + encodeURIComponent(f.file.name) + '&base64=' + encodeURIComponent(base64) + '&callback=' + cb;
+        s.onerror = function() { delete window[cb]; toast('خطأ في رفع الصورة ' + f.num); processNext(); };
+        document.head.appendChild(s);
       };
       img.src = ev.target.result;
     };
     reader.readAsDataURL(f.file);
-  });
+  }
+  processNext();
 }
 
 function deleteProduct(row, name) {
