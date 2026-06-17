@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Shopping</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--primary:#1a1a2e;--accent:#e94560;--accent-hover:#d63050;
+--bg:#f8f9fa;--card:#fff;--text:#1a1a2e;--text-light:#6c757d;
+--border:#e0e0e0;--success:#28a745;--shadow:0 2px 12px rgba(0,0,0,.08);
+--radius:12px;--max-w:1200px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+body.ltr{direction:ltr;text-align:left}
+body.rtl{direction:rtl;text-align:right}
+
+.container{max-width:var(--max-w);margin:0 auto;padding:0 16px}
+
+/* Header */
+header{background:var(--primary);color:#fff;padding:12px 0;position:sticky;top:0;z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.logo{font-size:1.4rem;font-weight:800;letter-spacing:-.5px}
+.logo span{color:var(--accent)}
+.header-actions{display:flex;align-items:center;gap:8px}
+.btn{padding:8px 18px;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;font-size:.85rem;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-accent:hover{background:var(--accent-hover)}
+.btn-outline{background:transparent;border:2px solid rgba(255,255,255,.3);color:#fff}
+.btn-outline:hover{border-color:#fff;background:rgba(255,255,255,.1)}
+.btn-sm{padding:6px 12px;font-size:.8rem}
+.cart-badge{background:var(--accent);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700}
+.nav-links{display:flex;gap:4px}
+.nav-link{color:rgba(255,255,255,.7);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:.85rem;transition:all .2s}
+.nav-link:hover,.nav-link.active{color:#fff;background:rgba(255,255,255,.1)}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,var(--primary),#16213e);color:#fff;padding:60px 0;text-align:center}
+.hero h1{font-size:2.2rem;font-weight:800;margin-bottom:12px}
+.hero p{font-size:1.1rem;opacity:.85;max-width:600px;margin:0 auto}
+
+/* Search */
+.search-bar{max-width:500px;margin:24px auto 0;position:relative}
+.search-bar input{width:100%;padding:14px 20px;border:2px solid var(--border);border-radius:50px;font-family:inherit;font-size:1rem;outline:none;transition:border .2s}
+.search-bar input:focus{border-color:var(--accent)}
+
+/* Sections */
+section{padding:40px 0}
+.section-title{font-size:1.5rem;font-weight:700;margin-bottom:24px;text-align:center}
+
+/* Products Grid */
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+.product-card{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
+.product-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.product-img{width:100%;aspect-ratio:1;object-fit:cover;background:#f0f0f0}
+.product-info{padding:16px}
+.product-cat{font-size:.75rem;color:var(--accent);font-weight:600;text-transform:uppercase;margin-bottom:4px}
+.product-name{font-size:1rem;font-weight:700;margin-bottom:8px;line-height:1.4}
+.product-price{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.price-current{font-size:1.15rem;font-weight:800;color:var(--accent)}
+.price-old{font-size:.85rem;color:var(--text-light);text-decoration:line-through}
+.product-actions{padding:0 16px 16px;display:flex;gap:8px}
+.btn-add{flex:1;background:var(--primary);color:#fff;padding:10px;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;font-size:.85rem;transition:background .2s}
+.btn-add:hover{background:#16213e}
+.btn-add:disabled{opacity:.5;cursor:not-allowed}
+.qty-control{display:flex;align-items:center;gap:0;border:2px solid var(--border);border-radius:8px;overflow:hidden}
+.qty-btn{width:32px;height:36px;border:none;background:var(--bg);cursor:pointer;font-size:1rem;font-weight:700}
+.qty-val{width:36px;text-align:center;font-weight:700;font-size:.9rem;border:none;background:transparent;font-family:inherit}
+
+/* Cart Drawer */
+.cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;opacity:0;visibility:hidden;transition:all .3s}
+.cart-overlay.open{opacity:1;visibility:visible}
+.cart-drawer{position:fixed;top:0;left:0;width:400px;max-width:90vw;height:100%;background:var(--card);z-index:2001;transform:translateX(-100%);transition:transform .3s;overflow-y:auto;display:flex;flex-direction:column}
+body.ltr .cart-drawer{left:auto;right:0;transform:translateX(100%)}
+body.ltr .cart-drawer.open{transform:translateX(0)}
+body.rtl .cart-drawer.open{transform:translateX(0)}
+.cart-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.cart-header h3{font-size:1.1rem}
+.cart-close{background:none;border:none;font-size:1.5rem;cursor:pointer;padding:4px}
+.cart-items{flex:1;overflow-y:auto;padding:16px 20px}
+.cart-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.cart-item-img{width:64px;height:64px;object-fit:cover;border-radius:8px;background:#f0f0f0}
+.cart-item-info{flex:1}
+.cart-item-name{font-weight:600;font-size:.9rem;margin-bottom:4px}
+.cart-item-price{color:var(--accent);font-weight:700;font-size:.9rem}
+.cart-item-qty{display:flex;align-items:center;gap:0;margin-top:6px}
+.cart-item-qty .qty-btn{width:28px;height:28px;font-size:.85rem}
+.cart-item-qty .qty-val{width:32px;font-size:.8rem}
+.cart-item-remove{color:#dc3545;cursor:pointer;font-size:.8rem;margin-top:4px}
+.cart-empty{text-align:center;padding:40px 0;color:var(--text-light)}
+.cart-footer{padding:16px 20px;border-top:1px solid var(--border);background:var(--bg)}
+.cart-subtotal{display:flex;justify-content:space-between;font-weight:700;font-size:1.1rem;margin-bottom:12px}
+.btn-checkout{width:100%;padding:14px;font-size:1rem}
+
+/* Checkout Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all .3s;padding:16px}
+.modal-overlay.open{opacity:1;visibility:visible}
+.modal{background:var(--card);border-radius:var(--radius);width:500px;max-width:100%;max-height:90vh;overflow-y:auto;padding:32px;position:relative}
+.modal-close{position:absolute;top:12px;left:12px;background:none;border:none;font-size:1.5rem;cursor:pointer}
+body.ltr .modal-close{left:auto;right:12px}
+.modal h2{font-size:1.3rem;margin-bottom:20px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-weight:600;font-size:.85rem;margin-bottom:6px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:12px;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:.95rem;outline:none;transition:border .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+.delivery-note{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-bottom:16px;font-size:.85rem;color:#856404}
+.order-summary{background:var(--bg);border-radius:8px;padding:16px;margin-bottom:16px}
+.order-summary-item{display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:4px}
+.order-summary-total{font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:8px}
+
+/* Success */
+.success-msg{text-align:center;padding:40px 20px}
+.success-msg h2{color:var(--success);margin-bottom:12px}
+.order-number{font-size:1.8rem;font-weight:800;color:var(--primary);margin:16px 0;background:var(--bg);padding:12px 24px;border-radius:8px;display:inline-block}
+.whatsapp-btn{display:inline-flex;align-items:center;gap:8px;background:#25d366;color:#fff;padding:14px 28px;border-radius:50px;text-decoration:none;font-weight:700;font-size:1rem;margin-top:16px;transition:background .2s}
+.whatsapp-btn:hover{background:#1da851}
+
+/* Track */
+.track-section{background:var(--card);border-radius:var(--radius);padding:32px;max-width:600px;margin:0 auto;box-shadow:var(--shadow)}
+.track-form{display:flex;gap:8px;margin-bottom:20px}
+.track-form input{flex:1;padding:12px;border:2px solid var(--border);border-radius:8px;font-family:inherit;font-size:1rem}
+.track-form input:focus{border-color:var(--accent);outline:none}
+.track-result{padding:16px;border-radius:8px;background:var(--bg)}
+.track-result h4{margin-bottom:8px}
+.track-status{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:700}
+.track-status.pending{background:#fff3cd;color:#856404}
+.track-status.confirmed{background:#d4edda;color:#155724}
+.track-status.shipped{background:#cce5ff;color:#004085}
+.track-status.delivered{background:#d1ecf1;color:#0c5460}
+
+/* Footer */
+footer{background:var(--primary);color:rgba(255,255,255,.7);padding:32px 0;text-align:center;font-size:.85rem}
+footer a{color:var(--accent);text-decoration:none}
+
+/* Responsive */
+@media(max-width:768px){
+.hero h1{font-size:1.6rem}
+.hero p{font-size:.95rem}
+.products-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.product-info{padding:12px}
+.product-name{font-size:.9rem}
+.modal{padding:20px}
+.header-inner{flex-wrap:nowrap}
+.nav-links{display:none}
+}
+@media(max-width:480px){
+.products-grid{grid-template-columns:1fr 1fr;gap:8px}
+.product-img{aspect-ratio:1}
+.product-actions{flex-direction:column}
+}
+
+/* Loading */
+.loading{text-align:center;padding:60px 0}
+.spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Animations */
+.fade-in{animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.hidden{display:none!important}
+</style>
+</head>
+<body class="rtl">
+
+<!-- Facebook Pixel (placeholder) -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+</script>
+<!-- fbq('init', 'YOUR_PIXEL_ID'); fbq('track', 'PageView'); -->
+
+<header>
+<div class="container header-inner">
+  <div class="logo">Smart <span>Shopping</span></div>
+  <nav class="nav-links">
+    <a href="#products" class="nav-link active" data-i18n="nav_products">المنتجات</a>
+    <a href="#track-section" class="nav-link" data-i18n="nav_track">تتبع الطلب</a>
+  </nav>
+  <div class="header-actions">
+    <button class="btn btn-outline btn-sm" id="langToggle" onclick="toggleLang()">EN</button>
+    <button class="btn btn-outline btn-sm" onclick="openCart()">
+      <span data-i18n="nav_cart">سلة</span>
+      <span class="cart-badge" id="cartCount">0</span>
+    </button>
+    <button class="btn btn-accent btn-sm" onclick="openCheckout()" id="checkoutBtn" style="display:none">
+      <span data-i18n="nav_checkout">طلب</span>
+    </button>
+  </div>
+</div>
+</header>
+
+<section class="hero">
+<div class="container">
+  <h1 data-i18n="hero_title">تسوّق بذكاء</h1>
+  <p data-i18n="hero_sub">منتجات متنوعة بأفضل الأسعار - توصيل لجميع الولايات</p>
+  <div class="search-bar">
+    <input type="text" id="searchInput" data-i18n-placeholder="search_placeholder" placeholder="ابحث عن منتج..." oninput="filterProducts()">
+  </div>
+</div>
+</section>
+
+<section id="products">
+<div class="container">
+  <h2 class="section-title" data-i18n="section_products">المنتجات</h2>
+  <div id="productsGrid" class="products-grid">
+    <div class="loading"><div class="spinner"></div><p data-i18n="loading">جاري التحميل...</p></div>
+  </div>
+</div>
+</section>
+
+<section id="track-section">
+<div class="container">
+  <h2 class="section-title" data-i18n="section_track">تتبع طلبك</h2>
+  <div class="track-section">
+    <div class="track-form">
+      <input type="text" id="trackInput" placeholder="أدخل رقم الطلب (SK-...)" data-i18n-placeholder="track_placeholder">
+      <button class="btn btn-accent" onclick="trackOrder()" data-i18n="track_btn">تتبع</button>
+    </div>
+    <div id="trackResult"></div>
+  </div>
+</div>
+</section>
+
+<footer>
+<div class="container">
+  <p data-i18n="footer_text">© 2026 Smart Shopping - جميع الحقوق محفوظة</p>
+  <p style="margin-top:8px"><span data-i18n="footer_whatsapp">للتواصل واتساب</span>: <a href="https://wa.me/213557543177" target="_blank">+213 557 543 177</a></p>
+</div>
+</footer>
+
+<!-- Cart Drawer -->
+<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+<div class="cart-drawer" id="cartDrawer">
+  <div class="cart-header">
+    <h3 data-i18n="cart_title">سلة الشراء</h3>
+    <button class="cart-close" onclick="closeCart()">×</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer" id="cartFooter" style="display:none">
+    <div class="cart-subtotal">
+      <span data-i18n="cart_subtotal">المجموع</span>
+      <span id="cartSubtotal">0 DZD</span>
+    </div>
+    <button class="btn btn-accent btn-checkout" onclick="closeCart();openCheckout()" data-i18n="cart_checkout">إتمام الطلب</button>
+  </div>
+</div>
+
+<!-- Checkout Modal -->
+<div class="modal-overlay" id="checkoutModal">
+<div class="modal">
+  <button class="modal-close" onclick="closeCheckout()">×</button>
+  <h2 data-i18n="checkout_title">إتمام الطلب</h2>
+  <form id="checkoutForm" onsubmit="submitOrder(event)">
+    <div class="form-group">
+      <label data-i18n="form_name">الاسم الكامل</label>
+      <input type="text" id="orderName" required>
+    </div>
+    <div class="form-group">
+      <label data-i18n="form_phone">رقم الهاتف</label>
+      <input type="tel" id="orderPhone" placeholder="0555555555" required>
+    </div>
+    <div class="form-group">
+      <label data-i18n="form_wilaya">الولاية</label>
+      <select id="orderWilaya" required>
+        <option value="" data-i18n="form_wilaya_select">اختر الولاية</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label data-i18n="form_delivery">نوع التوصيل</label>
+      <select id="orderDelivery" required>
+        <option value="home" data-i18n="form_home">المنزل</option>
+        <option value="office" data-i18n="form_office">المكتب</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label data-i18n="form_note">ملاحظة (اختياري)</label>
+      <textarea id="orderNote" rows="2"></textarea>
+    </div>
+    <div class="delivery-note" data-i18n="delivery_note">⚠️ سعر التوصيل يتم تأكيده بعد التواصل معك عبر الهاتف أو الواتساب.</div>
+    <div class="order-summary" id="orderSummary"></div>
+    <button type="submit" class="btn btn-accent btn-checkout" id="submitBtn" data-i18n="checkout_submit">تأكيد الطلب</button>
+  </form>
+  <div id="orderSuccess" class="hidden"></div>
+</div>
+</div>
+
+<script>
+// ===== CONFIG =====
+var API_URL = 'https://script.google.com/macros/s/AKfycbw8Ses3QmKtnTbuTkcCyEoxqHUou_4e44JDZtUtV6St3yCe2SAoknGRYR5mCL00TCvtHQ/exec';
+var LANG_KEY = 'sk_lang';
+var CART_KEY = 'sk_cart';
+var currentLang = localStorage.getItem(LANG_KEY) || 'ar';
+var cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+var allProducts = [];
+var storeSettings = {};
+
+// ===== WILAYAS =====
+var WILAYAS = [
+  {code:"01",ar:"أدرار",en:"Adrar"},{code:"02",ar:"الشلف",en:"Chlef"},
+  {code:"03",ar:"الأغواط",en:"Laghouat"},{code:"04",ar:"أم البواقي",en:"Oum El Bouaghi"},
+  {code:"05",ar:"باتنة",en:"Batna"},{code:"06",ar:"بجاية",en:"Bejaia"},
+  {code:"07",ar:"بسكرة",en:"Biskra"},{code:"08",ar:"بشار",en:"Bechar"},
+  {code:"09",ar:"البليدة",en:"Blida"},{code:"10",ar:"البويرة",en:"Bouira"},
+  {code:"11",ar:"تمنراست",en:"Tamanrasset"},{code:"12",ar:"تبسة",en:"Tebessa"},
+  {code:"13",ar:"تلمسان",en:"Tlemcen"},{code:"14",ar:"تيارت",en:"Tiaret"},
+  {code:"15",ar:"تيزي وزو",en:"Tizi Ouzou"},{code:"16",ar:"الجزائر",en:"Alger"},
+  {code:"17",ar:"الجلفة",en:"Djelfa"},{code:"18",ar:"جيجل",en:"Jijel"},
+  {code:"19",ar:"سطيف",en:"Sétif"},{code:"20",ar:"سعيدة",en:"Saïda"},
+  {code:"21",ar:"سكيكدة",en:"Skikda"},{code:"22",ar:"سيدي بلعباس",en:"Sidi Bel Abbès"},
+  {code:"23",ar:"عنابة",en:"Annaba"},{code:"24",ar:"قالمة",en:"Guelma"},
+  {code:"25",ar:"قسنطينة",en:"Constantine"},{code:"26",ar:"المدية",en:"Médéa"},
+  {code:"27",ar:"مستغانم",en:"Mostaganem"},{code:"28",ar:"المسيلة",en:"M'sila"},
+  {code:"29",ar:"معسكر",en:"Mascara"},{code:"30",ar:"ورقلة",en:"Ouargla"},
+  {code:"31",ar:"وهران",en:"Oran"},{code:"32",ar:"البيض",en:"El Bayadh"},
+  {code:"33",ar:"إليزي",en:"Illizi"},{code:"34",ar:"برج بوعريريج",en:"Bordj Bou Arréridj"},
+  {code:"35",ar:"بومرداس",en:"Boumerdès"},{code:"36",ar:"الطارف",en:"El Tarf"},
+  {code:"37",ar:"تندوف",en:"Tindouf"},{code:"38",ar:"تيسمسيلت",en:"Tissemsilt"},
+  {code:"39",ar:"الوادي",en:"El Oued"},{code:"40",ar:"خنشلة",en:"Khenchela"},
+  {code:"41",ar:"سوق أهراس",en:"Souk Ahras"},{code:"42",ar:"تيبازة",en:"Tipaza"},
+  {code:"43",ar:"ميلة",en:"Mila"},{code:"44",ar:"عين الدفلى",en:"Aïn Defla"},
+  {code:"45",ar:"النعامة",en:"Naâma"},{code:"46",ar:"عين تموشنت",en:"Aïn Témouchent"},
+  {code:"47",ar:"غرداية",en:"Ghardaïa"},{code:"48",ar:"غليزان",en:"Relizane"},
+  {code:"49",ar:"تيميمون",en:"Timimoun"},{code:"50",ar:"برج باجي مختار",en:"Bordj Badji Mokhtar"},
+  {code:"51",ar:"أولاد جلال",en:"Ouled Djellal"},{code:"52",ar:"بني عباس",en:"Béni Abbès"},
+  {code:"53",ar:"عين صالح",en:"In Salah"},{code:"54",ar:"عين قزام",en:"In Guezzam"},
+  {code:"55",ar:"توقرت",en:"Touggourt"},{code:"56",ar:"جانت",en:"Djanet"},
+  {code:"57",ar:"المغير",en:"El M'Ghair"},{code:"58",ar:"المنيعة",en:"El Meniaa"}
+];
+
+// ===== I18N =====
+var I18N = {
+  ar: {
+    nav_products:"المنتجات",nav_track:"تتبع الطلب",nav_cart:"سلة",nav_checkout:"طلب",
+    hero_title:"تسوّق بذكاء",hero_sub:"منتجات متنوعة بأفضل الأسعار - توصيل لجميع الولايات",
+    search_placeholder:"ابحث عن منتج...",section_products:"المنتجات",section_track:"تتبع طلبك",
+    loading:"جاري التحميل...",no_products:"لا توجد منجات",add_to_cart:"أضف للسلة",
+    in_cart:"في السلة",cart_title:"سلة الشراء",cart_empty:"سلتك فارغة",
+    cart_subtotal:"المجموع",cart_checkout:"إتمام الطلب",remove:"حذف",
+    checkout_title:"إتمام الطلب",form_name:"الاسم الكامل",form_phone:"رقم الهاتف",
+    form_wilaya:"الولاية",form_wilaya_select:"اختر الولاية",
+    form_delivery:"نوع التوصيل",form_home:"المنزل",form_office:"المكتب",
+    form_note:"ملاحظة (اختياري)",
+    delivery_note:"⚠️ سعر التوصيل يتم تأكيده بعد التواصل معك عبر الهاتف أو الواتساب.",
+    checkout_submit:"تأكيد الطلب",order_success:"تم إرسال طلبك بنجاح!",
+    order_your_order:"رقم طلبك",track_placeholder:"أدخل رقم الطلب (SK-...)",
+    track_btn:"تتبع",track_not_found:"الطلب غير موجود",
+    track_order_status:"حالة الطلب",track_items:"المنتجات",track_total:"المجموع",
+    track_wilaya:"الولاية",track_delivery:"نوع التوصيل",
+    footer_text:"© 2026 Smart Shopping - جميع الحقوق محفوظة",
+    footer_whatsapp:"للتواصل واتساب",whatsapp_msg:"مرحبا، لدي طلب برقم",
+    out_of_stock:"نفذ من المخزون",currency:"د.ج",
+    status_pending:"قيد الانتظار",status_confirmed:"تم التأكيد",status_shipped:"تم الشحن",status_delivered:"تم التوصيل"
+  },
+  en: {
+    nav_products:"Products",nav_track:"Track Order",nav_cart:"Cart",nav_checkout:"Order",
+    hero_title:"Shop Smart",hero_sub:"Great products at best prices - Delivery to all states",
+    search_placeholder:"Search products...",section_products:"Products",section_track:"Track Your Order",
+    loading:"Loading...",no_products:"No products found",add_to_cart:"Add to Cart",
+    in_cart:"In Cart",cart_title:"Shopping Cart",cart_empty:"Your cart is empty",
+    cart_subtotal:"Subtotal",cart_checkout:"Checkout",remove:"Remove",
+    checkout_title:"Checkout",form_name:"Full Name",form_phone:"Phone Number",
+    form_wilaya:"Wilaya",form_wilaya_select:"Select Wilaya",
+    form_delivery:"Delivery Type",form_home:"Home",form_office:"Office",
+    form_note:"Note (optional)",
+    delivery_note:"⚠️ Delivery cost will be confirmed after contacting you by phone or WhatsApp.",
+    checkout_submit:"Confirm Order",order_success:"Your order has been submitted!",
+    order_your_order:"Your Order Number",track_placeholder:"Enter order number (SK-...)",
+    track_btn:"Track",track_not_found:"Order not found",
+    track_order_status:"Order Status",track_items:"Items",track_total:"Total",
+    track_wilaya:"Wilaya",track_delivery:"Delivery Type",
+    footer_text:"© 2026 Smart Shopping - All rights reserved",
+    footer_whatsapp:"WhatsApp contact",whatsapp_msg:"Hello, I have order number",
+    out_of_stock:"Out of Stock",currency:"DZD",
+    status_pending:"Pending",status_confirmed:"Confirmed",status_shipped:"Shipped",status_delivered:"Delivered"
+  }
+};
+
+function t(key){return (I18N[currentLang]||I18N.ar)[key]||key}
+
+function setLang(lang){
+  currentLang=lang;
+  localStorage.setItem(LANG_KEY,lang);
+  var isAr=lang==='ar';
+  document.body.className=isAr?'rtl':'ltr';
+  document.documentElement.lang=lang;
+  document.documentElement.dir=isAr?'rtl':'ltr';
+  document.getElementById('langToggle').textContent=isAr?'EN':'AR';
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    el.textContent=t(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){
+    el.placeholder=t(el.getAttribute('data-i18n-placeholder'));
+  });
+  renderProducts();
+  renderCart();
+}
+
+function toggleLang(){setLang(currentLang==='ar'?'en':'ar')}
+
+// ===== API =====
+function apiCall(action, params, callback) {
+  var url = API_URL + '?action=' + action;
+  if (params) { for (var k in params) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); } }
+
+  var cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+  var fullUrl = url + '&callback=' + cbName;
+  var called = false;
+
+  window[cbName] = function(data) {
+    if (called) return;
+    called = true;
+    delete window[cbName];
+    document.head.removeChild(script);
+    callback(data);
+  };
+
+  var script = document.createElement('script');
+  script.src = fullUrl;
+  script.onerror = function() {
+    if (called) return;
+    called = true;
+    delete window[cbName];
+    callback({ error: 'Network error' });
+  };
+  document.head.appendChild(script);
+
+  setTimeout(function() {
+    if (!called) {
+      called = true;
+      delete window[cbName];
+      document.head.removeChild(script);
+      callback({ error: 'Timeout' });
+    }
+  }, 15000);
+}
+
+// ===== INIT =====
+function init(){
+  setLang(currentLang);
+  apiCall('settings',{},function(data){
+    if(!data||data.error)return;
+    storeSettings=data;
+    if(data.pixel_id){fbq('init',data.pixel_id)}
+    var name=currentLang==='ar'?data.store_name_ar:data.store_name_en;
+    if(name){document.querySelector('.logo').innerHTML=name.replace(/Smart\s*/i,'Smart <span>Shopping</span>')}
+    if(data.phone){
+      document.querySelectorAll('a[href*="wa.me"]').forEach(function(a){
+        a.href='https://wa.me/'+data.phone;
+      });
+    }
+  });
+  apiCall('catalog',{},function(data){
+    if(!data||data.error||!data.products){
+      document.getElementById('productsGrid').innerHTML='<p style="text-align:center;padding:40px">'+t('no_products')+'</p>';
+      return;
+    }
+    allProducts=data.products;
+    renderProducts();
+  });
+}
+
+// ===== PRODUCTS =====
+function renderProducts(){
+  var grid=document.getElementById('productsGrid');
+  var search=(document.getElementById('searchInput').value||'').toLowerCase();
+  var filtered=allProducts.filter(function(p){
+    if(!p)return false;
+    var title=(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar||'').toLowerCase();
+    var cat=(currentLang==='ar'?p.category_ar:p.category_en||p.category_ar||'').toLowerCase();
+    return title.indexOf(search)>-1||cat.indexOf(search)>-1;
+  });
+  if(!filtered.length){
+    grid.innerHTML='<p style="text-align:center;padding:40px;grid-column:1/-1">'+t('no_products')+'</p>';
+    return;
+  }
+  grid.innerHTML=filtered.map(function(p,i){
+    var inCart=cart.find(function(c){return c.id===p.id});
+    var qty=inCart?inCart.qty:0;
+    var outOfStock=p.stock<=0;
+    var img=p.image1||'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="%23f0f0f0"><rect width="300" height="300"/><text x="150" y="160" text-anchor="middle" fill="%23999" font-size="16">No Image</text></svg>';
+    return '<div class="product-card fade-in" style="animation-delay:'+i*50+'ms">'+
+      '<img class="product-img" src="'+img+'" alt="'+(p.title_ar||'')+'" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;300&quot; height=&quot;300&quot; fill=&quot;%23f0f0f0&quot;><rect width=&quot;300&quot; height=&quot;300&quot;/><text x=&quot;150&quot; y=&quot;160&quot; text-anchor=&quot;middle&quot; fill=&quot;%23999&quot; font-size=&quot;16&quot;>No Image</text></svg>\'">'+
+      '<div class="product-info">'+
+        '<div class="product-cat">'+(currentLang==='ar'?p.category_ar:p.category_en||'')+'</div>'+
+        '<div class="product-name">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div>'+
+        '<div class="product-price">'+
+          '<span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>'+
+          (p.old_price?'<span class="price-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>':'')+
+        '</div>'+
+      '</div>'+
+      '<div class="product-actions">'+
+        (outOfStock?'<button class="btn-add" disabled style="flex:1">'+t('out_of_stock')+'</button>':
+          qty>0?
+          '<div class="qty-control"><button class="qty-btn" onclick="changeQty(\''+p.id+'\',-1)">−</button>'+
+          '<input class="qty-val" value="'+qty+'" readonly>'+
+          '<button class="qty-btn" onclick="changeQty(\''+p.id+'\',1)">+</button></div>':
+          '<button class="btn-add" onclick="addToCart(\''+p.id+'\')">'+t('add_to_cart')+'</button>'
+        )+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function filterProducts(){renderProducts()}
+
+// ===== CART =====
+function addToCart(id){
+  var p=allProducts.find(function(x){return x.id===id});
+  if(!p)return;
+  var existing=cart.find(function(c){return c.id===id});
+  if(existing){existing.qty++}
+  else{cart.push({id:id,qty:1})}
+  saveCart();
+  renderProducts();
+  renderCart();
+  if(typeof fbq==='function')fbq('track','AddToCart',{content_ids:[id],content_type:'product'});
+}
+
+function changeQty(id,delta){
+  var item=cart.find(function(c){return c.id===id});
+  if(!item)return;
+  item.qty+=delta;
+  if(item.qty<=0){cart=cart.filter(function(c){return c.id!==id})}
+  saveCart();
+  renderProducts();
+  renderCart();
+}
+
+function removeFromCart(id){
+  cart=cart.filter(function(c){return c.id!==id});
+  saveCart();
+  renderProducts();
+  renderCart();
+}
+
+function saveCart(){
+  localStorage.setItem(CART_KEY,JSON.stringify(cart));
+  var count=cart.reduce(function(s,c){return s+c.qty},0);
+  document.getElementById('cartCount').textContent=count;
+  document.getElementById('checkoutBtn').style.display=count>0?'inline-flex':'none';
+}
+
+function renderCart(){
+  saveCart();
+  var container=document.getElementById('cartItems');
+  var footer=document.getElementById('cartFooter');
+  if(!cart.length){
+    container.innerHTML='<div class="cart-empty"><p>'+t('cart_empty')+'</p></div>';
+    footer.style.display='none';
+    return;
+  }
+  footer.style.display='block';
+  var subtotal=0;
+  container.innerHTML=cart.map(function(c){
+    var p=allProducts.find(function(x){return x.id===c.id});
+    if(!p)return'';
+    var total=p.price*c.qty;
+    subtotal+=total;
+    var img=p.image1||'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="%23f0f0f0"><rect width="64" height="64"/></svg>';
+    return '<div class="cart-item">'+
+      '<img class="cart-item-img" src="'+img+'" alt="">'+
+      '<div class="cart-item-info">'+
+        '<div class="cart-item-name">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div>'+
+        '<div class="cart-item-price">'+Number(p.price).toLocaleString()+' '+t('currency')+'</div>'+
+        '<div class="cart-item-qty">'+
+          '<button class="qty-btn" onclick="changeQty(\''+c.id+'\',-1)">−</button>'+
+          '<input class="qty-val" value="'+c.qty+'" readonly>'+
+          '<button class="qty-btn" onclick="changeQty(\''+c.id+'\',1)">+</button>'+
+        '</div>'+
+        '<div class="cart-item-remove" onclick="removeFromCart(\''+c.id+'\')">'+t('remove')+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('cartSubtotal').textContent=subtotal.toLocaleString()+' '+t('currency');
+}
+
+function openCart(){document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartDrawer').classList.add('open')}
+function closeCart(){document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartDrawer').classList.remove('open')}
+
+// ===== CHECKOUT =====
+function openCheckout(){
+  if(!cart.length)return;
+  document.getElementById('checkoutModal').classList.add('open');
+  document.getElementById('checkoutForm').classList.remove('hidden');
+  document.getElementById('orderSuccess').classList.add('hidden');
+  populateWilayas();
+  renderOrderSummary();
+  if(typeof fbq==='function')fbq('track','InitiateCheckout');
+}
+
+function closeCheckout(){document.getElementById('checkoutModal').classList.remove('open')}
+
+function populateWilayas(){
+  var sel=document.getElementById('orderWilaya');
+  if(sel.options.length>1)return;
+  WILAYAS.forEach(function(w){
+    var opt=document.createElement('option');
+    opt.value=w.code;
+    opt.textContent=w.code+' - '+(currentLang==='ar'?w.ar:w.en);
+    sel.appendChild(opt);
+  });
+}
+
+function renderOrderSummary(){
+  var html='';
+  var subtotal=0;
+  cart.forEach(function(c){
+    var p=allProducts.find(function(x){return x.id===c.id});
+    if(!p)return;
+    var total=p.price*c.qty;
+    subtotal+=total;
+    html+='<div class="order-summary-item"><span>'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+' × '+c.qty+'</span><span>'+Number(total).toLocaleString()+' '+t('currency')+'</span></div>';
+  });
+  html+='<div class="order-summary-item order-summary-total"><span>'+t('cart_subtotal')+'</span><span>'+Number(subtotal).toLocaleString()+' '+t('currency')+'</span></div>';
+  document.getElementById('orderSummary').innerHTML=html;
+}
+
+function submitOrder(e){
+  e.preventDefault();
+  var name=document.getElementById('orderName').value.trim();
+  var phone=document.getElementById('orderPhone').value.trim();
+  var wilayaCode=document.getElementById('orderWilaya').value;
+  var deliveryType=document.getElementById('orderDelivery').value;
+  var note=document.getElementById('orderNote').value.trim();
+
+  if(!name||!phone||!wilayaCode){return}
+
+  var wilaya=WILAYAS.find(function(w){return w.code===wilayaCode});
+  var itemsJson=JSON.stringify(cart.map(function(c){
+    var p=allProducts.find(function(x){return x.id===c.id});
+    return{id:c.id,title:p?(currentLang==='ar'?p.title_ar:p.title_en):'',price:p?p.price:0,qty:c.qty};
+  }));
+  var subtotal=cart.reduce(function(s,c){
+    var p=allProducts.find(function(x){return x.id===c.id});
+    return s+(p?p.price*c.qty:0);
+  },0);
+
+  document.getElementById('submitBtn').disabled=true;
+
+  apiCall('order',{
+    name:name,phone:phone,
+    wilaya_code:wilayaCode,wilaya_ar:wilaya?wilaya.ar:'',wilaya_en:wilaya?wilaya.en:'',
+    delivery_type:deliveryType==='office'?'Office':'Home',
+    items_json:itemsJson,subtotal:subtotal,note:note
+  },function(data){
+    document.getElementById('submitBtn').disabled=false;
+    if(!data||data.error||!data.ok){
+      alert('Error: '+(data?data.error||'Unknown error':'Network error'));
+      return;
+    }
+    document.getElementById('checkoutForm').classList.add('hidden');
+    var success=document.getElementById('orderSuccess');
+    success.classList.remove('hidden');
+    var orderId=data.order_id;
+    var waPhone=storeSettings.phone||'213557543177';
+    var waMsg=encodeURIComponent(t('whatsapp_msg')+' '+orderId);
+    success.innerHTML='<div class="success-msg fade-in">'+
+      '<h2>✓ '+t('order_success')+'</h2>'+
+      '<p>'+t('order_your_order')+':</p>'+
+      '<div class="order-number">'+orderId+'</div>'+
+      '<p style="margin-top:12px;color:var(--text-light)">'+t('delivery_note')+'</p>'+
+      '<a href="https://wa.me/'+waPhone+'?text='+waMsg+'" target="_blank" class="whatsapp-btn">📱 WhatsApp</a>'+
+    '</div>';
+    cart=[];
+    saveCart();
+    renderCart();
+    renderProducts();
+    if(typeof fbq==='function')fbq('track','Purchase',{value:subtotal,currency:'DZD'});
+  });
+}
+
+// ===== TRACK =====
+function trackOrder(){
+  var orderId=document.getElementById('trackInput').value.trim();
+  if(!orderId)return;
+  document.getElementById('trackResult').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  apiCall('track',{order_id:orderId},function(data){
+    if(!data||data.error||!data.found){
+      document.getElementById('trackResult').innerHTML='<div class="track-result"><p style="color:#dc3545">'+t('track_not_found')+'</p></div>';
+      return;
+    }
+    var o=data.order;
+    var statusKey='status_'+(o.status||'pending');
+    var items=[];
+    try{items=JSON.parse(o.items_json||'[]')}catch(e){}
+    var itemsList=items.map(function(it){return it.title+' × '+it.qty}).join(', ');
+    var html='<div class="track-result fade-in">'+
+      '<h4>'+t('track_order_status')+': <span class="track-status '+(o.status||'pending')+'">'+t(statusKey)+'</span></h4>'+
+      '<p><strong>'+t('track_wilaya')+':</strong> '+(currentLang==='ar'?o.wilaya_ar:o.wilaya_en)+'</p>'+
+      '<p><strong>'+t('track_delivery')+':</strong> '+(currentLang==='ar'?(o.delivery_type==='Office'?'المكتب':'المنزل'):(o.delivery_type==='Office'?'Office':'Home'))+'</p>'+
+      (itemsList?'<p><strong>'+t('track_items')+':</strong> '+itemsList+'</p>':'')+
+      '<p><strong>'+t('track_total')+':</strong> '+Number(o.subtotal||0).toLocaleString()+' '+t('currency')+'</p>'+
+      '<p style="margin-top:12px;color:var(--text-light);font-size:.85rem">'+t('delivery_note')+'</p>'+
+    '</div>';
+    document.getElementById('trackResult').innerHTML=html;
+  });
+}
+
+// ===== FACEBOOK PIXEL PLACEHOLDER =====
+function initPixel(){
+  if(typeof fbq==='function'&&storeSettings.pixel_id){
+    fbq('init',storeSettings.pixel_id);
+    fbq('track','PageView');
+  }
+}
+
+// ===== BOOT =====
+document.addEventListener('DOMContentLoaded',function(){
+  init();
+  setTimeout(initPixel,2000);
+});
+</script>
+</body>
+</html>
