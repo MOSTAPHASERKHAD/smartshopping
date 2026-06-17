@@ -1,4 +1,4 @@
-// SmartKiosk - Google Apps Script Backend (JSONP + Fetch API)
+// SmartKiosk - Google Apps Script Backend (JSONP + Admin CRUD)
 // Deploy as Web App → Execute as: Me → Who has access: Anyone
 
 function doGet(e) {
@@ -20,6 +20,15 @@ function doGet(e) {
       break;
     case 'order':
       result = createOrder(params);
+      break;
+    case 'admin_list':
+      result = adminListProducts();
+      break;
+    case 'admin_orders':
+      result = adminListOrders();
+      break;
+    case 'admin_settings':
+      result = getSettings();
       break;
     default:
       result = { error: 'Unknown action' };
@@ -47,6 +56,21 @@ function doPost(e) {
     case 'order':
       result = createOrder(params);
       break;
+    case 'admin_add_product':
+      result = adminAddProduct(params);
+      break;
+    case 'admin_edit_product':
+      result = adminEditProduct(params);
+      break;
+    case 'admin_delete_product':
+      result = adminDeleteProduct(params);
+      break;
+    case 'admin_update_order':
+      result = adminUpdateOrder(params);
+      break;
+    case 'admin_update_settings':
+      result = adminUpdateSettings(params);
+      break;
     default:
       result = { error: 'Unknown action' };
   }
@@ -61,6 +85,8 @@ function doPost(e) {
   return ContentService.createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+// ===== PUBLIC =====
 
 function getCatalog() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -150,19 +176,9 @@ function createOrder(params) {
   var shippingNote = 'سعر التوصيل يُحدد بعد التأكيد';
 
   sheet.appendRow([
-    orderId,
-    createdAt,
-    name,
-    phone,
-    wilayaCode,
-    wilayaAr,
-    wilayaEn,
-    deliveryType,
-    itemsJson,
-    subtotal,
-    shippingNote,
-    'pending',
-    note
+    orderId, createdAt, name, phone, wilayaCode,
+    wilayaAr, wilayaEn, deliveryType, itemsJson,
+    subtotal, shippingNote, 'pending', note
   ]);
 
   return { ok: true, order_id: orderId };
@@ -175,10 +191,170 @@ function generateOrderId() {
   return 'SK-' + datePart + '-' + randomPart;
 }
 
+// ===== ADMIN =====
+
+function adminListProducts() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Catalog');
+  if (!sheet) return { products: [] };
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var products = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var product = { _row: i + 1 };
+    for (var j = 0; j < headers.length; j++) {
+      product[headers[j]] = row[j];
+    }
+    products.push(product);
+  }
+
+  return { products: products };
+}
+
+function adminAddProduct(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Catalog');
+  if (!sheet) return { error: 'Catalog sheet not found' };
+
+  var id = params.id || ('PROD-' + Date.now());
+
+  sheet.appendRow([
+    id,
+    params.title_ar || '',
+    params.title_en || '',
+    params.price || 0,
+    params.old_price || 0,
+    params.currency || 'DZD',
+    params.image1 || '',
+    params.image2 || '',
+    params.image3 || '',
+    params.category_ar || '',
+    params.category_en || '',
+    params.desc_ar || '',
+    params.desc_en || '',
+    params.stock || 0,
+    params.active === false || params.active === 'false' ? false : true
+  ]);
+
+  return { ok: true, id: id };
+}
+
+function adminEditProduct(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Catalog');
+  if (!sheet) return { error: 'Catalog sheet not found' };
+
+  var row = parseInt(params._row);
+  if (!row || row < 2) return { error: 'Invalid row number' };
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+
+  var fields = ['id', 'title_ar', 'title_en', 'price', 'old_price', 'currency',
+    'image1', 'image2', 'image3', 'category_ar', 'category_en',
+    'desc_ar', 'desc_en', 'stock', 'active'];
+
+  for (var j = 0; j < headers.length; j++) {
+    if (params[headers[j]] !== undefined) {
+      var val = params[headers[j]];
+      if (headers[j] === 'active') {
+        val = (val === true || val === 'true' || val === 'TRUE' || val === 1 || val === '1');
+      }
+      sheet.getRange(row, j + 1).setValue(val);
+    }
+  }
+
+  return { ok: true };
+}
+
+function adminDeleteProduct(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Catalog');
+  if (!sheet) return { error: 'Catalog sheet not found' };
+
+  var row = parseInt(params._row);
+  if (!row || row < 2) return { error: 'Invalid row number' };
+
+  sheet.deleteRow(row);
+
+  return { ok: true };
+}
+
+function adminListOrders() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Orders');
+  if (!sheet) return { orders: [] };
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var orders = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var order = { _row: i + 1 };
+    for (var j = 0; j < headers.length; j++) {
+      order[headers[j]] = row[j];
+    }
+    orders.push(order);
+  }
+
+  orders.reverse();
+  return { orders: orders };
+}
+
+function adminUpdateOrder(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Orders');
+  if (!sheet) return { error: 'Orders sheet not found' };
+
+  var row = parseInt(params._row);
+  if (!row || row < 2) return { error: 'Invalid row number' };
+
+  if (params.status) {
+    var statusCol = 12;
+    sheet.getRange(row, statusCol).setValue(params.status);
+  }
+  if (params.notes !== undefined) {
+    var notesCol = 13;
+    sheet.getRange(row, notesCol).setValue(params.notes);
+  }
+
+  return { ok: true };
+}
+
+function adminUpdateSettings(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Settings');
+  if (!sheet) return { error: 'Settings sheet not found' };
+
+  var data = sheet.getDataRange().getValues();
+
+  for (var key in params) {
+    if (key === 'action' || key === 'callback') continue;
+    var found = false;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === key) {
+        sheet.getRange(i + 1, 2).setValue(params[key]);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      sheet.appendRow([key, params[key]]);
+    }
+  }
+
+  return { ok: true };
+}
+
+// ===== SETUP =====
+
 function setupSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // Catalog sheet
   var catalogSheet = ss.getSheetByName('Catalog');
   if (!catalogSheet) {
     catalogSheet = ss.insertSheet('Catalog');
@@ -188,13 +364,12 @@ function setupSheets() {
       'desc_ar', 'desc_en', 'stock', 'active'
     ]);
     catalogSheet.appendRow([
-      'PROD-001', 'سماعة بلوتوث', 'Bluetooth Speaker', 2500, 3500, 'DZD',
-      'https://i.imgur.com/example1.jpg', '', '', 'إلكترونيات', 'Electronics',
-      'سماعة بلوتوث متحركة', 'Portable Bluetooth Speaker', 10, true
+      'PROD-001', 'ساعة ذكية', 'Smart Watch', 5900, 7500, 'DZD',
+      '', '', '', 'إلكترونيات', 'Electronics',
+      'ساعة ذكية عملية بتصميم أنيق', 'Practical smart watch with elegant design', 10, true
     ]);
   }
 
-  // Orders sheet
   var ordersSheet = ss.getSheetByName('Orders');
   if (!ordersSheet) {
     ordersSheet = ss.insertSheet('Orders');
@@ -205,7 +380,6 @@ function setupSheets() {
     ]);
   }
 
-  // Settings sheet
   var settingsSheet = ss.getSheetByName('Settings');
   if (!settingsSheet) {
     settingsSheet = ss.insertSheet('Settings');
