@@ -16,6 +16,11 @@ function doGet(e) {
     case 'admin_orders': result = adminListOrders(); break;
     case 'admin_settings': result = getSettings(); break;
     case 'upload_image': result = adminUploadImageGet(params); break;
+    case 'admin_add_product': result = adminAddProduct(params); break;
+    case 'admin_edit_product': result = adminEditProduct(params); break;
+    case 'admin_delete_product': result = adminDeleteProduct(params); break;
+    case 'admin_update_order': result = adminUpdateOrder(params); break;
+    case 'admin_update_settings': result = adminUpdateSettings(params); break;
     default: result = { error: 'Unknown action' };
   }
 
