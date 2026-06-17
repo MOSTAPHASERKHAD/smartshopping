@@ -46,8 +46,9 @@ function doPost(e) {
 
   var json = JSON.stringify(result);
   if (action === 'admin_upload_image') {
+    var safeJson = json.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     return ContentService.createTextOutput(
-      '<html><body><script>window.parent.postMessage(\'' + json.replace(/'/g, "\\'") + '\', "*");</script></body></html>'
+      '<html><body><script>try{window.parent.postMessage(' + safeJson + ',"*");}catch(e){}</script></body></html>'
     ).setMimeType(ContentService.MimeType.HTML);
   }
   if (callback) {
@@ -235,6 +236,7 @@ function adminUploadImage(params) {
   var base64 = params.imageData;
   var fileName = params.fileName || 'image.jpg';
   var mimeType = params.mimeType || 'image/jpeg';
+  var num = params.num || '1';
   if (!base64) return { error: 'No image data' };
 
   var blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, fileName);
@@ -242,7 +244,7 @@ function adminUploadImage(params) {
   var file = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   var url = 'https://drive.google.com/uc?id=' + file.getId() + '&export=view';
-  return { ok: true, url: url };
+  return { ok: true, url: url, _num: num };
 }
 
 function getOrCreateFolderId() {
