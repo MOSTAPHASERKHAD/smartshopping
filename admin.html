@@ -349,6 +349,18 @@ function loadProducts() {
   });
 }
 
+function previewImage(input, num) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('upload-preview-' + num).src = e.target.result;
+    document.getElementById('upload-preview-' + num).style.display = 'block';
+    document.getElementById('upload-label-' + num).style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
 function openProductModal(row) {
   document.getElementById('productModal').classList.add('open');
   document.getElementById('productModalTitle').textContent = row ? 'تعديل منتج' : 'إضافة منتج جديد';
