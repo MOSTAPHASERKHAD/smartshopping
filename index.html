@@ -469,6 +469,13 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
 </div>
 </section>
 
+<section id="suggestedSection" style="display:none;padding:32px 0;border-top:1px solid var(--border)">
+<div class="container">
+  <h2 style="font-size:1rem;font-weight:700;margin-bottom:16px" data-i18n="suggested_title">منتجات مقترحة</h2>
+  <div id="suggestedGrid" class="products-grid" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px"></div>
+</div>
+</section>
+
 <section id="track-section" style="padding-bottom:48px">
 <div class="container">
   <div class="products-header">
@@ -504,6 +511,8 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
       <h4 data-i18n="footer_links">روابط</h4>
       <a href="#products" data-i18n="nav_products">المنتجات</a>
       <a href="#track-section" data-i18n="nav_track">تتبع الطلب</a>
+      <a href="#" onclick="showPage('about');return false" data-i18n="nav_about">من نحن</a>
+      <a href="#" onclick="showPage('return');return false" data-i18n="nav_return">سياسة الاسترجاع</a>
     </div>
     <div>
       <h4 data-i18n="footer_contact">تواصل</h4>
@@ -513,6 +522,41 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
   <div class="footer-bottom" data-i18n="footer_copy">© 2026 Smart Shopping</div>
 </div>
 </footer>
+
+<!-- About Page -->
+<div class="modal-overlay" id="aboutPage" onclick="if(event.target===this)closePage('about')">
+<div class="modal" style="max-width:650px">
+  <div class="modal-header"><h2 data-i18n="about_title">من نحن</h2><button class="modal-close-btn" onclick="closePage('about')">✕</button></div>
+  <div class="modal-body" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
+    <p data-i18n="about_p1">Smart Shopping هو متجر إلكتروني جزائري يهدف لتوفير أفضل المنتجات بأسعار مناسبة للجميع.</p>
+    <p data-i18n="about_p2">نعمل على تلبية احتياجات عملائنا مع ضمان جودة عالية وخدمة عملاء ممتازة.</p>
+    <p data-i18n="about_p3">نوفر الدفع عند الاستلام والتوصيل لجميع ولايات الجزائر لراحتكم.</p>
+    <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+      <a href="https://wa.me/213557543177" target="_blank" class="btn btn-success">💬 تواصل معنا واتساب</a>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Return Policy Page -->
+<div class="modal-overlay" id="returnPage" onclick="if(event.target===this)closePage('return')">
+<div class="modal" style="max-width:650px">
+  <div class="modal-header"><h2 data-i18n="return_title">سياسة الاسترجاع</h2><button class="modal-close-btn" onclick="closePage('return')">✕</button></div>
+  <div class="modal-body" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
+    <p data-i18n="return_p1">نحرص على رضاك التام عن مشترياتك. إذا لم تكن راضياً عن المنتج، يمكنك استرجاعه خلال 7 أيام من تاريخ الاستلام.</p>
+    <h4 style="margin:12px 0 6px;font-size:.85rem;color:var(--text)" data-i18n="return_conditions_title">شروط الاسترجاع:</h4>
+    <ul style="padding-right:20px;margin:0">
+      <li data-i18n="return_c1">يجب أن يكون المنتج في حالته الأصلية غير المستخدمة</li>
+      <li data-i18n="return_c2">التغليف يجب أن يكون سليماً</li>
+      <li data-i18n="return_c3">يجب إبلاغنا خلال 7 أيام من الاستلام</li>
+      <li data-i18n="return_c4">تكلفة الشحن على العميل في حالة الإرجاع</li>
+    </ul>
+    <div style="margin-top:16px">
+      <a href="https://wa.me/213557543177?text=' + encodeURIComponent('مرحبا، أريد استرجاع منتج برقم الطلب')" target="_blank" class="btn btn-success">💬 تواصل للاسترجاع</a>
+    </div>
+  </div>
+</div>
+</div>
 
 <!-- Cart -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
@@ -658,7 +702,20 @@ var I18N = {
     trust_cod:"الدفع عند الاستلام",trust_cod_sub:"ادفع لما تستلم",
     trust_secure:"دفع آمن",trust_secure_sub:"معلوماتك محمية 100%",
     trust_return:"استرجاع سهل",trust_return_sub:" خلال 7 أيام",
-    testimonials_title:"ماذا يقول عملاؤنا"
+    testimonials_title:"ماذا يقول عملاؤنا",
+    suggested_title:"منتجات مقترحة",
+    nav_about:"من نحن",nav_return:"سياسة الاسترجاع",
+    about_title:"من نحن",
+    about_p1:"Smart Shopping هو متجر إلكتروني جزائري يهدف لتوفير أفضل المنتجات بأسعار مناسبة للجميع.",
+    about_p2:"نعمل على تلبية احتياجات عملائنا مع ضمان جودة عالية وخدمة عملاء ممتازة.",
+    about_p3:"نوفر الدفع عند الاستلام والتوصيل لجميع ولايات الجزائر لراحتكم.",
+    return_title:"سياسة الاسترجاع",
+    return_p1:"نحرص على رضاك التام عن مشترياتك. إذا لم تكن راضياً عن المنتج، يمكنك استرجاعه خلال 7 أيام من تاريخ الاستلام.",
+    return_conditions_title:"شروط الاسترجاع:",
+    return_c1:"يجب أن يكون المنتج في حالته الأصلية غير المستخدمة",
+    return_c2:"التغليف يجب أن يكون سليماً",
+    return_c3:"يجب إبلاغنا خلال 7 أيام من الاستلام",
+    return_c4:"تكلفة الشحن على العميل في حالة الإرجاع"
   },
   en: {
     announce:"🇩🇿 Cash on delivery — Delivery to all Algerian states",
@@ -690,7 +747,20 @@ var I18N = {
     trust_cod:"Cash on Delivery",trust_cod_sub:"Pay when you receive",
     trust_secure:"Secure Payment",trust_secure_sub:"Your info is 100% protected",
     trust_return:"Easy Returns",trust_return_sub:"Within 7 days",
-    testimonials_title:"What Our Customers Say"
+    testimonials_title:"What Our Customers Say",
+    suggested_title:"Suggested Products",
+    nav_about:"About Us",nav_return:"Return Policy",
+    about_title:"About Us",
+    about_p1:"Smart Shopping is an Algerian online store aiming to provide the best products at affordable prices.",
+    about_p2:"We work to meet our customers' needs with high quality and excellent customer service.",
+    about_p3:"We offer cash on delivery and shipping to all Algerian states for your convenience.",
+    return_title:"Return Policy",
+    return_p1:"We are committed to your complete satisfaction. If you're not happy with a product, you can return it within 7 days of receipt.",
+    return_conditions_title:"Return Conditions:",
+    return_c1:"Product must be in its original unused condition",
+    return_c2:"Packaging must be intact",
+    return_c3:"You must notify us within 7 days of receipt",
+    return_c4:"Shipping cost is the customer's responsibility for returns"
   }
 };
 
@@ -750,6 +820,26 @@ function init(){
       }).join('');
     }catch(e){console.error('testimonials err',e)}
   });
+}
+
+function showPage(name){var el=document.getElementById(name+'Page');if(el)el.classList.add('open')}
+function closePage(name){var el=document.getElementById(name+'Page');if(el)el.classList.remove('open')}
+
+function renderSuggested(currentId){
+  try{
+    var section=document.getElementById('suggestedSection');
+    var grid=document.getElementById('suggestedGrid');
+    if(!section||!grid)return;
+    var others=allProducts.filter(function(p){return p.id!==currentId&&p.active!==false});
+    if(!others.length){section.style.display='none';return}
+    var shuffled=others.sort(function(){return .5-Math.random()});
+    var picked=shuffled.slice(0,4);
+    section.style.display='block';
+    grid.innerHTML=picked.map(function(p){
+      var img=p.image1||'';
+      return '<div class="product-card" style="cursor:pointer" onclick="showProductDetail(\''+p.id+'\')"><div class="product-image-wrap"><img class="product-image" src="'+img+'" loading="lazy" alt=""></div><div class="product-body"><div class="product-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div><div class="product-price"><span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span></div></div></div>';
+    }).join('');
+  }catch(e){}
 }
 
 var activeCategory='';
@@ -1020,6 +1110,7 @@ function showProductDetail(id){
     populatePdWilaya();
     el=document.getElementById('products');if(el)el.classList.add('hidden');
     el=document.getElementById('productDetailSection');if(el)el.classList.remove('hidden');
+    renderSuggested(id);
     window.scrollTo({top:0,behavior:'smooth'});
   }catch(e){console.error('showProductDetail err',e)}
 }
