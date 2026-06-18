@@ -163,6 +163,7 @@ body.rtl{font-family:var(--font-ar)}
     <a href="#" onclick="showSection('orders')" id="nav-orders"><span class="icon">🛒</span><span>الطلبات</span></a>
     <a href="#" onclick="showSection('settings')" id="nav-settings"><span class="icon">⚙️</span><span>الإعدادات</span></a>
     <a href="#" onclick="showSection('testimonials')" id="nav-testimonials"><span class="icon">⭐</span><span>الشهادات</span></a>
+    <a href="#" onclick="showSection('pages')" id="nav-pages"><span class="icon">📄</span><span>الصفحات</span></a>
   </nav>
   <div class="sidebar-footer">Smart Shopping v1.0</div>
 </div>
@@ -280,7 +281,30 @@ body.rtl{font-family:var(--font-ar)}
       </tr></thead><tbody id="testimonials-list"></tbody></table></div></div>
     </div>
   </div>
+
+  <!-- Pages -->
+  <div id="sec-pages" class="hidden">
+    <div class="top-bar"><h1>الصفحات الثابتة</h1></div>
+    <div class="panel">
+      <div class="panel-header"><h3>من نحن</h3></div>
+      <div class="panel-body">
+        <div class="form-group"><label>العنوان (عربي)</label><input id="pg_about_title_ar"></div>
+        <div class="form-group"><label>المحتوى (عربي)</label><textarea id="pg_about_body_ar" rows="4"></textarea></div>
+        <div class="form-group"><label>العنوان (إنجليزي)</label><input id="pg_about_title_en"></div>
+        <div class="form-group"><label>المحتوى (إنجليزي)</label><textarea id="pg_about_body_en" rows="4"></textarea></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>سياسة الاسترجاع</h3></div>
+      <div class="panel-body">
+        <div class="form-group"><label>المحتوى (عربي)</label><textarea id="pg_return_body_ar" rows="6"></textarea></div>
+        <div class="form-group"><label>المحتوى (إنجليزي)</label><textarea id="pg_return_body_en" rows="6"></textarea></div>
+      </div>
+    </div>
+    <button class="btn btn-accent" onclick="savePages()" style="margin-top:8px">حفظ الصفحات</button>
+  </div>
 </div>
+
 <div class="modal-overlay" id="productModal">
 <div class="modal">
   <div class="modal-header">
@@ -423,7 +447,7 @@ function apiGet(action, params, callback) {
 
 // ===== NAV =====
 function showSection(name) {
-  ['dashboard','products','orders','settings','testimonials'].forEach(function(s) {
+  ['dashboard','products','orders','settings','testimonials','pages'].forEach(function(s) {
     document.getElementById('sec-' + s).classList.toggle('hidden', s !== name);
     document.getElementById('nav-' + s).classList.toggle('active', s === name);
   });
@@ -432,6 +456,7 @@ function showSection(name) {
   if (name === 'orders') loadOrders();
   if (name === 'settings') loadSettings();
   if (name === 'testimonials') loadTestimonials();
+  if (name === 'pages') loadPages();
 }
 
 function toast(msg, isNew) {
@@ -1058,6 +1083,38 @@ function deleteTestimonial(row, name) {
   s.src = API_URL + '?action=admin_delete_testimonial&_row=' + encodeURIComponent(row) + '&callback=' + cbName;
   s.onerror = function() { delete window[cbName]; toast('خطأ'); };
   document.head.appendChild(s);
+}
+
+// ===== PAGES =====
+function loadPages() {
+  apiGet('admin_settings', {}, function(data) {
+    if (!data) return;
+    document.getElementById('pg_about_title_ar').value = data.about_title_ar || 'من نحن';
+    document.getElementById('pg_about_body_ar').value = data.about_body_ar || '';
+    document.getElementById('pg_about_title_en').value = data.about_title_en || 'About Us';
+    document.getElementById('pg_about_body_en').value = data.about_body_en || '';
+    document.getElementById('pg_return_body_ar').value = data.return_body_ar || '';
+    document.getElementById('pg_return_body_en').value = data.return_body_en || '';
+  });
+}
+
+function savePages() {
+  var data = {
+    about_title_ar: document.getElementById('pg_about_title_ar').value,
+    about_body_ar: document.getElementById('pg_about_body_ar').value,
+    about_title_en: document.getElementById('pg_about_title_en').value,
+    about_body_en: document.getElementById('pg_about_body_en').value,
+    return_body_ar: document.getElementById('pg_return_body_ar').value,
+    return_body_en: document.getElementById('pg_return_body_en').value
+  };
+  var url = API_URL + '?action=admin_update_settings&callback=pg_' + Date.now();
+  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
+  var cbName = url.split('callback=')[1];
+  window[cbName] = function() { delete window[cbName]; toast('تم حفظ الصفحات'); };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() { toast('خطأ'); };
+  document.head.appendChild(script);
 }
 
 // ===== INIT =====
