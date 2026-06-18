@@ -170,6 +170,20 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .hidden{display:none!important}
 
+/* Quick Order */
+.product-actions{display:flex;gap:6px;margin-top:8px}
+.product-actions .btn-add{flex:1}
+.btn-qorder{padding:9px;border:1px solid var(--sale);border-radius:8px;background:transparent;color:var(--sale);cursor:pointer;font-family:var(--font);font-size:.78rem;font-weight:600;transition:all .2s;white-space:nowrap}
+.btn-qorder:hover{background:var(--sale);color:#fff}
+.qmodal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all .25s;padding:16px}
+.qmodal-overlay.open{opacity:1;visibility:visible}
+.qmodal{background:var(--card);border-radius:var(--radius);width:380px;max-width:100%;padding:28px 24px 24px;position:relative}
+.qmodal h3{font-size:1rem;font-weight:700;margin-bottom:4px}
+.qmodal .sub{font-size:.8rem;color:var(--text2);margin-bottom:18px}
+.qmodal .form-group{margin-bottom:12px}
+.qmodal .form-group input{padding:10px 12px;font-size:.85rem}
+.qmodal .close-btn{position:absolute;top:12px;left:12px;width:28px;height:28px;border:none;border-radius:6px;background:var(--bg);cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center}
+
 @media(max-width:768px){
   .hero{padding:32px 0}
   .hero h1{font-size:1.5rem}
@@ -286,6 +300,28 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
   </div>
 </div>
 
+<!-- Quick Order Modal -->
+<div class="qmodal-overlay" id="quickOrderModal" onclick="if(event.target===this)closeQuickOrder()">
+<div class="qmodal">
+  <button class="close-btn" onclick="closeQuickOrder()">✕</button>
+  <h3 data-i18n="qorder_title">طلب سريع</h3>
+  <p class="sub" data-i18n="qorder_sub" id="qorderProductName"></p>
+  <form id="quickOrderForm" onsubmit="submitQuickOrder(event)">
+    <input type="hidden" id="qorderProductId">
+    <div class="form-group">
+      <label data-i18n="form_name">الاسم</label>
+      <input type="text" id="qorderName" required>
+    </div>
+    <div class="form-group">
+      <label data-i18n="form_phone">الهاتف</label>
+      <input type="tel" id="qorderPhone" placeholder="0555 XX XX XX" required>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block btn-lg" id="qorderSubmit" data-i18n="qorder_btn">تأكيد الطلب السريع</button>
+  </form>
+  <div id="qorderSuccess" class="hidden" style="text-align:center;padding:16px 0"></div>
+</div>
+</div>
+
 <!-- Checkout -->
 <div class="modal-overlay" id="checkoutModal" onclick="if(event.target===this)closeCheckout()">
 <div class="modal">
@@ -399,7 +435,9 @@ var I18N = {
     footer_links:"روابط",footer_contact:"تواصل",footer_copy:"© 2026 Smart Shopping",
     nav_products:"المنتجات",nav_track:"تتبع الطلب",
     whatsapp_msg:"مرحبا، لدي طلب برقم",out_of_stock:"نفذ",currency:"د.ج",
-    status_pending:"قيد الانتظار",status_confirmed:"تم التأكيد",status_shipped:"تم الشحن",status_delivered:"تم التوصيل"
+    status_pending:"قيد الانتظار",status_confirmed:"تم التأكيد",status_shipped:"تم الشحن",status_delivered:"تم التوصيل",
+    qorder_title:"طلب سريع",qorder_sub:"طلب:",
+    qorder_btn:"تأكيد الطلب السريع",qorder_success:"تم إرسال طلبك!"
   },
   en: {
     announce:"🇩🇿 Cash on delivery — Delivery to all Algerian states",
@@ -422,7 +460,9 @@ var I18N = {
     footer_links:"Links",footer_contact:"Contact",footer_copy:"© 2026 Smart Shopping",
     nav_products:"Products",nav_track:"Track Order",
     whatsapp_msg:"Hello, I have order number",out_of_stock:"Sold out",currency:"DZD",
-    status_pending:"Pending",status_confirmed:"Confirmed",status_shipped:"Shipped",status_delivered:"Delivered"
+    status_pending:"Pending",status_confirmed:"Confirmed",status_shipped:"Shipped",status_delivered:"Delivered",
+    qorder_title:"Quick Order",qorder_sub:"Order:",
+    qorder_btn:"Confirm Quick Order",qorder_success:"Your order has been submitted!"
   }
 };
 
@@ -495,7 +535,9 @@ function renderProducts(){
           '<div class="qty-inline"><button onclick="changeQty(\''+p.id+'\',-1)">−</button>'+
           '<input value="'+qty+'" readonly>'+
           '<button onclick="changeQty(\''+p.id+'\',1)">+</button></div>':
-          '<button class="btn-add" onclick="addToCart(\''+p.id+'\')">'+t('add_to_cart')+'</button>'
+          '<div class="product-actions">'+
+          '<button class="btn-add" onclick="addToCart(\''+p.id+'\')">'+t('add_to_cart')+'</button>'+
+          '<button class="btn-qorder" onclick="quickOrder(\''+p.id+'\')">⚡</button></div>'
         )+
       '</div>'+
     '</div>';
@@ -624,6 +666,52 @@ function trackOrder(){
       '<div class="track-info"><strong>'+t('track_delivery')+':</strong> '+(currentLang==='ar'?(o.delivery_type==='Office'?'المكتب':'المنزل'):(o.delivery_type==='Office'?'Office':'Home'))+'</div>'+
       (il?'<div class="track-info"><strong>'+t('track_items')+':</strong> '+il+'</div>':'')+
       '<div class="track-info"><strong>'+t('track_total')+':</strong> '+Number(o.subtotal||0).toLocaleString()+' '+t('currency')+'</div>'+
+    '</div>';
+  });
+}
+
+// ===== QUICK ORDER =====
+var CUSTOMER_KEY = 'sk_customer';
+function quickOrder(id){
+  var p=allProducts.find(function(x){return x.id===id});if(!p)return;
+  document.getElementById('qorderProductId').value=id;
+  document.getElementById('qorderProductName').textContent=t('qorder_sub')+' '+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar);
+  var saved=JSON.parse(localStorage.getItem(CUSTOMER_KEY)||'{}');
+  document.getElementById('qorderName').value=saved.name||'';
+  document.getElementById('qorderPhone').value=saved.phone||'';
+  document.getElementById('qorderSuccess').classList.add('hidden');
+  document.getElementById('quickOrderForm').classList.remove('hidden');
+  document.getElementById('qorderSubmit').disabled=false;
+  document.getElementById('quickOrderModal').classList.add('open');
+}
+function closeQuickOrder(){document.getElementById('quickOrderModal').classList.remove('open')}
+function submitQuickOrder(e){
+  e.preventDefault();
+  var n=document.getElementById('qorderName').value.trim();
+  var p=document.getElementById('qorderPhone').value.trim();
+  if(!n||!p)return;
+  var pid=document.getElementById('qorderProductId').value;
+  var prod=allProducts.find(function(x){return x.id===pid});
+  if(!prod)return;
+  localStorage.setItem(CUSTOMER_KEY,JSON.stringify({name:n,phone:p}));
+  var qty=1;
+  var items=JSON.stringify([{id:pid,title:currentLang==='ar'?prod.title_ar:prod.title_en,price:prod.price,qty:qty}]);
+  document.getElementById('qorderSubmit').disabled=true;
+  apiCall('order',{
+    name:n,phone:p,wilaya_code:'16',wilaya_ar:'الجزائر',wilaya_en:'Alger',
+    delivery_type:'Home',items_json:items,subtotal:prod.price,note:''
+  },function(data){
+    document.getElementById('qorderSubmit').disabled=false;
+    if(!data||data.error||!data.ok){alert('Error');return}
+    document.getElementById('quickOrderForm').classList.add('hidden');
+    var sc=document.getElementById('qorderSuccess');sc.classList.remove('hidden');
+    var orderId=data.order_id;var wa=storeSettings.phone||'213557543177';
+    var msg=encodeURIComponent(t('whatsapp_msg')+' '+orderId);
+    sc.innerHTML='<div class="fade-in">'+
+      '<div style="width:40px;height:40px;border-radius:50%;background:#dcfce7;color:var(--success);display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin:0 auto 10px">✓</div>'+
+      '<p style="font-weight:700;color:var(--success);margin-bottom:4px">'+t('qorder_success')+'</p>'+
+      '<div style="font-size:1.2rem;font-weight:800;margin:8px 0;background:var(--bg);padding:6px 16px;border-radius:6px;display:inline-block;letter-spacing:.5px">'+orderId+'</div>'+
+      '<br><a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn" style="display:inline-flex;margin-top:10px">واتساب</a>'+
     '</div>';
   });
 }
