@@ -281,6 +281,25 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
 .back-to-top{position:fixed;bottom:24px;left:24px;width:44px;height:44px;border:none;border-radius:50%;background:var(--text);color:#fff;font-size:1.2rem;cursor:pointer;opacity:0;visibility:hidden;transition:all .3s;z-index:90;box-shadow:0 4px 12px rgba(0,0,0,.2)}
 .back-to-top.visible{opacity:1;visibility:visible}
 .back-to-top:hover{background:var(--sale);transform:translateY(-2px)}
+
+/* Scroll Reveal */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* Share */
+.product-share{display:flex;gap:6px;margin-top:6px}
+.share-btn{width:32px;height:32px;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:opacity .2s;text-decoration:none}
+.share-btn:hover{opacity:.8}
+.share-wa{background:#25d366;color:#fff}
+.share-fb{background:#1877f2;color:#fff}
+.share-tw{background:#1da1f2;color:#fff}
+
+/* Mobile Nav */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);z-index:100;padding:6px 0 env(safe-area-inset-bottom)}
+.mobile-nav a{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;color:var(--text2);font-size:.62rem;font-weight:600;padding:4px 0;flex:1}
+.mobile-nav a .icon{font-size:1.2rem}
+.mobile-nav a.active{color:var(--sale)}
+@media(max-width:768px){.mobile-nav{display:flex}}
 .testimonial-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
 .testimonial-stars{color:#f59e0b;font-size:.85rem;margin-bottom:6px}
 .testimonial-text{font-size:.82rem;color:var(--text);line-height:1.6;margin-bottom:10px;font-style:italic}
@@ -306,6 +325,7 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
   .cat-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
   .cat-btn{white-space:nowrap;font-size:.72rem;padding:4px 10px}
   .sort-select{font-size:.72rem;padding:4px 8px}
+  body{padding-bottom:64px}
 }
 @media(max-width:480px){
   .products-grid{grid-template-columns:1fr 1fr;gap:8px}
@@ -778,6 +798,11 @@ function renderProducts(){
           '<span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>'+
           (disc?'<span class="price-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>':'')+
         '</div>'+
+        '<div class="product-share">'+
+          '<a class="share-btn share-wa" href="https://wa.me/?text='+encodeURIComponent((currentLang==='ar'?p.title_ar:p.title_en||'')+' - '+Number(p.price).toLocaleString()+' DZD')+'" target="_blank" title="WhatsApp">💬</a>'+
+          '<a class="share-btn share-fb" href="https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(window.location.href)+'" target="_blank" title="Facebook">f</a>'+
+          '<a class="share-btn share-tw" href="https://twitter.com/intent/tweet?text='+encodeURIComponent((currentLang==='ar'?p.title_ar:p.title_en||'')+' - '+Number(p.price).toLocaleString()+' DZD')+'" target="_blank" title="Twitter">𝕏</a>'+
+        '</div>'+
         (out?'':qty>0?
           '<div class="product-actions"><div class="qty-inline"><button onclick="changeQty(\''+p.id+'\',-1)">−</button>'+
           '<input value="'+qty+'" readonly>'+
@@ -1068,10 +1093,28 @@ document.addEventListener('DOMContentLoaded',function(){init()});
 window.addEventListener('scroll',function(){
   var btn=document.querySelector('.back-to-top');
   if(btn)btn.classList.toggle('visible',window.scrollY>400);
+  document.querySelectorAll('.reveal:not(.visible)').forEach(function(el){
+    if(el.getBoundingClientRect().top<window.innerHeight-40)el.classList.add('visible');
+  });
 });
 function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
+function scrollToSection(id){
+  var el=document.getElementById(id);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+  document.querySelectorAll('.mobile-nav a').forEach(function(a){a.classList.remove('active')});
+  var links=document.querySelectorAll('.mobile-nav a[href="#'+id+'"]');
+  if(links.length)links[0].classList.add('active');
+}
 </script>
 
 <button class="back-to-top" onclick="scrollToTop()">↑</button>
+
+<nav class="mobile-nav">
+  <a href="#products" class="active" onclick="scrollToSection('products')"><span class="icon">🏠</span><span data-i18n="nav_products">المنتجات</span></a>
+  <a href="#" onclick="openCart();return false"><span class="icon">🛒</span><span data-i18n="cart_title">السلة</span></a>
+  <a href="#track-section" onclick="scrollToSection('track-section')"><span class="icon">📦</span><span data-i18n="nav_track">تتبع الطلب</span></a>
+  <a href="https://wa.me/213557543177" target="_blank"><span class="icon">💬</span><span>WhatsApp</span></a>
+</nav>
+
 </body>
 </html>
