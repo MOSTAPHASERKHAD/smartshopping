@@ -442,31 +442,25 @@ function saveProduct(e) {
     var endpoint = row ? 'admin_edit_product' : 'admin_add_product';
     if (row) data._row = row;
     else data.id = 'PROD-' + Date.now();
+    data.action = endpoint;
 
-    var url = API_URL + '?action=' + endpoint;
-    for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
-    var cbName = 'save_' + Date.now();
-    url += '&callback=' + cbName;
-    window[cbName] = function() {
-      delete window[cbName];
-      if (script.parentNode) document.head.removeChild(script);
+    fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify(Object.assign({ action: endpoint }, data))
+    }).then(function() {
       closeProductModal();
       toast(row ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح');
       submitBtn.disabled = false;
       submitBtn.textContent = 'حفظ';
       setTimeout(loadProducts, 2000);
-    };
-    var script = document.createElement('script');
-    script.src = url;
-    script.onerror = function() {
-      delete window[cbName];
+    }).catch(function() {
       closeProductModal();
       toast('تم الحفظ');
       submitBtn.disabled = false;
       submitBtn.textContent = 'حفظ';
       setTimeout(loadProducts, 2000);
-    };
-    document.head.appendChild(script);
+    });
   }
 
   var filesToUpload = [];
