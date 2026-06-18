@@ -513,6 +513,8 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
       <a href="#track-section" data-i18n="nav_track">تتبع الطلب</a>
       <a href="#" onclick="showPage('about');return false" data-i18n="nav_about">من نحن</a>
       <a href="#" onclick="showPage('return');return false" data-i18n="nav_return">سياسة الاسترجاع</a>
+      <a href="#" onclick="showPage('terms');return false" data-i18n="nav_terms">الشروط والأحكام</a>
+      <a href="#" onclick="showPage('privacy');return false" data-i18n="nav_privacy">سياسة الخصوصية</a>
     </div>
     <div>
       <h4 data-i18n="footer_contact">تواصل</h4>
@@ -549,6 +551,46 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
       <li data-i18n="return_c4">تكلفة الشحن على العميل في حالة الإرجاع</li>
     </ul>
   </div>
+</div>
+</div>
+
+<!-- Terms Page -->
+<div class="modal-overlay" id="termsPage" onclick="if(event.target===this)closePage('terms')">
+<div class="modal" style="max-width:650px">
+  <div class="modal-header"><h2 data-i18n="terms_title">الشروط والأحكام</h2><button class="modal-close-btn" onclick="closePage('terms')">✕</button></div>
+  <div class="modal-body" id="termsBody" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
+    <p data-i18n="terms_p1">باستخدامك لمتجر Smart Shopping، أنت توافق على الشروط والأحكام التالية.</p>
+    <h4 style="margin:12px 0 6px;font-size:.85rem;color:var(--text)" data-i18n="terms_conditions">الشروط:</h4>
+    <ul style="padding-right:20px;margin:0">
+      <li data-i18n="terms_c1">جميع الأسعار بالدينار الجزائري وتشمل الضريبة</li>
+      <li data-i18n="terms_c2">الدفع عند الاستلام هو طريقة الدفع الوحيدة حالياً</li>
+      <li data-i18n="terms_c3">نحتفظ بحق إلغاء الطلب في حال عدم توفر المنتج</li>
+      <li data-i18n="terms_c4">الصور للتمثيل فقط وقد تختلف عن المنتج الفعلي</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- Privacy Page -->
+<div class="modal-overlay" id="privacyPage" onclick="if(event.target===this)closePage('privacy')">
+<div class="modal" style="max-width:650px">
+  <div class="modal-header"><h2 data-i18n="privacy_title">سياسة الخصوصية</h2><button class="modal-close-btn" onclick="closePage('privacy')">✕</button></div>
+  <div class="modal-body" id="privacyBody" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
+    <p data-i18n="privacy_p1">نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية.</p>
+    <h4 style="margin:12px 0 6px;font-size:.85rem;color:var(--text)" data-i18n="privacy_collect">المعلومات التي نجمعها:</h4>
+    <ul style="padding-right:20px;margin:0">
+      <li data-i18n="privacy_c1">الاسم ورقم الهاتف والعنوان عند تقديم طلب</li>
+      <li data-i18n="privacy_c2">معلومات التصفح بشكل مجهول لتحسين الخدمة</li>
+    </ul>
+    <h4 style="margin:12px 0 6px;font-size:.85rem;color:var(--text)" data-i18n="privacy_use">استخدام المعلومات:</h4>
+    <ul style="padding-right:20px;margin:0">
+      <li data-i18n="privacy_u1">معالجة وشحن طلباتك فقط</li>
+      <li data-i18n="privacy_u2">التواصل معك بخصوص طلبك</li>
+      <li data-i18n="privacy_u3">لا نبيع أو نشارك بياناتك مع أطراف ثالثة</li>
+    </ul>
+  </div>
+</div>
+</div>
 </div>
 </div>
 
@@ -709,7 +751,24 @@ var I18N = {
     return_c1:"يجب أن يكون المنتج في حالته الأصلية غير المستخدمة",
     return_c2:"التغليف يجب أن يكون سليماً",
     return_c3:"يجب إبلاغنا خلال 7 أيام من الاستلام",
-    return_c4:"تكلفة الشحن على العميل في حالة الإرجاع"
+    return_c4:"تكلفة الشحن على العميل في حالة الإرجاع",
+    nav_terms:"الشروط والأحكام",nav_privacy:"سياسة الخصوصية",
+    terms_title:"الشروط والأحكام",
+    terms_p1:"باستخدامك لمتجر Smart Shopping، أنت توافق على الشروط والأحكام التالية.",
+    terms_conditions:"الشروط:",
+    terms_c1:"جميع الأسعار بالدينار الجزائري وتشمل الضريبة",
+    terms_c2:"الدفع عند الاستلام هو طريقة الدفع الوحيدة حالياً",
+    terms_c3:"نحتفظ بحق إلغاء الطلب في حال عدم توفر المنتج",
+    terms_c4:"الصور للتمثيل فقط وقد تختلف عن المنتج الفعلي",
+    privacy_title:"سياسة الخصوصية",
+    privacy_p1:"نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية.",
+    privacy_collect:"المعلومات التي نجمعها:",
+    privacy_c1:"الاسم ورقم الهاتف والعنوان عند تقديم طلب",
+    privacy_c2:"معلومات التصفح بشكل مجهول لتحسين الخدمة",
+    privacy_use:"استخدام المعلومات:",
+    privacy_u1:"معالجة وشحن طلباتك فقط",
+    privacy_u2:"التواصل معك بخصوص طلبك",
+    privacy_u3:"لا نبيع أو نشارك بياناتك مع أطراف ثالثة"
   },
   en: {
     announce:"🇩🇿 Cash on delivery — Delivery to all Algerian states",
@@ -754,7 +813,24 @@ var I18N = {
     return_c1:"Product must be in its original unused condition",
     return_c2:"Packaging must be intact",
     return_c3:"You must notify us within 7 days of receipt",
-    return_c4:"Shipping cost is the customer's responsibility for returns"
+    return_c4:"Shipping cost is the customer's responsibility for returns",
+    nav_terms:"Terms & Conditions",nav_privacy:"Privacy Policy",
+    terms_title:"Terms & Conditions",
+    terms_p1:"By using Smart Shopping, you agree to the following terms and conditions.",
+    terms_conditions:"Terms:",
+    terms_c1:"All prices are in Algerian Dinar and include tax",
+    terms_c2:"Cash on delivery is the only payment method currently",
+    terms_c3:"We reserve the right to cancel orders if the product is unavailable",
+    terms_c4:"Images are for illustration only and may differ from the actual product",
+    privacy_title:"Privacy Policy",
+    privacy_p1:"We respect your privacy and are committed to protecting your personal data.",
+    privacy_collect:"Information We Collect:",
+    privacy_c1:"Name, phone number, and address when placing an order",
+    privacy_c2:"Anonymous browsing information to improve service",
+    privacy_use:"How We Use Information:",
+    privacy_u1:"To process and ship your orders only",
+    privacy_u2:"To communicate with you about your order",
+    privacy_u3:"We do not sell or share your data with third parties"
   }
 };
 
@@ -831,6 +907,20 @@ function showPage(name){
     if(b2){
       var body2=currentLang==='ar'?storeSettings.return_body_ar:storeSettings.return_body_en;
       if(body2){b2.innerHTML=body2.split('\n').map(function(l){return'<p>'+l+'</p>'}).join('')}
+    }
+  }
+  if(name==='terms'){
+    var b3=document.getElementById('termsBody');
+    if(b3){
+      var body3=currentLang==='ar'?storeSettings.terms_body_ar:storeSettings.terms_body_en;
+      if(body3){b3.innerHTML=body3.split('\n').map(function(l){return'<p>'+l+'</p>'}).join('')}
+    }
+  }
+  if(name==='privacy'){
+    var b4=document.getElementById('privacyBody');
+    if(b4){
+      var body4=currentLang==='ar'?storeSettings.privacy_body_ar:storeSettings.privacy_body_en;
+      if(body4){b4.innerHTML=body4.split('\n').map(function(l){return'<p>'+l+'</p>'}).join('')}
     }
   }
 }

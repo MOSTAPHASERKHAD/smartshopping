@@ -301,6 +301,20 @@ body.rtl{font-family:var(--font-ar)}
         <div class="form-group"><label>المحتوى (إنجليزي)</label><textarea id="pg_return_body_en" rows="6"></textarea></div>
       </div>
     </div>
+    <div class="panel">
+      <div class="panel-header"><h3>الشروط والأحكام</h3></div>
+      <div class="panel-body">
+        <div class="form-group"><label>المحتوى (عربي)</label><textarea id="pg_terms_body_ar" rows="6"></textarea></div>
+        <div class="form-group"><label>المحتوى (إنجليزي)</label><textarea id="pg_terms_body_en" rows="6"></textarea></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>سياسة الخصوصية</h3></div>
+      <div class="panel-body">
+        <div class="form-group"><label>المحتوى (عربي)</label><textarea id="pg_privacy_body_ar" rows="6"></textarea></div>
+        <div class="form-group"><label>المحتوى (إنجليزي)</label><textarea id="pg_privacy_body_en" rows="6"></textarea></div>
+      </div>
+    </div>
     <button class="btn btn-accent" onclick="savePages()" style="margin-top:8px">حفظ الصفحات</button>
   </div>
 </div>
@@ -1095,6 +1109,10 @@ function loadPages() {
     document.getElementById('pg_about_body_en').value = data.about_body_en || '';
     document.getElementById('pg_return_body_ar').value = data.return_body_ar || '';
     document.getElementById('pg_return_body_en').value = data.return_body_en || '';
+    if(document.getElementById('pg_terms_body_ar')) document.getElementById('pg_terms_body_ar').value = data.terms_body_ar || '';
+    if(document.getElementById('pg_terms_body_en')) document.getElementById('pg_terms_body_en').value = data.terms_body_en || '';
+    if(document.getElementById('pg_privacy_body_ar')) document.getElementById('pg_privacy_body_ar').value = data.privacy_body_ar || '';
+    if(document.getElementById('pg_privacy_body_en')) document.getElementById('pg_privacy_body_en').value = data.privacy_body_en || '';
   });
 }
 
@@ -1105,7 +1123,11 @@ function savePages() {
     about_title_en: document.getElementById('pg_about_title_en').value,
     about_body_en: document.getElementById('pg_about_body_en').value,
     return_body_ar: document.getElementById('pg_return_body_ar').value,
-    return_body_en: document.getElementById('pg_return_body_en').value
+    return_body_en: document.getElementById('pg_return_body_en').value,
+    terms_body_ar: (document.getElementById('pg_terms_body_ar')||{}).value || '',
+    terms_body_en: (document.getElementById('pg_terms_body_en')||{}).value || '',
+    privacy_body_ar: (document.getElementById('pg_privacy_body_ar')||{}).value || '',
+    privacy_body_en: (document.getElementById('pg_privacy_body_en')||{}).value || ''
   };
   var url = API_URL + '?action=admin_update_settings&callback=pg_' + Date.now();
   for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
