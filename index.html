@@ -170,34 +170,38 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .hidden{display:none!important}
 
-/* Product Detail Overlay */
-.pdetail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;opacity:0;visibility:hidden;transition:all .25s;overflow-y:auto;padding:16px;display:flex;align-items:center;justify-content:center}
-.pdetail-overlay.open{opacity:1;visibility:visible}
-.pdetail{background:var(--card);border-radius:var(--radius);width:800px;max-width:100%;position:relative;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;max-height:90vh}
-.pdetail-image{background:#f7f7f7;min-height:300px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.pdetail-image img{width:100%;height:100%;object-fit:cover;display:block}
-.pdetail-content{padding:24px;overflow-y:auto;max-height:90vh}
-.pdetail-close{position:absolute;top:12px;right:12px;z-index:10;width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.9);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:background .15s}
-body.ltr .pdetail-close{right:auto;left:12px}
-.pdetail-close:hover{background:#fff}
-.pdetail h2{font-size:1.1rem;font-weight:700;margin-bottom:4px}
-.pdetail .price-big{font-size:1.2rem;font-weight:800;color:var(--sale);margin-bottom:8px}
-.pdetail .price-big .old{font-size:.85rem;color:var(--text2);text-decoration:line-through;font-weight:400;margin-right:6px}
-.pdetail .desc{font-size:.82rem;color:var(--text2);line-height:1.6;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-.pdetail .form-title{font-size:.85rem;font-weight:700;margin-bottom:12px}
-.pdetail .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0}
-.pdetail .form-group{margin-bottom:12px}
-.pdetail .form-group label{display:block;font-size:.75rem;font-weight:600;margin-bottom:3px;color:var(--text2);text-transform:uppercase;letter-spacing:.2px}
-.pdetail .form-group input,.pdetail .form-group select,.pdetail .form-group textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.82rem;outline:none;transition:border .15s;background:var(--bg)}
-.pdetail .form-group input:focus,.pdetail .form-group select:focus,.pdetail .form-group textarea:focus{border-color:var(--text)}
-.pdetail .form-group textarea{resize:vertical;min-height:50px}
-.pdetail .note-box{background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 10px;margin-bottom:12px;font-size:.75rem;color:#92400e;display:flex;gap:5px;align-items:flex-start}
+/* Product Detail Section (inline, not overlay) */
+#productDetailSection{background:var(--bg);padding:32px 0 48px}
+.back-link{display:inline-flex;align-items:center;gap:4px;color:var(--text2);text-decoration:none;font-size:.8rem;font-weight:500;margin-bottom:20px;transition:color .15s}
+.back-link:hover{color:var(--text)}
+.pdetail-layout{display:grid;grid-template-columns:1fr 1fr;gap:32px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.pdetail-img{background:#f7f7f7;min-height:300px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pdetail-img img{width:100%;height:100%;object-fit:cover;display:block}
+.pdetail-info{padding:28px 28px 28px 0}
+body.ltr .pdetail-info{padding:28px 0 28px 28px}
+.pdetail-info h2{font-size:1.25rem;font-weight:800;margin-bottom:6px}
+.pdetail-info .pd-price{font-size:1.3rem;font-weight:800;color:var(--sale);margin-bottom:4px}
+.pdetail-info .pd-price .pd-old{font-size:.85rem;color:var(--text2);text-decoration:line-through;font-weight:400;margin-right:6px}
+.pdetail-info .pd-desc{font-size:.82rem;color:var(--text2);line-height:1.7;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.pdetail-info .pd-form-title{font-size:.85rem;font-weight:700;margin-bottom:14px}
+.pdetail-info .pd-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pdetail-info .pd-group{margin-bottom:12px}
+.pdetail-info .pd-group label{display:block;font-size:.72rem;font-weight:600;margin-bottom:3px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px}
+.pdetail-info .pd-group input,.pdetail-info .pd-group select,.pdetail-info .pd-group textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.85rem;outline:none;transition:border .15s;background:var(--bg);color:var(--text)}
+.pdetail-info .pd-group input:focus,.pdetail-info .pd-group select:focus,.pdetail-info .pd-group textarea:focus{border-color:var(--text)}
+.pdetail-info .pd-group textarea{resize:vertical;min-height:55px}
+.pdetail-info .pd-note{background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:9px 11px;margin-bottom:14px;font-size:.75rem;color:#92400e;display:flex;gap:5px;align-items:flex-start}
+.pdetail-info .pd-success{text-align:center;padding:30px 0}
+.pdetail-info .pd-success .pd-check{width:48px;height:48px;border-radius:50%;background:#dcfce7;color:var(--success);display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin:0 auto 14px}
+.pdetail-info .pd-success h3{font-weight:800;font-size:1.1rem;color:var(--success);margin-bottom:4px}
+.pdetail-info .pd-success .pd-id{font-size:1.3rem;font-weight:800;margin:10px 0;background:var(--bg);padding:8px 20px;border-radius:6px;display:inline-block;letter-spacing:.5px}
 
-@media(max-width:700px){
-  .pdetail{grid-template-columns:1fr}
-  .pdetail-image{min-height:200px;max-height:250px}
-  .pdetail-content{padding:16px;max-height:none}
-  .pdetail{max-height:95vh}
+@media(max-width:768px){
+  .pdetail-layout{grid-template-columns:1fr}
+  .pdetail-img{min-height:200px;max-height:260px}
+  .pdetail-info{padding:20px}
+  body.ltr .pdetail-info{padding:20px}
+  .pdetail-info .pd-row{grid-template-columns:1fr}
 }
 
 .product-title a{color:inherit;text-decoration:none}
@@ -265,6 +269,66 @@ body.ltr .pdetail-close{right:auto;left:12px}
 </div>
 </section>
 
+<!-- Product Detail Page (inline) -->
+<section id="productDetailSection" class="hidden">
+<div class="container">
+  <a href="#" class="back-link" onclick="hideProductDetail();return false" data-i18n="back_products">← العودة للمنتجات</a>
+  <div class="pdetail-layout">
+    <div class="pdetail-img" id="pdImage">
+      <div style="color:var(--text2);font-size:.85rem;text-align:center;padding:40px" data-i18n="loading">جاري التحميل...</div>
+    </div>
+    <div class="pdetail-info">
+      <h2 id="pdTitle"></h2>
+      <div class="pd-price" id="pdPrice"></div>
+      <div class="pd-desc" id="pdDesc"></div>
+      <div class="pd-form-title" data-i18n="order_info">معلومات الطلب</div>
+      <form id="pdForm" onsubmit="submitProductDetail(event)">
+        <input type="hidden" id="pdProductId">
+        <div class="pd-row">
+          <div class="pd-group">
+            <label data-i18n="form_name">الاسم الكامل</label>
+            <input type="text" id="pdName" required>
+          </div>
+          <div class="pd-group">
+            <label data-i18n="form_phone">رقم الهاتف</label>
+            <input type="tel" id="pdPhone" placeholder="0555 XX XX XX" required>
+          </div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-group">
+            <label data-i18n="form_wilaya">الولاية</label>
+            <select id="pdWilaya" required>
+              <option value="" data-i18n="form_wilaya_select">اختر الولاية</option>
+            </select>
+          </div>
+          <div class="pd-group">
+            <label data-i18n="form_delivery">نوع التوصيل</label>
+            <select id="pdDelivery" required>
+              <option value="home" data-i18n="form_home">المنزل</option>
+              <option value="office" data-i18n="form_office">المكتب</option>
+            </select>
+          </div>
+        </div>
+        <div class="pd-group">
+          <label data-i18n="form_address">العنوان (الحي، الشارع، رقم المبنى)</label>
+          <input type="text" id="pdAddress" placeholder="مثال: حي السلام، شارع 5، رقم 12" required>
+        </div>
+        <div class="pd-group">
+          <label data-i18n="form_note">ملاحظة (اختياري)</label>
+          <textarea id="pdNote" rows="2" placeholder="...</textarea>
+        </div>
+        <div class="pd-note">
+          <span>⚠️</span>
+          <span data-i18n="delivery_note">سعر التوصيل يتم تأكيده بعد التواصل معك.</span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="pdSubmit" data-i18n="submit_order">تأكيد الطلب</button>
+      </form>
+      <div id="pdSuccess" class="hidden pd-success"></div>
+    </div>
+  </div>
+</div>
+</section>
+
 <section id="track-section" style="padding-bottom:48px">
 <div class="container">
   <div class="products-header">
@@ -321,60 +385,6 @@ body.ltr .pdetail-close{right:auto;left:12px}
     </div>
     <button class="btn btn-primary btn-block btn-lg" onclick="closeCart();openCheckout()" data-i18n="checkout_btn">إتمام الطلب</button>
   </div>
-</div>
-
-<!-- Product Detail Overlay -->
-<div class="pdetail-overlay" id="productDetailOverlay" onclick="if(event.target===this)closeProductDetail()">
-<div class="pdetail">
-  <button class="pdetail-close" onclick="closeProductDetail()">✕</button>
-  <div class="pdetail-image" id="pdetailImage">
-    <div style="color:var(--text2);font-size:.85rem" data-i18n="loading">جاري التحميل...</div>
-  </div>
-  <div class="pdetail-content" id="pdetailContent">
-    <h2 id="pdetailTitle"></h2>
-    <div class="price-big" id="pdetailPrice"></div>
-    <div class="desc" id="pdetailDesc"></div>
-    <div class="form-title" data-i18n="pdetail_form_title">معلومات الطلب</div>
-    <form id="pdetailForm" onsubmit="submitProductOrder(event)">
-      <input type="hidden" id="pdetailProductId">
-      <div class="form-row">
-        <div class="form-group">
-          <label data-i18n="form_name">الاسم</label>
-          <input type="text" id="pdetailName" required>
-        </div>
-        <div class="form-group">
-          <label data-i18n="form_phone">الهاتف</label>
-          <input type="tel" id="pdetailPhone" placeholder="0555 XX XX XX" required>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label data-i18n="form_wilaya">الولاية</label>
-          <select id="pdetailWilaya" required>
-            <option value="" data-i18n="form_wilaya_select">اختر الولاية</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label data-i18n="form_delivery">التوصيل</label>
-          <select id="pdetailDelivery" required>
-            <option value="home" data-i18n="form_home">المنزل</option>
-            <option value="office" data-i18n="form_office">المكتب</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label data-i18n="form_note">ملاحظة</label>
-        <textarea id="pdetailNote" rows="2" placeholder="الحي، الطابق، ..."></textarea>
-      </div>
-      <div class="note-box">
-        <span>⚠️</span>
-        <span data-i18n="delivery_note">سعر التوصيل يتم تأكيده بعد التواصل.</span>
-      </div>
-      <button type="submit" class="btn btn-primary btn-block btn-lg" id="pdetailSubmit" data-i18n="submit_order">تأكيد الطلب</button>
-    </form>
-    <div id="pdetailSuccess" class="hidden" style="text-align:center;padding:20px 0"></div>
-  </div>
-</div>
 </div>
 
 <!-- Checkout -->
@@ -491,7 +501,8 @@ var I18N = {
     nav_products:"المنتجات",nav_track:"تتبع الطلب",
     whatsapp_msg:"مرحبا، لدي طلب برقم",out_of_stock:"نفذ",currency:"د.ج",
     status_pending:"قيد الانتظار",status_confirmed:"تم التأكيد",status_shipped:"تم الشحن",status_delivered:"تم التوصيل",
-    pdetail_form_title:"معلومات الطلب",qorder_success:"تم إرسال طلبك!"
+    qorder_success:"تم إرسال طلبك!",back_products:"← العودة للمنتجات",
+    form_address:"العنوان (الحي، الشارع، رقم المبنى)",order_info:"معلومات الطلب"
   },
   en: {
     announce:"🇩🇿 Cash on delivery — Delivery to all Algerian states",
@@ -515,7 +526,8 @@ var I18N = {
     nav_products:"Products",nav_track:"Track Order",
     whatsapp_msg:"Hello, I have order number",out_of_stock:"Sold out",currency:"DZD",
     status_pending:"Pending",status_confirmed:"Confirmed",status_shipped:"Shipped",status_delivered:"Delivered",
-    pdetail_form_title:"Order Information",qorder_success:"Your order has been submitted!"
+    qorder_success:"Your order has been submitted!",back_products:"← Back to products",
+    form_address:"Address (neighborhood, street, building)",order_info:"Order Information"
   }
 };
 
@@ -579,7 +591,7 @@ function renderProducts(){
         (out&&!disc?'<span class="product-badge" style="background:#6b7280">'+t('out_of_stock')+'</span>':'')+
       '</div>'+
       '<div class="product-body">'+
-        '<div class="product-title"><a href="#" onclick="openProductDetail(\''+p.id+'\');return false">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</a></div>'+
+        '<div class="product-title"><a href="#" onclick="showProductDetail(\''+p.id+'\');return false">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</a></div>'+
         '<div class="product-price">'+
           '<span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>'+
           (disc?'<span class="price-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>':'')+
@@ -590,7 +602,7 @@ function renderProducts(){
           '<button onclick="changeQty(\''+p.id+'\',1)">+</button></div></div>':
           '<div class="product-actions">'+
           '<button class="btn-add" onclick="addToCart(\''+p.id+'\')">'+t('add_to_cart')+'</button>'+
-          '<button class="btn-qorder" onclick="openProductDetail(\''+p.id+'\')">اطلب</button></div>'
+          '<button class="btn-qorder" onclick="showProductDetail(\''+p.id+'\')">اطلب</button></div>'
         )+
       '</div>'+
     '</div>';
@@ -725,61 +737,71 @@ function trackOrder(){
 
 // ===== PRODUCT DETAIL =====
 var CUSTOMER_KEY = 'sk_customer';
-function openProductDetail(id){
+function showProductDetail(id){
   var p=allProducts.find(function(x){return x.id===id});if(!p)return;
-  document.getElementById('pdetailProductId').value=id;
-  document.getElementById('pdetailTitle').textContent=currentLang==='ar'?p.title_ar:p.title_en||p.title_ar;
-  var priceHtml='<span>'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>';
-  if(p.old_price>0)priceHtml+=' <span class="old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>';
-  document.getElementById('pdetailPrice').innerHTML=priceHtml;
-  document.getElementById('pdetailDesc').textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
+  document.getElementById('pdProductId').value=id;
+  document.getElementById('pdTitle').textContent=currentLang==='ar'?p.title_ar:p.title_en||p.title_ar;
+  var ph='<span>'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>';
+  if(p.old_price>0)ph+=' <span class="pd-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>';
+  document.getElementById('pdPrice').innerHTML=ph;
+  document.getElementById('pdDesc').textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
   var img=p.image1||'';
-  document.getElementById('pdetailImage').innerHTML=img?'<img src="'+img+'" alt="" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">':'<div style="color:var(--text2);font-size:.85rem" data-i18n="no_results">لا توجد منتجات</div>';
+  document.getElementById('pdImage').innerHTML=img?'<img src="'+img+'" alt="" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">':'<div style="color:var(--text2);font-size:.85rem">No Image</div>';
   var saved=JSON.parse(localStorage.getItem(CUSTOMER_KEY)||'{}');
-  document.getElementById('pdetailName').value=saved.name||'';
-  document.getElementById('pdetailPhone').value=saved.phone||'';
-  document.getElementById('pdetailSuccess').classList.add('hidden');
-  document.getElementById('pdetailForm').classList.remove('hidden');
-  document.getElementById('pdetailSubmit').disabled=false;
-  populateWilayasDetail();
-  document.getElementById('productDetailOverlay').classList.add('open');document.body.style.overflow='hidden';
+  document.getElementById('pdName').value=saved.name||'';
+  document.getElementById('pdPhone').value=saved.phone||'';
+  document.getElementById('pdAddress').value=saved.address||'';
+  document.getElementById('pdSuccess').classList.add('hidden');
+  document.getElementById('pdForm').classList.remove('hidden');
+  document.getElementById('pdSubmit').disabled=false;
+  populatePdWilaya();
+  document.getElementById('products').classList.add('hidden');
+  document.getElementById('productDetailSection').classList.remove('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
 }
-function closeProductDetail(){document.getElementById('productDetailOverlay').classList.remove('open');document.body.style.overflow=''}
-function populateWilayasDetail(){
-  var s=document.getElementById('pdetailWilaya');if(s.options.length>1)return;
+function hideProductDetail(){
+  document.getElementById('products').classList.remove('hidden');
+  document.getElementById('productDetailSection').classList.add('hidden');
+}
+function populatePdWilaya(){
+  var s=document.getElementById('pdWilaya');if(s.options.length>1)return;
   WILAYAS.forEach(function(w){var o=document.createElement('option');o.value=w.code;o.textContent=w.code+' - '+(currentLang==='ar'?w.ar:w.en);s.appendChild(o)});
 }
-function submitProductOrder(e){
+function submitProductDetail(e){
   e.preventDefault();
-  var n=document.getElementById('pdetailName').value.trim();
-  var ph=document.getElementById('pdetailPhone').value.trim();
-  var w=document.getElementById('pdetailWilaya').value;
-  var d=document.getElementById('pdetailDelivery').value;
-  var note=document.getElementById('pdetailNote').value.trim();
-  if(!n||!ph||!w)return;
-  var pid=document.getElementById('pdetailProductId').value;
+  var n=document.getElementById('pdName').value.trim();
+  var ph=document.getElementById('pdPhone').value.trim();
+  var w=document.getElementById('pdWilaya').value;
+  var d=document.getElementById('pdDelivery').value;
+  var addr=document.getElementById('pdAddress').value.trim();
+  var note=(document.getElementById('pdNote').value.trim())+' | '+addr;
+  if(!n||!ph||!w||!addr)return;
+  var pid=document.getElementById('pdProductId').value;
   var prod=allProducts.find(function(x){return x.id===pid});if(!prod)return;
   var wil=WILAYAS.find(function(x){return x.code===w});
-  localStorage.setItem(CUSTOMER_KEY,JSON.stringify({name:n,phone:ph}));
+  localStorage.setItem(CUSTOMER_KEY,JSON.stringify({name:n,phone:ph,address:addr}));
   var items=JSON.stringify([{id:pid,title:currentLang==='ar'?prod.title_ar:prod.title_en,price:prod.price,qty:1}]);
-  document.getElementById('pdetailSubmit').disabled=true;
+  document.getElementById('pdSubmit').disabled=true;
   apiCall('order',{
     name:n,phone:ph,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
     delivery_type:d==='office'?'Office':'Home',items_json:items,subtotal:prod.price,note:note
   },function(data){
-    document.getElementById('pdetailSubmit').disabled=false;
+    document.getElementById('pdSubmit').disabled=false;
     if(!data||data.error||!data.ok){alert('Error: '+(data?data.error||'Unknown error':'Network error'));return}
-    document.getElementById('pdetailForm').classList.add('hidden');
-    var sc=document.getElementById('pdetailSuccess');sc.classList.remove('hidden');
+    document.getElementById('pdForm').classList.add('hidden');
+    var sc=document.getElementById('pdSuccess');sc.classList.remove('hidden');
     var orderId=data.order_id;var wa=storeSettings.phone||'213557543177';
     var msg=encodeURIComponent(t('whatsapp_msg')+' '+orderId);
     sc.innerHTML='<div class="fade-in">'+
-      '<div style="width:44px;height:44px;border-radius:50%;background:#dcfce7;color:var(--success);display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin:0 auto 12px">✓</div>'+
-      '<p style="font-weight:800;font-size:1.1rem;color:var(--success);margin-bottom:4px">'+t('order_success')+'</p>'+
+      '<div class="pd-check">✓</div>'+
+      '<h3>'+t('order_success')+'</h3>'+
       '<p style="color:var(--text2);font-size:.8rem">'+t('order_num')+':</p>'+
-      '<div style="font-size:1.3rem;font-weight:800;margin:8px 0;background:var(--bg);padding:8px 20px;border-radius:6px;display:inline-block;letter-spacing:.5px">'+orderId+'</div>'+
-      '<br><a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn" style="display:inline-flex;margin-top:12px">واتساب</a>'+
+      '<div class="pd-id">'+orderId+'</div>'+
+      '<p style="color:var(--text2);font-size:.75rem;margin-top:4px">'+t('delivery_note')+'</p>'+
+      '<a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn" style="display:inline-flex;margin-top:12px">واتساب</a>'+
+      '<br><button class="btn btn-outline btn-sm" style="margin-top:12px" onclick="hideProductDetail()" data-i18n="back_products">← العودة للمنتجات</button>'+
     '</div>';
+    document.querySelector('.pd-success .btn-outline').textContent=t('back_products');
   });
 }
 
