@@ -707,39 +707,43 @@ function changeQty(id,d){
 function removeFromCart(id){cart=cart.filter(function(c){return c.id!==id});saveCart();renderProducts();renderCart()}
 
 function saveCart(){
-  localStorage.setItem(CART_KEY,JSON.stringify(cart));
-  var c=cart.reduce(function(s,i){return s+i.qty},0);
-  var cc=document.getElementById('cartCount');if(cc)cc.textContent=c;
+  try{
+    localStorage.setItem(CART_KEY,JSON.stringify(cart));
+    var c=cart.reduce(function(s,i){return s+i.qty},0);
+    var cc=document.getElementById('cartCount');if(cc)cc.textContent=c;
+  }catch(e){}
 }
 
 function renderCart(){
-  saveCart();
-  var c=document.getElementById('cartItems');var f=document.getElementById('cartFooter');
-  if(!c)return;
-  var cnt=cart.reduce(function(s,i){return s+i.qty},0);
-  var cl=document.getElementById('cartCountLabel');if(cl)cl.textContent='('+cnt+')';
-  if(!cart.length){c.innerHTML='<div class="cart-empty"><p>'+t('cart_empty')+'</p></div>';if(f)f.style.display='none';return}
-  if(f)f.style.display='block';var sub=0;
-  c.innerHTML=cart.map(function(item){
-    var p=allProducts.find(function(x){return x.id===item.id});if(!p)return'';
-    var t=p.price*item.qty;sub+=t;
-    var img=p.image1||'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="%23f0f0f0"><rect width="64" height="64"/></svg>';
-    return '<div class="cart-item">'+
-      '<img class="cart-item-img" src="'+img+'" alt="">'+
-      '<div class="cart-item-info">'+
-        '<div class="cart-item-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div>'+
-        '<div class="cart-item-price">'+Number(p.price).toLocaleString()+' '+t('currency')+'</div>'+
-        '<div class="cart-item-bottom">'+
-          '<div class="qty-inline"><button onclick="changeQty(\''+item.id+'\',-1)">−</button>'+
-          '<input value="'+item.qty+'" readonly>'+
-          '<button onclick="changeQty(\''+item.id+'\',1)">+</button></div>'+
-          '<span class="cart-item-total">'+Number(t).toLocaleString()+' '+t('currency')+'</span>'+
+  try{
+    saveCart();
+    var c=document.getElementById('cartItems');var f=document.getElementById('cartFooter');
+    if(!c)return;
+    var cnt=cart.reduce(function(s,i){return s+i.qty},0);
+    var cl=document.getElementById('cartCountLabel');if(cl)cl.textContent='('+cnt+')';
+    if(!cart.length){c.innerHTML='<div class="cart-empty"><p>'+t('cart_empty')+'</p></div>';if(f)f.style.display='none';return}
+    if(f)f.style.display='block';var sub=0;
+    c.innerHTML=cart.map(function(item){
+      var p=allProducts.find(function(x){return x.id===item.id});if(!p)return'';
+      var t=p.price*item.qty;sub+=t;
+      var img=p.image1||'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="%23f0f0f0"><rect width="64" height="64"/></svg>';
+      return '<div class="cart-item">'+
+        '<img class="cart-item-img" src="'+img+'" alt="">'+
+        '<div class="cart-item-info">'+
+          '<div class="cart-item-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div>'+
+          '<div class="cart-item-price">'+Number(p.price).toLocaleString()+' '+t('currency')+'</div>'+
+          '<div class="cart-item-bottom">'+
+            '<div class="qty-inline"><button onclick="changeQty(\''+item.id+'\',-1)">−</button>'+
+            '<input value="'+item.qty+'" readonly>'+
+            '<button onclick="changeQty(\''+item.id+'\',1)">+</button></div>'+
+            '<span class="cart-item-total">'+Number(t).toLocaleString()+' '+t('currency')+'</span>'+
+          '</div>'+
+          '<div class="cart-item-remove" onclick="removeFromCart(\''+item.id+'\')">'+t('remove')+'</div>'+
         '</div>'+
-        '<div class="cart-item-remove" onclick="removeFromCart(\''+item.id+'\')">'+t('remove')+'</div>'+
-      '</div>'+
-    '</div>';
-  }).join('');
-  var cs=document.getElementById('cartSubtotal');if(cs)cs.textContent=sub.toLocaleString()+' '+t('currency');
+      '</div>';
+    }).join('');
+    var cs=document.getElementById('cartSubtotal');if(cs)cs.textContent=sub.toLocaleString()+' '+t('currency');
+  }catch(e){}
 }
 
 function openCart(){try{document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartDrawer').classList.add('open');document.body.style.overflow='hidden'}catch(e){}}
