@@ -72,6 +72,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
 .modal h3{margin-bottom:16px;font-size:1.1rem}
 
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--success);color:#fff;padding:12px 24px;border-radius:8px;font-weight:600;font-size:.85rem;z-index:3000;animation:slideUp .3s}
+.toast-new{bottom:70px;background:var(--accent)}
 @keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
 .empty{text-align:center;padding:40px;color:var(--text-light)}
@@ -83,6 +84,13 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .img-thumb{width:48px;height:48px;object-fit:cover;border-radius:6px;background:#f0f0f0}
+.order-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.order-filters input,.order-filters select{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.8rem;outline:none}
+.order-filters input:focus,.order-filters select:focus{border-color:var(--accent)}
+.order-filters input{flex:1;min-width:150px}
+.order-filters select{min-width:120px}
+.new-order-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-left:4px;animation:pulse 1s infinite}
+@keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
 
 @media(max-width:768px){
 .sidebar{width:60px}.sidebar-header h2,.sidebar-header p,.sidebar-nav a span:not(.icon){display:none}
@@ -116,6 +124,8 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
       <div class="stat-card"><div class="label">الطلبات</div><div class="value" id="stat-orders">0</div></div>
       <div class="stat-card"><div class="label">قيد الانتظار</div><div class="value" id="stat-pending" style="color:#ffc107">0</div></div>
       <div class="stat-card"><div class="label">الإيراد</div><div class="value success" id="stat-revenue">0 DZD</div></div>
+      <div class="stat-card"><div class="label">طلبات اليوم</div><div class="value" id="stat-today" style="color:var(--info)">0</div></div>
+      <div class="stat-card"><div class="label">إيراد اليوم</div><div class="value success" id="stat-today-revenue">0 DZD</div></div>
     </div>
     <div class="panel">
       <div class="panel-header"><h3>آخر الطلبات</h3></div>
@@ -140,11 +150,24 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);min-h
 
   <!-- Orders -->
   <div id="sec-orders" class="hidden">
-    <div class="top-bar"><h1>الطلبات</h1></div>
+    <div class="top-bar"><h1>الطلبات <span id="orders-count-badge"></span></h1></div>
     <div class="panel">
-      <div class="panel-body"><div class="table-wrap"><table><thead><tr>
-        <th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>الولاية</th><th>التوصيل</th><th>المبلغ</th><th>الحالة</th><th>إجراءات</th>
-      </tr></thead><tbody id="orders-list"></tbody></table></div></div>
+      <div class="panel-body">
+        <div class="order-filters">
+          <input type="text" id="orderSearch" placeholder="بحث برقم الطلب أو اسم العميل أو الهاتف..." oninput="renderOrders()">
+          <select id="orderStatusFilter" onchange="renderOrders()">
+            <option value="">جميع الحالات</option>
+            <option value="pending">قيد الانتظار</option>
+            <option value="confirmed">تم التأكيد</option>
+            <option value="shipped">تم الشحن</option>
+            <option value="delivered">تم التوصيل</option>
+            <option value="cancelled">ملغي</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>الولاية</th><th>التوصيل</th><th>المبلغ</th><th>الحالة</th><th>إجراءات</th>
+        </tr></thead><tbody id="orders-list"></tbody></table></div>
+      </div>
     </div>
   </div>
 
@@ -286,15 +309,30 @@ function showSection(name) {
   if (name === 'settings') loadSettings();
 }
 
-function toast(msg) {
+function toast(msg, isNew) {
   var el = document.createElement('div');
-  el.className = 'toast';
+  el.className = 'toast' + (isNew ? ' toast-new' : '');
   el.textContent = msg;
   document.body.appendChild(el);
   setTimeout(function() { el.remove(); }, 3000);
 }
 
+function playNotification() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.setValueAtTime(1000, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
+  } catch(e) {}
+}
+
 // ===== DASHBOARD =====
+var lastOrderCount = 0;
 function loadDashboard() {
   apiGet('admin_list', {}, function(data) {
     if (data && data.products) {
@@ -304,14 +342,25 @@ function loadDashboard() {
   });
   apiGet('admin_orders', {}, function(data) {
     if (data && data.orders) {
+      var oldCount = allOrders.length;
       allOrders = data.orders;
       document.getElementById('stat-orders').textContent = data.orders.length;
       var pending = data.orders.filter(function(o) { return o.status === 'pending'; }).length;
       document.getElementById('stat-pending').textContent = pending;
       var revenue = data.orders.reduce(function(s, o) { return s + (Number(o.subtotal) || 0); }, 0);
       document.getElementById('stat-revenue').textContent = revenue.toLocaleString() + ' DZD';
+      var today = new Date().toISOString().substring(0,10);
+      var todayOrders = data.orders.filter(function(o) { return o.created_at && o.created_at.substring(0,10) === today; });
+      document.getElementById('stat-today').textContent = todayOrders.length;
+      var todayRev = todayOrders.reduce(function(s, o) { return s + (Number(o.subtotal) || 0); }, 0);
+      document.getElementById('stat-today-revenue').textContent = todayRev.toLocaleString() + ' DZD';
+      if (oldCount > 0 && data.orders.length > oldCount) {
+        playNotification();
+        toast('🔔 طلب جديد!', true);
+      }
+      lastOrderCount = data.orders.length;
       var html = data.orders.slice(0, 5).map(function(o) {
-        return '<tr><td><strong>' + o.order_id + '</strong></td><td>' + o.name + '</td><td>' + o.phone + '</td><td>' + o.wilaya_ar + '</td><td>' + Number(o.subtotal).toLocaleString() + ' DZD</td><td><span class="badge badge-' + o.status + '">' + getStatusText(o.status) + '</span></td></tr>';
+        return '<tr><td><strong>' + o.order_id + '</strong></td><td>' + o.name + '</td><td><a href="https://wa.me/' + o.phone + '" target="_blank" style="color:var(--accent)">' + o.phone + '</a></td><td>' + o.wilaya_ar + '</td><td>' + Number(o.subtotal).toLocaleString() + ' DZD</td><td><span class="badge badge-' + o.status + '">' + getStatusText(o.status) + '</span></td></tr>';
       }).join('');
       document.getElementById('dash-orders').innerHTML = html || '<tr><td colspan="6" class="empty">لا توجد طلبات</td></tr>';
     }
@@ -531,38 +580,57 @@ function deleteProduct(row, name) {
 
 // ===== ORDERS =====
 function loadOrders() {
-  document.getElementById('orders-list').innerHTML = '<tr><td colspan="9" class="loading"><div class="spinner"></div></td></tr>';
   apiGet('admin_orders', {}, function(data) {
     if (!data || !data.orders) return;
     allOrders = data.orders;
-    if (!data.orders.length) {
-      document.getElementById('orders-list').innerHTML = '<tr><td colspan="9" class="empty">لا توجد طلبات</td></tr>';
-      return;
-    }
-    var html = data.orders.map(function(o) {
-      var items = [];
-      try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
-      var itemsText = items.map(function(it) { return it.title + ' x' + it.qty; }).join(', ');
-      return '<tr>' +
-        '<td><strong>' + o.order_id + '</strong></td>' +
-        '<td>' + (o.created_at || '').substring(0, 10) + '</td>' +
-        '<td>' + o.name + '</td>' +
-        '<td><a href="https://wa.me/' + o.phone + '" target="_blank" style="color:var(--accent)">' + o.phone + '</a></td>' +
-        '<td>' + o.wilaya_ar + '</td>' +
-        '<td>' + (o.delivery_type === 'Office' ? 'مكتب' : 'منزل') + '</td>' +
-        '<td>' + Number(o.subtotal).toLocaleString() + ' DZD</td>' +
-        '<td><select onchange="updateOrderStatus(\'' + o._row + '\',this.value)" style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:.75rem">' +
-          '<option value="pending"' + (o.status === 'pending' ? ' selected' : '') + '>قيد الانتظار</option>' +
-          '<option value="confirmed"' + (o.status === 'confirmed' ? ' selected' : '') + '>تم التأكيد</option>' +
-          '<option value="shipped"' + (o.status === 'shipped' ? ' selected' : '') + '>تم الشحن</option>' +
-          '<option value="delivered"' + (o.status === 'delivered' ? ' selected' : '') + '>تم التوصيل</option>' +
-          '<option value="cancelled"' + (o.status === 'cancelled' ? ' selected' : '') + '>ملغي</option>' +
-        '</select></td>' +
-        '<td><button class="btn btn-info btn-sm" onclick="viewOrder(' + o._row + ')">تفاصيل</button></td>' +
-      '</tr>';
-    }).join('');
-    document.getElementById('orders-list').innerHTML = html;
+    renderOrders();
   });
+}
+
+function renderOrders() {
+  var q = (document.getElementById('orderSearch').value || '').toLowerCase();
+  var sf = document.getElementById('orderStatusFilter').value;
+  var filtered = allOrders.filter(function(o) {
+    if (sf && o.status !== sf) return false;
+    if (q) {
+      var match = (o.order_id || '').toLowerCase().indexOf(q) > -1 ||
+                  (o.name || '').toLowerCase().indexOf(q) > -1 ||
+                  (o.phone || '').indexOf(q) > -1;
+      if (!match) return false;
+    }
+    return true;
+  });
+  document.getElementById('orders-count-badge').textContent = '(' + filtered.length + ')';
+  if (!filtered.length) {
+    document.getElementById('orders-list').innerHTML = '<tr><td colspan="9" class="empty">لا توجد طلبات مطابقة</td></tr>';
+    return;
+  }
+  var html = filtered.map(function(o) {
+    var items = [];
+    try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
+    var itemsText = items.map(function(it) { return it.title + ' x' + it.qty; }).join(', ');
+    return '<tr>' +
+      '<td><strong>' + o.order_id + '</strong></td>' +
+      '<td>' + (o.created_at || '').substring(0, 10) + '</td>' +
+      '<td>' + o.name + '</td>' +
+      '<td><a href="https://wa.me/' + (o.phone || '') + '" target="_blank" style="color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:3px">📱 ' + (o.phone || '') + '</a></td>' +
+      '<td>' + o.wilaya_ar + '</td>' +
+      '<td>' + (o.delivery_type === 'Office' ? 'مكتب' : 'منزل') + '</td>' +
+      '<td>' + Number(o.subtotal).toLocaleString() + ' DZD</td>' +
+      '<td><select onchange="updateOrderStatus(\'' + o._row + '\',this.value)" style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:.75rem">' +
+        '<option value="pending"' + (o.status === 'pending' ? ' selected' : '') + '>قيد الانتظار</option>' +
+        '<option value="confirmed"' + (o.status === 'confirmed' ? ' selected' : '') + '>تم التأكيد</option>' +
+        '<option value="shipped"' + (o.status === 'shipped' ? ' selected' : '') + '>تم الشحن</option>' +
+        '<option value="delivered"' + (o.status === 'delivered' ? ' selected' : '') + '>تم التوصيل</option>' +
+        '<option value="cancelled"' + (o.status === 'cancelled' ? ' selected' : '') + '>ملغي</option>' +
+      '</select></td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="btn btn-info btn-sm" onclick="viewOrder(' + o._row + ')" style="margin-bottom:2px">تفاصيل</button> ' +
+        '<a href="https://wa.me/' + (o.phone || '') + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-sm">واتساب</a>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('orders-list').innerHTML = html;
 }
 
 function updateOrderStatus(row, status) {
@@ -583,24 +651,30 @@ function viewOrder(row) {
   var itemsHtml = items.map(function(it) {
     return '<tr><td>' + it.title + '</td><td>' + it.qty + '</td><td>' + Number(it.price).toLocaleString() + ' DZD</td><td>' + Number(it.price * it.qty).toLocaleString() + ' DZD</td></tr>';
   }).join('');
+  var noteText = o.notes || '';
+  var addrMatch = noteText.match(/\| (.+)$/);
+  var orderNote = noteText;
+  var orderAddr = '';
+  if (addrMatch) { orderAddr = addrMatch[1]; orderNote = noteText.replace(' | ' + orderAddr, ''); }
 
   document.getElementById('orderDetail').innerHTML =
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">' +
-      '<div><strong>رقم الطلب:</strong> ' + o.order_id + '</div>' +
-      '<div><strong>التاريخ:</strong> ' + o.created_at + '</div>' +
-      '<div><strong>العميل:</strong> ' + o.name + '</div>' +
-      '<div><strong>الهاتف:</strong> <a href="https://wa.me/' + o.phone + '" target="_blank" style="color:var(--accent)">' + o.phone + '</a></div>' +
-      '<div><strong>الولاية:</strong> ' + o.wilaya_ar + ' (' + o.wilaya_en + ')</div>' +
-      '<div><strong>التوصيل:</strong> ' + (o.delivery_type === 'Office' ? 'مكتب' : 'منزل') + '</div>' +
-      '<div><strong>الملاحظة:</strong> ' + (o.notes || 'لا توجد') + '</div>' +
-      '<div><strong>ملاحظة الشحن:</strong> ' + (o.shipping_note || '') + '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
+      '<div><strong>رقم الطلب:</strong><br>' + o.order_id + '</div>' +
+      '<div><strong>التاريخ:</strong><br>' + o.created_at + '</div>' +
+      '<div><strong>العميل:</strong><br>' + o.name + '</div>' +
+      '<div><strong>الهاتف:</strong><br><a href="https://wa.me/' + o.phone + '" target="_blank" style="color:var(--accent)">' + o.phone + '</a></div>' +
+      '<div><strong>الولاية:</strong><br>' + (o.wilaya_ar || '') + ' (' + (o.wilaya_en || '') + ')</div>' +
+      '<div><strong>التوصيل:</strong><br>' + (o.delivery_type === 'Office' ? 'مكتب' : 'منزل') + '</div>' +
+      (orderAddr ? '<div style="grid-column:1/-1"><strong>العنوان:</strong><br>' + orderAddr + '</div>' : '') +
+      (orderNote ? '<div style="grid-column:1/-1"><strong>الملاحظة:</strong><br>' + orderNote + '</div>' : '') +
     '</div>' +
     '<h4 style="margin-bottom:8px">المنتجات</h4>' +
     '<table style="width:100%;border-collapse:collapse;margin-bottom:16px"><thead><tr style="background:var(--bg)"><th style="padding:8px;text-align:right">المنتج</th><th style="padding:8px;text-align:right">الكمية</th><th style="padding:8px;text-align:right">السعر</th><th style="padding:8px;text-align:right">الإجمالي</th></tr></thead><tbody>' + itemsHtml + '</tbody></table>' +
     '<div style="text-align:left;font-weight:700;font-size:1.1rem">المجموع: ' + Number(o.subtotal).toLocaleString() + ' DZD</div>' +
-    '<div style="margin-top:12px;display:flex;gap:8px">' +
-      '<a href="https://wa.me/' + o.phone + '?text=' + encodeURIComponent('مرحبا ' + o.name + ', طلبك رقم ' + o.order_id + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-sm">📱 واتساب</a>' +
-      '<a href="tel:' + o.phone + '" class="btn btn-info btn-sm">📞 اتصال</a>' +
+    '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">' +
+      '<a href="https://wa.me/' + o.phone + '?text=' + encodeURIComponent('مرحبا ' + o.name + '، طلبك رقم ' + o.order_id + ' قيد المعالجة') + '" target="_blank" class="btn btn-success">📱 واتساب العميل</a>' +
+      '<a href="tel:' + o.phone + '" class="btn btn-info">📞 اتصال</a>' +
+      '<button class="btn btn-outline" onclick="closeOrderModal()">إغلاق</button>' +
     '</div>';
 
   document.getElementById('orderModal').classList.add('open');
@@ -643,7 +717,32 @@ function saveSettings() {
 }
 
 // ===== INIT =====
+var autoRefreshInterval = null;
+
+function startAutoRefresh() {
+  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+  autoRefreshInterval = setInterval(function() {
+    if (!document.getElementById('sec-dashboard').classList.contains('hidden')) {
+      loadDashboard();
+    }
+    if (!document.getElementById('sec-orders').classList.contains('hidden')) {
+      apiGet('admin_orders', {}, function(data) {
+        if (data && data.orders) {
+          var oldCount = allOrders.length;
+          allOrders = data.orders;
+          renderOrders();
+          if (oldCount > 0 && data.orders.length > oldCount) {
+            playNotification();
+            toast('🔔 طلب جديد!', true);
+          }
+        }
+      });
+    }
+  }, 15000);
+}
+
 loadDashboard();
+startAutoRefresh();
 </script>
 </body>
 </html>
