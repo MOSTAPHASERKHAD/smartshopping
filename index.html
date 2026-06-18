@@ -210,6 +210,8 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
 .product-actions .btn-add{flex:1}
 .btn-qorder{padding:9px 14px;border:1px solid var(--sale);border-radius:8px;background:transparent;color:var(--sale);cursor:pointer;font-family:var(--font);font-size:.78rem;font-weight:600;transition:all .2s;white-space:nowrap}
 .btn-qorder:hover{background:var(--sale);color:#fff}
+.buy-now{background:var(--sale)!important;color:#fff!important;border-color:var(--sale)!important}
+.buy-now:hover{opacity:.85!important}
 
 /* Category & Sort */
 .cat-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
@@ -522,7 +524,8 @@ var I18N = {
     status_pending:"قيد الانتظار",status_confirmed:"تم التأكيد",status_shipped:"تم الشحن",status_delivered:"تم التوصيل",
     qorder_success:"تم إرسال طلبك!",back_products:"← العودة للمنتجات",
     form_address:"العنوان (الحي، الشارع، رقم المبنى)",order_info:"معلومات الطلب",
-    cat_all:"الكل",sort_default:"الأحدث",sort_price_asc:"السعر: من الأقل",sort_price_desc:"السعر: من الأعلى",sort_name:"الاسم"
+    cat_all:"الكل",sort_default:"الأحدث",sort_price_asc:"السعر: من الأقل",sort_price_desc:"السعر: من الأعلى",sort_name:"الاسم",
+    buy_now:"شراء الآن"
   },
   en: {
     announce:"🇩🇿 Cash on delivery — Delivery to all Algerian states",
@@ -548,7 +551,8 @@ var I18N = {
     status_pending:"Pending",status_confirmed:"Confirmed",status_shipped:"Shipped",status_delivered:"Delivered",
     qorder_success:"Your order has been submitted!",back_products:"← Back to products",
     form_address:"Address (neighborhood, street, building)",order_info:"Order Information",
-    cat_all:"All",sort_default:"Newest",sort_price_asc:"Price: Low",sort_price_desc:"Price: High",sort_name:"Name"
+    cat_all:"All",sort_default:"Newest",sort_price_asc:"Price: Low",sort_price_desc:"Price: High",sort_name:"Name",
+    buy_now:"Buy Now"
   }
 };
 
@@ -647,8 +651,7 @@ function renderProducts(){
           '<input value="'+qty+'" readonly>'+
           '<button onclick="changeQty(\''+p.id+'\',1)">+</button></div></div>':
           '<div class="product-actions">'+
-          '<button class="btn-add" onclick="addToCart(\''+p.id+'\')">'+t('add_to_cart')+'</button>'+
-          '<button class="btn-qorder" onclick="showProductDetail(\''+p.id+'\')">اطلب</button></div>'
+          '<button class="btn-add buy-now" onclick="showProductDetail(\''+p.id+'\')">'+t('buy_now')+'</button></div>'
         )+
       '</div>'+
     '</div>';
