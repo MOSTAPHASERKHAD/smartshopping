@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Smart Shopping</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -339,7 +340,7 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
         </div>
         <div class="pd-group">
           <label data-i18n="form_note">ملاحظة (اختياري)</label>
-          <textarea id="pdNote" rows="2" placeholder="...</textarea>
+          <textarea id="pdNote" rows="2" placeholder="..."></textarea>
         </div>
         <div class="pd-note">
           <span>⚠️</span>
@@ -833,30 +834,32 @@ var CUSTOMER_KEY = 'sk_customer';
 function showProductDetail(id){
   try{
     var p=allProducts.find(function(x){return x.id===id});if(!p)return;
-    document.getElementById('pdProductId').value=id;
-    document.getElementById('pdTitle').textContent=currentLang==='ar'?p.title_ar:p.title_en||p.title_ar;
+    var el;
+    el=document.getElementById('pdProductId');if(el)el.value=id;
+    el=document.getElementById('pdTitle');if(el)el.textContent=currentLang==='ar'?p.title_ar:p.title_en||p.title_ar;
     var ph='<span>'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>';
     if(p.old_price>0)ph+=' <span class="pd-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>';
-    document.getElementById('pdPrice').innerHTML=ph;
-    document.getElementById('pdDesc').textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
+    el=document.getElementById('pdPrice');if(el)el.innerHTML=ph;
+    el=document.getElementById('pdDesc');if(el)el.textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
     var img=p.image1||'';
-    document.getElementById('pdImage').innerHTML=img?'<img src="'+img+'" alt="" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">':'<div style="color:var(--text2);font-size:.85rem">No Image</div>';
+    el=document.getElementById('pdImage');if(el)el.innerHTML=img?'<img src="'+img+'" alt="" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">':'<div style="color:var(--text2);font-size:.85rem">No Image</div>';
     var saved=JSON.parse(localStorage.getItem(CUSTOMER_KEY)||'{}');
-    document.getElementById('pdName').value=saved.name||'';
-    document.getElementById('pdPhone').value=saved.phone||'';
-    document.getElementById('pdAddress').value=saved.address||'';
-    document.getElementById('pdSuccess').classList.add('hidden');
-    document.getElementById('pdForm').classList.remove('hidden');
-    document.getElementById('pdSubmit').disabled=false;
+    el=document.getElementById('pdName');if(el)el.value=saved.name||'';
+    el=document.getElementById('pdPhone');if(el)el.value=saved.phone||'';
+    el=document.getElementById('pdAddress');if(el)el.value=saved.address||'';
+    el=document.getElementById('pdSuccess');if(el)el.classList.add('hidden');
+    el=document.getElementById('pdForm');if(el)el.classList.remove('hidden');
+    el=document.getElementById('pdSubmit');if(el)el.disabled=false;
     populatePdWilaya();
-    document.getElementById('products').classList.add('hidden');
-    document.getElementById('productDetailSection').classList.remove('hidden');
+    el=document.getElementById('products');if(el)el.classList.add('hidden');
+    el=document.getElementById('productDetailSection');if(el)el.classList.remove('hidden');
     window.scrollTo({top:0,behavior:'smooth'});
   }catch(e){console.error('showProductDetail err',e)}
 }
 function hideProductDetail(){
-  document.getElementById('products').classList.remove('hidden');
-  document.getElementById('productDetailSection').classList.add('hidden');
+  var el;
+  el=document.getElementById('products');if(el)el.classList.remove('hidden');
+  el=document.getElementById('productDetailSection');if(el)el.classList.add('hidden');
 }
 function populatePdWilaya(){
   var s=document.getElementById('pdWilaya');if(s.options.length>1)return;
