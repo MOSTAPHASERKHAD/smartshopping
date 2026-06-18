@@ -22,6 +22,11 @@ function doGet(e) {
     case 'admin_update_order': result = adminUpdateOrder(params); break;
     case 'admin_update_settings': result = adminUpdateSettings(params); break;
     case 'admin_delete_order': result = adminDeleteOrder(params); break;
+    case 'testimonials': result = getTestimonials(); break;
+    case 'admin_list_testimonials': result = adminListTestimonials(); break;
+    case 'admin_add_testimonial': result = adminAddTestimonial(params); break;
+    case 'admin_edit_testimonial': result = adminEditTestimonial(params); break;
+    case 'admin_delete_testimonial': result = adminDeleteTestimonial(params); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -47,6 +52,9 @@ function doPost(e) {
     case 'admin_delete_product': result = adminDeleteProduct(params); break;
     case 'admin_update_order': result = adminUpdateOrder(params); break;
     case 'admin_delete_order': result = adminDeleteOrder(params); break;
+    case 'admin_add_testimonial': result = adminAddTestimonial(params); break;
+    case 'admin_edit_testimonial': result = adminEditTestimonial(params); break;
+    case 'admin_delete_testimonial': result = adminDeleteTestimonial(params); break;
     case 'admin_update_settings': result = adminUpdateSettings(params); break;
     case 'admin_upload_image': result = adminUploadImage(params); break;
     default: result = { error: 'Unknown action' };
@@ -247,6 +255,90 @@ function adminUpdateSettings(params) {
     }
     if (!found) sheet.appendRow([key, params[key]]);
   }
+  return { ok: true };
+}
+
+function getTestimonials() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Testimonials');
+  if (!sheet) return { testimonials: [] };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { testimonials: [] };
+  var headers = data[0];
+  var testimonials = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var t = {};
+    for (var j = 0; j < headers.length; j++) { t[headers[j]] = row[j]; }
+    if (t.active === true || t.active === 'TRUE' || t.active === 'true' || t.active === 1) {
+      testimonials.push(t);
+    }
+  }
+  return { testimonials: testimonials };
+}
+
+function adminListTestimonials() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Testimonials');
+  if (!sheet) {
+    ss.insertSheet('Testimonials');
+    var newSheet = ss.getSheetByName('Testimonials');
+    newSheet.appendRow(['name', 'location', 'text', 'rating', 'active', 'created_at']);
+    return { testimonials: [] };
+  }
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { testimonials: [] };
+  var headers = data[0];
+  var testimonials = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var t = { _row: i + 1 };
+    for (var j = 0; j < headers.length; j++) { t[headers[j]] = row[j]; }
+    testimonials.push(t);
+  }
+  return { testimonials: testimonials };
+}
+
+function adminAddTestimonial(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Testimonials');
+  if (!sheet) {
+    sheet = ss.insertSheet('Testimonials');
+    sheet.appendRow(['name', 'location', 'text', 'rating', 'active', 'created_at']);
+  }
+  var now = Utilities.formatDate(new Date(), 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
+  sheet.appendRow([
+    params.name || '', params.location || '', params.text || '',
+    params.rating || 5, params.active !== 'false', now
+  ]);
+  return { ok: true };
+}
+
+function adminEditTestimonial(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Testimonials');
+  if (!sheet) return { error: 'Testimonials sheet not found' };
+  var row = parseInt(params._row);
+  if (!row || row < 2) return { error: 'Invalid row' };
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  for (var j = 0; j < headers.length; j++) {
+    if (params[headers[j]] !== undefined) {
+      var val = params[headers[j]];
+      if (headers[j] === 'active') { val = (val === true || val === 'true' || val === 'TRUE' || val === 1 || val === '1'); }
+      sheet.getRange(row, j + 1).setValue(val);
+    }
+  }
+  return { ok: true };
+}
+
+function adminDeleteTestimonial(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Testimonials');
+  if (!sheet) return { error: 'Testimonials sheet not found' };
+  var row = parseInt(params._row);
+  if (!row || row < 2) return { error: 'Invalid row' };
+  sheet.deleteRow(row);
   return { ok: true };
 }
 

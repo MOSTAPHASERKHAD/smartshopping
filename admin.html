@@ -162,6 +162,7 @@ body.rtl{font-family:var(--font-ar)}
     <a href="#" onclick="showSection('products')" id="nav-products"><span class="icon">📦</span><span>المنتجات</span></a>
     <a href="#" onclick="showSection('orders')" id="nav-orders"><span class="icon">🛒</span><span>الطلبات</span></a>
     <a href="#" onclick="showSection('settings')" id="nav-settings"><span class="icon">⚙️</span><span>الإعدادات</span></a>
+    <a href="#" onclick="showSection('testimonials')" id="nav-testimonials"><span class="icon">⭐</span><span>الشهادات</span></a>
   </nav>
   <div class="sidebar-footer">Smart Shopping v1.0</div>
 </div>
@@ -266,9 +267,20 @@ body.rtl{font-family:var(--font-ar)}
       </div>
     </div>
   </div>
-</div>
 
-<!-- Product Modal -->
+  <!-- Testimonials -->
+  <div id="sec-testimonials" class="hidden">
+    <div class="top-bar">
+      <h1>شهادات العملاء</h1>
+      <button class="btn btn-accent" onclick="openTestimonialModal()">+ إضافة شهادة</button>
+    </div>
+    <div class="panel">
+      <div class="panel-body"><div class="table-wrap"><table><thead><tr>
+        <th>الاسم</th><th>الموقع</th><th>النص</th><th>التقييم</th><th>الحالة</th><th>إجراءات</th>
+      </tr></thead><tbody id="testimonials-list"></tbody></table></div></div>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="productModal">
 <div class="modal">
   <div class="modal-header">
@@ -336,6 +348,34 @@ body.rtl{font-family:var(--font-ar)}
 </div>
 </div>
 
+<!-- Testimonial Modal -->
+<div class="modal-overlay" id="testimonialModal">
+<div class="modal">
+  <div class="modal-header">
+    <h3 id="testimonialModalTitle">إضافة شهادة</h3>
+    <button class="modal-close" onclick="closeTestimonialModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <form onsubmit="saveTestimonial(event)">
+      <input type="hidden" id="t_row">
+      <div class="form-row">
+        <div class="form-group"><label>اسم العميل *</label><input id="t_name" required></div>
+        <div class="form-group"><label>المدينة / الولاية</label><input id="t_location"></div>
+      </div>
+      <div class="form-group"><label>نص الشهادة *</label><textarea id="t_text" rows="3" required></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>التقييم (1-5)</label><select id="t_rating"><option value="5">★★★★★</option><option value="4">★★★★</option><option value="3">★★★</option><option value="2">★★</option><option value="1">★</option></select></div>
+        <div class="form-group"><label>الحالة</label><select id="t_active"><option value="true">ظاهرة</option><option value="false">مخفية</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button type="submit" class="btn btn-accent">حفظ</button>
+        <button type="button" class="btn btn-outline" onclick="closeTestimonialModal()">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+</div>
+
 
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycby810Mntd1xIk5MrhxRj1spUC4-Xmwme3f599TZ0_O1Lh5ENfF6iNFU7JgH3M-yyN2F/exec';
@@ -383,7 +423,7 @@ function apiGet(action, params, callback) {
 
 // ===== NAV =====
 function showSection(name) {
-  ['dashboard','products','orders','settings'].forEach(function(s) {
+  ['dashboard','products','orders','settings','testimonials'].forEach(function(s) {
     document.getElementById('sec-' + s).classList.toggle('hidden', s !== name);
     document.getElementById('nav-' + s).classList.toggle('active', s === name);
   });
@@ -391,6 +431,7 @@ function showSection(name) {
   if (name === 'products') loadProducts();
   if (name === 'orders') loadOrders();
   if (name === 'settings') loadSettings();
+  if (name === 'testimonials') loadTestimonials();
 }
 
 function toast(msg, isNew) {
@@ -927,6 +968,96 @@ function saveSettings() {
   script.src = url;
   script.onload = function() { toast('تم حفظ الإعدادات'); };
   document.head.appendChild(script);
+}
+
+// ===== TESTIMONIALS =====
+var allTestimonials = [];
+
+function loadTestimonials() {
+  document.getElementById('testimonials-list').innerHTML = '<tr><td colspan="6" class="loading"><div class="spinner"></div></td></tr>';
+  apiGet('admin_list_testimonials', {}, function(data) {
+    if (!data || !data.testimonials) return;
+    allTestimonials = data.testimonials;
+    if (!data.testimonials.length) {
+      document.getElementById('testimonials-list').innerHTML = '<tr><td colspan="6" class="empty">لا توجد شهادات</td></tr>';
+      return;
+    }
+    var html = data.testimonials.map(function(t) {
+      var stars = '';
+      for (var i = 0; i < (t.rating || 5); i++) stars += '★';
+      for (var i = (t.rating || 5); i < 5; i++) stars += '☆';
+      return '<tr>' +
+        '<td><strong>' + (t.name || '') + '</strong></td>' +
+        '<td>' + (t.location || '-') + '</td>' +
+        '<td style="max-width:300px">' + (t.text || '') + '</td>' +
+        '<td style="color:#f59e0b">' + stars + '</td>' +
+        '<td>' + (t.active ? '<span class="badge badge-confirmed">ظاهرة</span>' : '<span class="badge badge-cancelled">مخفية</span>') + '</td>' +
+        '<td style="white-space:nowrap">' +
+          '<button class="btn btn-info btn-xs" onclick="editTestimonial(' + t._row + ')">تعديل</button> ' +
+          '<button class="btn btn-danger btn-xs" onclick="deleteTestimonial(' + t._row + ',\'' + (t.name || '') + '\')">حذف</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+    document.getElementById('testimonials-list').innerHTML = html;
+  });
+}
+
+function openTestimonialModal(row) {
+  document.getElementById('testimonialModal').classList.add('open');
+  document.getElementById('testimonialModalTitle').textContent = row ? 'تعديل شهادة' : 'إضافة شهادة';
+  document.getElementById('t_row').value = row || '';
+  if (!row) {
+    document.getElementById('t_name').value = '';
+    document.getElementById('t_location').value = '';
+    document.getElementById('t_text').value = '';
+    document.getElementById('t_rating').value = '5';
+    document.getElementById('t_active').value = 'true';
+  }
+}
+
+function closeTestimonialModal() { document.getElementById('testimonialModal').classList.remove('open'); }
+
+function editTestimonial(row) {
+  var t = allTestimonials.find(function(x) { return x._row === row; });
+  if (!t) return;
+  openTestimonialModal(row);
+  document.getElementById('t_name').value = t.name || '';
+  document.getElementById('t_location').value = t.location || '';
+  document.getElementById('t_text').value = t.text || '';
+  document.getElementById('t_rating').value = t.rating || 5;
+  document.getElementById('t_active').value = t.active ? 'true' : 'false';
+}
+
+function saveTestimonial(e) {
+  e.preventDefault();
+  var row = document.getElementById('t_row').value;
+  var data = {
+    name: document.getElementById('t_name').value,
+    location: document.getElementById('t_location').value,
+    text: document.getElementById('t_text').value,
+    rating: Number(document.getElementById('t_rating').value),
+    active: document.getElementById('t_active').value === 'true'
+  };
+  var endpoint = row ? 'admin_edit_testimonial' : 'admin_add_testimonial';
+  if (row) data._row = row;
+  var cbName = 'test_save_' + Date.now();
+  var url = API_URL + '?action=' + endpoint + '&callback=' + cbName;
+  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent('' + data[k]); }
+  window[cbName] = function() { delete window[cbName]; closeTestimonialModal(); toast(row ? 'تم التعديل' : 'تمت الإضافة'); setTimeout(loadTestimonials, 2000); };
+  var s = document.createElement('script');
+  s.src = url;
+  s.onerror = function() { delete window[cbName]; toast('خطأ'); };
+  document.head.appendChild(s);
+}
+
+function deleteTestimonial(row, name) {
+  if (!confirm('هل تريد حذف شهادة "' + name + '"؟')) return;
+  var cbName = 'cb_delt_' + Date.now();
+  window[cbName] = function(res) { delete window[cbName]; toast('تم الحذف'); setTimeout(loadTestimonials, 2000); };
+  var s = document.createElement('script');
+  s.src = API_URL + '?action=admin_delete_testimonial&_row=' + encodeURIComponent(row) + '&callback=' + cbName;
+  s.onerror = function() { delete window[cbName]; toast('خطأ'); };
+  document.head.appendChild(s);
 }
 
 // ===== INIT =====

@@ -250,6 +250,19 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
   .trust-icon{width:42px;height:42px;font-size:1.4rem}
 }
 
+/* Testimonials */
+.testimonials-section{background:var(--bg);padding:40px 0}
+.testimonials-section h2{text-align:center;font-size:1.1rem;font-weight:800;margin-bottom:24px}
+.testimonials-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.testimonial-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.testimonial-stars{color:#f59e0b;font-size:.85rem;margin-bottom:6px}
+.testimonial-text{font-size:.82rem;color:var(--text);line-height:1.6;margin-bottom:10px;font-style:italic}
+.testimonial-author{display:flex;align-items:center;gap:8px}
+.testimonial-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700}
+.testimonial-name{font-size:.75rem;font-weight:600}
+.testimonial-loc{font-size:.65rem;color:var(--text3)}
+@media(max-width:768px){.testimonials-grid{grid-template-columns:1fr}}
+
 @media(max-width:768px){
   .hero{padding:32px 0}
   .hero h1{font-size:1.5rem}
@@ -423,6 +436,13 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
 </div>
 </section>
 
+<section class="testimonials-section" id="testimonialsSection" style="display:none">
+<div class="container">
+  <h2 data-i18n="testimonials_title">ماذا يقول عملاؤنا</h2>
+  <div class="testimonials-grid" id="testimonialsGrid"></div>
+</div>
+</section>
+
 <footer>
 <div class="container">
   <div class="footer-inner">
@@ -587,7 +607,8 @@ var I18N = {
     trust_ship:"شحن لجميع الولايات",trust_ship_sub:"توصيل سريع لـ 58 ولاية",
     trust_cod:"الدفع عند الاستلام",trust_cod_sub:"ادفع لما تستلم",
     trust_secure:"دفع آمن",trust_secure_sub:"معلوماتك محمية 100%",
-    trust_return:"استرجاع سهل",trust_return_sub:" خلال 7 أيام"
+    trust_return:"استرجاع سهل",trust_return_sub:" خلال 7 أيام",
+    testimonials_title:"ماذا يقول عملاؤنا"
   },
   en: {
     announce:"🇩🇿 Cash on delivery — Delivery to all Algerian states",
@@ -618,7 +639,8 @@ var I18N = {
     trust_ship:"Ship to all states",trust_ship_sub:"Fast delivery to 58 states",
     trust_cod:"Cash on Delivery",trust_cod_sub:"Pay when you receive",
     trust_secure:"Secure Payment",trust_secure_sub:"Your info is 100% protected",
-    trust_return:"Easy Returns",trust_return_sub:"Within 7 days"
+    trust_return:"Easy Returns",trust_return_sub:"Within 7 days",
+    testimonials_title:"What Our Customers Say"
   }
 };
 
@@ -663,6 +685,20 @@ function init(){
       if(!d||d.error||!d.products){document.getElementById('productsGrid').innerHTML='<p style="text-align:center;padding:40px;color:var(--text2);grid-column:1/-1">'+t('no_results')+'</p>';return}
       allProducts=d.products;buildCategories();renderProducts();
     }catch(e){console.error('catalog err',e)}
+  });
+  apiCall('testimonials',{},function(d){
+    try{
+      if(!d||d.error||!d.testimonials||!d.testimonials.length)return;
+      var section=document.getElementById('testimonialsSection');
+      var grid=document.getElementById('testimonialsGrid');
+      if(!section||!grid)return;
+      section.style.display='block';
+      grid.innerHTML=d.testimonials.map(function(ti){
+        var stars='';for(var i=0;i<(ti.rating||5);i++)stars+='★';
+        var initial=(ti.name||'?')[0];
+        return '<div class="testimonial-card"><div class="testimonial-stars">'+stars+'</div><div class="testimonial-text">"'+(ti.text||'')+'"</div><div class="testimonial-author"><div class="testimonial-avatar">'+initial+'</div><div><div class="testimonial-name">'+(ti.name||'')+'</div><div class="testimonial-loc">'+(ti.location||'')+'</div></div></div></div>';
+      }).join('');
+    }catch(e){console.error('testimonials err',e)}
   });
 }
 
