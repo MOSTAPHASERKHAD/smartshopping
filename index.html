@@ -526,14 +526,11 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
 <!-- About Page -->
 <div class="modal-overlay" id="aboutPage" onclick="if(event.target===this)closePage('about')">
 <div class="modal" style="max-width:650px">
-  <div class="modal-header"><h2 data-i18n="about_title">من نحن</h2><button class="modal-close-btn" onclick="closePage('about')">✕</button></div>
-  <div class="modal-body" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
+  <div class="modal-header"><h2 id="aboutTitle" data-i18n="about_title">من نحن</h2><button class="modal-close-btn" onclick="closePage('about')">✕</button></div>
+  <div class="modal-body" id="aboutBody" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
     <p data-i18n="about_p1">Smart Shopping هو متجر إلكتروني جزائري يهدف لتوفير أفضل المنتجات بأسعار مناسبة للجميع.</p>
     <p data-i18n="about_p2">نعمل على تلبية احتياجات عملائنا مع ضمان جودة عالية وخدمة عملاء ممتازة.</p>
     <p data-i18n="about_p3">نوفر الدفع عند الاستلام والتوصيل لجميع ولايات الجزائر لراحتكم.</p>
-    <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
-      <a href="https://wa.me/213557543177" target="_blank" class="btn btn-success">💬 تواصل معنا واتساب</a>
-    </div>
   </div>
 </div>
 </div>
@@ -542,7 +539,7 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
 <div class="modal-overlay" id="returnPage" onclick="if(event.target===this)closePage('return')">
 <div class="modal" style="max-width:650px">
   <div class="modal-header"><h2 data-i18n="return_title">سياسة الاسترجاع</h2><button class="modal-close-btn" onclick="closePage('return')">✕</button></div>
-  <div class="modal-body" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
+  <div class="modal-body" id="returnBody" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
     <p data-i18n="return_p1">نحرص على رضاك التام عن مشترياتك. إذا لم تكن راضياً عن المنتج، يمكنك استرجاعه خلال 7 أيام من تاريخ الاستلام.</p>
     <h4 style="margin:12px 0 6px;font-size:.85rem;color:var(--text)" data-i18n="return_conditions_title">شروط الاسترجاع:</h4>
     <ul style="padding-right:20px;margin:0">
@@ -551,9 +548,6 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
       <li data-i18n="return_c3">يجب إبلاغنا خلال 7 أيام من الاستلام</li>
       <li data-i18n="return_c4">تكلفة الشحن على العميل في حالة الإرجاع</li>
     </ul>
-    <div style="margin-top:16px">
-      <a href="https://wa.me/213557543177?text=' + encodeURIComponent('مرحبا، أريد استرجاع منتج برقم الطلب')" target="_blank" class="btn btn-success">💬 تواصل للاسترجاع</a>
-    </div>
   </div>
 </div>
 </div>
@@ -822,7 +816,24 @@ function init(){
   });
 }
 
-function showPage(name){var el=document.getElementById(name+'Page');if(el)el.classList.add('open')}
+function showPage(name){
+  var el=document.getElementById(name+'Page');if(el)el.classList.add('open');
+  if(name==='about'){
+    var t1=document.getElementById('aboutTitle');var b1=document.getElementById('aboutBody');
+    if(t1)t1.textContent=currentLang==='ar'?(storeSettings.about_title_ar||'من نحن'):(storeSettings.about_title_en||'About Us');
+    if(b1){
+      var body=currentLang==='ar'?storeSettings.about_body_ar:storeSettings.about_body_en;
+      if(body){b1.innerHTML=body.split('\n').map(function(l){return'<p>'+l+'</p>'}).join('')}
+    }
+  }
+  if(name==='return'){
+    var b2=document.getElementById('returnBody');
+    if(b2){
+      var body2=currentLang==='ar'?storeSettings.return_body_ar:storeSettings.return_body_en;
+      if(body2){b2.innerHTML=body2.split('\n').map(function(l){return'<p>'+l+'</p>'}).join('')}
+    }
+  }
+}
 function closePage(name){var el=document.getElementById(name+'Page');if(el)el.classList.remove('open')}
 
 function renderSuggested(currentId){
