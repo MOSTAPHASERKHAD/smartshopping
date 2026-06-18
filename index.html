@@ -181,6 +181,15 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 /* Loading */
 .loading{text-align:center;padding:60px 0;grid-column:1/-1}
 .spinner{width:28px;height:28px;border:2.5px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+
+/* Skeleton */
+.skeleton{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+.skeleton-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.skeleton-img{width:100%;aspect-ratio:1;background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+.skeleton-text{height:14px;margin:8px 14px;border-radius:4px}
+.skeleton-text.short{width:60%}
+.skeleton-text.price{height:18px;width:40%;margin-top:4px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .fade-in{animation:fadeIn .35s ease}
@@ -254,6 +263,24 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
 .testimonials-section{background:var(--bg);padding:40px 0}
 .testimonials-section h2{text-align:center;font-size:1.1rem;font-weight:800;margin-bottom:24px}
 .testimonials-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+/* Carousel */
+.carousel{position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:var(--radius);background:#f7f7f7}
+.carousel img{width:100%;height:100%;object-fit:cover;transition:opacity .3s}
+.carousel-dots{display:flex;gap:6px;justify-content:center;margin-top:10px}
+.carousel-dot{width:8px;height:8px;border-radius:50%;border:none;background:var(--border);cursor:pointer;transition:background .2s}
+.carousel-dot.active{background:var(--accent)}
+.carousel-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.85);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:background .2s;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.carousel-arrow:hover{background:#fff}
+.carousel-arrow.prev{left:8px}
+.carousel-arrow.next{right:8px}
+body.rtl .carousel-arrow.prev{left:auto;right:8px}
+body.rtl .carousel-arrow.next{right:auto;left:8px}
+
+/* Back to top */
+.back-to-top{position:fixed;bottom:24px;left:24px;width:44px;height:44px;border:none;border-radius:50%;background:var(--text);color:#fff;font-size:1.2rem;cursor:pointer;opacity:0;visibility:hidden;transition:all .3s;z-index:90;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.back-to-top.visible{opacity:1;visibility:visible}
+.back-to-top:hover{background:var(--sale);transform:translateY(-2px)}
 .testimonial-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
 .testimonial-stars{color:#f59e0b;font-size:.85rem;margin-bottom:6px}
 .testimonial-text{font-size:.82rem;color:var(--text);line-height:1.6;margin-bottom:10px;font-style:italic}
@@ -354,7 +381,10 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
     </select>
   </div>
   <div id="productsGrid" class="products-grid">
-    <div class="loading"><div class="spinner"></div><p data-i18n="loading">جاري التحميل...</p></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
   </div>
 </div>
 </section>
@@ -937,8 +967,24 @@ function showProductDetail(id){
     if(p.old_price>0)ph+=' <span class="pd-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>';
     el=document.getElementById('pdPrice');if(el)el.innerHTML=ph;
     el=document.getElementById('pdDesc');if(el)el.textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
-    var img=p.image1||'';
-    el=document.getElementById('pdImage');if(el)el.innerHTML=img?'<img src="'+img+'" alt="" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">':'<div style="color:var(--text2);font-size:.85rem">No Image</div>';
+    var imgs=[p.image1,p.image2,p.image3].filter(function(i){return i});
+    el=document.getElementById('pdImage');
+    if(el){
+      if(imgs.length>1){
+        var cHtml='<div class="carousel" id="pdCarousel"><img src="'+imgs[0]+'" id="pdCarouselImg" alt="">';
+        cHtml+='<button class="carousel-arrow prev" onclick="carouselNav(-1)">‹</button>';
+        cHtml+='<button class="carousel-arrow next" onclick="carouselNav(1)">›</button></div>';
+        cHtml+='<div class="carousel-dots">';
+        imgs.forEach(function(_,i){cHtml+='<button class="carousel-dot'+(i===0?' active':'')+'" onclick="carouselGo('+i+')"></button>'});
+        cHtml+='</div>';
+        el.innerHTML=cHtml;
+        window._pdImgs=imgs;window._pdImgIdx=0;
+      }else if(imgs.length===1){
+        el.innerHTML='<img src="'+imgs[0]+'" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">';
+      }else{
+        el.innerHTML='<div style="color:var(--text2);font-size:.85rem;display:flex;align-items:center;justify-content:center;height:100%">No Image</div>';
+      }
+    }
     var saved=JSON.parse(localStorage.getItem(CUSTOMER_KEY)||'{}');
     el=document.getElementById('pdName');if(el)el.value=saved.name||'';
     el=document.getElementById('pdPhone');if(el)el.value=saved.phone||'';
@@ -951,6 +997,24 @@ function showProductDetail(id){
     el=document.getElementById('productDetailSection');if(el)el.classList.remove('hidden');
     window.scrollTo({top:0,behavior:'smooth'});
   }catch(e){console.error('showProductDetail err',e)}
+}
+
+var carouselTimer=null;
+function carouselNav(dir){
+  try{
+    var imgs=window._pdImgs;if(!imgs||imgs.length<2)return;
+    window._pdImgIdx=(window._pdImgIdx+dir+imgs.length)%imgs.length;
+    var img=document.getElementById('pdCarouselImg');if(img)img.src=imgs[window._pdImgIdx];
+    document.querySelectorAll('.carousel-dot').forEach(function(d,i){d.classList.toggle('active',i===window._pdImgIdx)});
+  }catch(e){}
+}
+function carouselGo(idx){
+  try{
+    var imgs=window._pdImgs;if(!imgs)return;
+    window._pdImgIdx=idx;
+    var img=document.getElementById('pdCarouselImg');if(img)img.src=imgs[idx];
+    document.querySelectorAll('.carousel-dot').forEach(function(d,i){d.classList.toggle('active',i===idx)});
+  }catch(e){}
 }
 function hideProductDetail(){
   var el;
@@ -1000,6 +1064,14 @@ function submitProductDetail(e){
 }
 
 document.addEventListener('DOMContentLoaded',function(){init()});
+
+window.addEventListener('scroll',function(){
+  var btn=document.querySelector('.back-to-top');
+  if(btn)btn.classList.toggle('visible',window.scrollY>400);
+});
+function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
 </script>
+
+<button class="back-to-top" onclick="scrollToTop()">↑</button>
 </body>
 </html>
