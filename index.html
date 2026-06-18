@@ -170,19 +170,42 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .hidden{display:none!important}
 
-/* Quick Order */
+/* Product Detail Overlay */
+.pdetail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;opacity:0;visibility:hidden;transition:all .25s;overflow-y:auto;padding:16px;display:flex;align-items:center;justify-content:center}
+.pdetail-overlay.open{opacity:1;visibility:visible}
+.pdetail{background:var(--card);border-radius:var(--radius);width:800px;max-width:100%;position:relative;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;max-height:90vh}
+.pdetail-image{background:#f7f7f7;min-height:300px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pdetail-image img{width:100%;height:100%;object-fit:cover;display:block}
+.pdetail-content{padding:24px;overflow-y:auto;max-height:90vh}
+.pdetail-close{position:absolute;top:12px;right:12px;z-index:10;width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.9);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:background .15s}
+body.ltr .pdetail-close{right:auto;left:12px}
+.pdetail-close:hover{background:#fff}
+.pdetail h2{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+.pdetail .price-big{font-size:1.2rem;font-weight:800;color:var(--sale);margin-bottom:8px}
+.pdetail .price-big .old{font-size:.85rem;color:var(--text2);text-decoration:line-through;font-weight:400;margin-right:6px}
+.pdetail .desc{font-size:.82rem;color:var(--text2);line-height:1.6;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.pdetail .form-title{font-size:.85rem;font-weight:700;margin-bottom:12px}
+.pdetail .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0}
+.pdetail .form-group{margin-bottom:12px}
+.pdetail .form-group label{display:block;font-size:.75rem;font-weight:600;margin-bottom:3px;color:var(--text2);text-transform:uppercase;letter-spacing:.2px}
+.pdetail .form-group input,.pdetail .form-group select,.pdetail .form-group textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.82rem;outline:none;transition:border .15s;background:var(--bg)}
+.pdetail .form-group input:focus,.pdetail .form-group select:focus,.pdetail .form-group textarea:focus{border-color:var(--text)}
+.pdetail .form-group textarea{resize:vertical;min-height:50px}
+.pdetail .note-box{background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 10px;margin-bottom:12px;font-size:.75rem;color:#92400e;display:flex;gap:5px;align-items:flex-start}
+
+@media(max-width:700px){
+  .pdetail{grid-template-columns:1fr}
+  .pdetail-image{min-height:200px;max-height:250px}
+  .pdetail-content{padding:16px;max-height:none}
+  .pdetail{max-height:95vh}
+}
+
+.product-title a{color:inherit;text-decoration:none}
+.product-title a:hover{color:var(--sale)}
 .product-actions{display:flex;gap:6px;margin-top:8px}
 .product-actions .btn-add{flex:1}
-.btn-qorder{padding:9px;border:1px solid var(--sale);border-radius:8px;background:transparent;color:var(--sale);cursor:pointer;font-family:var(--font);font-size:.78rem;font-weight:600;transition:all .2s;white-space:nowrap}
+.btn-qorder{padding:9px 14px;border:1px solid var(--sale);border-radius:8px;background:transparent;color:var(--sale);cursor:pointer;font-family:var(--font);font-size:.78rem;font-weight:600;transition:all .2s;white-space:nowrap}
 .btn-qorder:hover{background:var(--sale);color:#fff}
-.qmodal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all .25s;padding:16px}
-.qmodal-overlay.open{opacity:1;visibility:visible}
-.qmodal{background:var(--card);border-radius:var(--radius);width:380px;max-width:100%;padding:28px 24px 24px;position:relative}
-.qmodal h3{font-size:1rem;font-weight:700;margin-bottom:4px}
-.qmodal .sub{font-size:.8rem;color:var(--text2);margin-bottom:18px}
-.qmodal .form-group{margin-bottom:12px}
-.qmodal .form-group input{padding:10px 12px;font-size:.85rem}
-.qmodal .close-btn{position:absolute;top:12px;left:12px;width:28px;height:28px;border:none;border-radius:6px;background:var(--bg);cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center}
 
 @media(max-width:768px){
   .hero{padding:32px 0}
@@ -300,25 +323,57 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
   </div>
 </div>
 
-<!-- Quick Order Modal -->
-<div class="qmodal-overlay" id="quickOrderModal" onclick="if(event.target===this)closeQuickOrder()">
-<div class="qmodal">
-  <button class="close-btn" onclick="closeQuickOrder()">✕</button>
-  <h3 data-i18n="qorder_title">طلب سريع</h3>
-  <p class="sub" data-i18n="qorder_sub" id="qorderProductName"></p>
-  <form id="quickOrderForm" onsubmit="submitQuickOrder(event)">
-    <input type="hidden" id="qorderProductId">
-    <div class="form-group">
-      <label data-i18n="form_name">الاسم</label>
-      <input type="text" id="qorderName" required>
-    </div>
-    <div class="form-group">
-      <label data-i18n="form_phone">الهاتف</label>
-      <input type="tel" id="qorderPhone" placeholder="0555 XX XX XX" required>
-    </div>
-    <button type="submit" class="btn btn-primary btn-block btn-lg" id="qorderSubmit" data-i18n="qorder_btn">تأكيد الطلب السريع</button>
-  </form>
-  <div id="qorderSuccess" class="hidden" style="text-align:center;padding:16px 0"></div>
+<!-- Product Detail Overlay -->
+<div class="pdetail-overlay" id="productDetailOverlay" onclick="if(event.target===this)closeProductDetail()">
+<div class="pdetail">
+  <button class="pdetail-close" onclick="closeProductDetail()">✕</button>
+  <div class="pdetail-image" id="pdetailImage">
+    <div style="color:var(--text2);font-size:.85rem" data-i18n="loading">جاري التحميل...</div>
+  </div>
+  <div class="pdetail-content" id="pdetailContent">
+    <h2 id="pdetailTitle"></h2>
+    <div class="price-big" id="pdetailPrice"></div>
+    <div class="desc" id="pdetailDesc"></div>
+    <div class="form-title" data-i18n="pdetail_form_title">معلومات الطلب</div>
+    <form id="pdetailForm" onsubmit="submitProductOrder(event)">
+      <input type="hidden" id="pdetailProductId">
+      <div class="form-row">
+        <div class="form-group">
+          <label data-i18n="form_name">الاسم</label>
+          <input type="text" id="pdetailName" required>
+        </div>
+        <div class="form-group">
+          <label data-i18n="form_phone">الهاتف</label>
+          <input type="tel" id="pdetailPhone" placeholder="0555 XX XX XX" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label data-i18n="form_wilaya">الولاية</label>
+          <select id="pdetailWilaya" required>
+            <option value="" data-i18n="form_wilaya_select">اختر الولاية</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label data-i18n="form_delivery">التوصيل</label>
+          <select id="pdetailDelivery" required>
+            <option value="home" data-i18n="form_home">المنزل</option>
+            <option value="office" data-i18n="form_office">المكتب</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label data-i18n="form_note">ملاحظة</label>
+        <textarea id="pdetailNote" rows="2" placeholder="الحي، الطابق، ..."></textarea>
+      </div>
+      <div class="note-box">
+        <span>⚠️</span>
+        <span data-i18n="delivery_note">سعر التوصيل يتم تأكيده بعد التواصل.</span>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block btn-lg" id="pdetailSubmit" data-i18n="submit_order">تأكيد الطلب</button>
+    </form>
+    <div id="pdetailSuccess" class="hidden" style="text-align:center;padding:20px 0"></div>
+  </div>
 </div>
 </div>
 
@@ -436,8 +491,7 @@ var I18N = {
     nav_products:"المنتجات",nav_track:"تتبع الطلب",
     whatsapp_msg:"مرحبا، لدي طلب برقم",out_of_stock:"نفذ",currency:"د.ج",
     status_pending:"قيد الانتظار",status_confirmed:"تم التأكيد",status_shipped:"تم الشحن",status_delivered:"تم التوصيل",
-    qorder_title:"طلب سريع",qorder_sub:"طلب:",
-    qorder_btn:"تأكيد الطلب السريع",qorder_success:"تم إرسال طلبك!"
+    pdetail_form_title:"معلومات الطلب",qorder_success:"تم إرسال طلبك!"
   },
   en: {
     announce:"🇩🇿 Cash on delivery — Delivery to all Algerian states",
@@ -461,8 +515,7 @@ var I18N = {
     nav_products:"Products",nav_track:"Track Order",
     whatsapp_msg:"Hello, I have order number",out_of_stock:"Sold out",currency:"DZD",
     status_pending:"Pending",status_confirmed:"Confirmed",status_shipped:"Shipped",status_delivered:"Delivered",
-    qorder_title:"Quick Order",qorder_sub:"Order:",
-    qorder_btn:"Confirm Quick Order",qorder_success:"Your order has been submitted!"
+    pdetail_form_title:"Order Information",qorder_success:"Your order has been submitted!"
   }
 };
 
@@ -526,18 +579,18 @@ function renderProducts(){
         (out&&!disc?'<span class="product-badge" style="background:#6b7280">'+t('out_of_stock')+'</span>':'')+
       '</div>'+
       '<div class="product-body">'+
-        '<div class="product-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div>'+
+        '<div class="product-title"><a href="#" onclick="openProductDetail(\''+p.id+'\');return false">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</a></div>'+
         '<div class="product-price">'+
           '<span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>'+
           (disc?'<span class="price-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>':'')+
         '</div>'+
         (out?'':qty>0?
-          '<div class="qty-inline"><button onclick="changeQty(\''+p.id+'\',-1)">−</button>'+
+          '<div class="product-actions"><div class="qty-inline"><button onclick="changeQty(\''+p.id+'\',-1)">−</button>'+
           '<input value="'+qty+'" readonly>'+
-          '<button onclick="changeQty(\''+p.id+'\',1)">+</button></div>':
+          '<button onclick="changeQty(\''+p.id+'\',1)">+</button></div></div>':
           '<div class="product-actions">'+
           '<button class="btn-add" onclick="addToCart(\''+p.id+'\')">'+t('add_to_cart')+'</button>'+
-          '<button class="btn-qorder" onclick="quickOrder(\''+p.id+'\')">⚡</button></div>'
+          '<button class="btn-qorder" onclick="openProductDetail(\''+p.id+'\')">اطلب</button></div>'
         )+
       '</div>'+
     '</div>';
@@ -670,48 +723,62 @@ function trackOrder(){
   });
 }
 
-// ===== QUICK ORDER =====
+// ===== PRODUCT DETAIL =====
 var CUSTOMER_KEY = 'sk_customer';
-function quickOrder(id){
+function openProductDetail(id){
   var p=allProducts.find(function(x){return x.id===id});if(!p)return;
-  document.getElementById('qorderProductId').value=id;
-  document.getElementById('qorderProductName').textContent=t('qorder_sub')+' '+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar);
+  document.getElementById('pdetailProductId').value=id;
+  document.getElementById('pdetailTitle').textContent=currentLang==='ar'?p.title_ar:p.title_en||p.title_ar;
+  var priceHtml='<span>'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>';
+  if(p.old_price>0)priceHtml+=' <span class="old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>';
+  document.getElementById('pdetailPrice').innerHTML=priceHtml;
+  document.getElementById('pdetailDesc').textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
+  var img=p.image1||'';
+  document.getElementById('pdetailImage').innerHTML=img?'<img src="'+img+'" alt="" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">':'<div style="color:var(--text2);font-size:.85rem" data-i18n="no_results">لا توجد منتجات</div>';
   var saved=JSON.parse(localStorage.getItem(CUSTOMER_KEY)||'{}');
-  document.getElementById('qorderName').value=saved.name||'';
-  document.getElementById('qorderPhone').value=saved.phone||'';
-  document.getElementById('qorderSuccess').classList.add('hidden');
-  document.getElementById('quickOrderForm').classList.remove('hidden');
-  document.getElementById('qorderSubmit').disabled=false;
-  document.getElementById('quickOrderModal').classList.add('open');
+  document.getElementById('pdetailName').value=saved.name||'';
+  document.getElementById('pdetailPhone').value=saved.phone||'';
+  document.getElementById('pdetailSuccess').classList.add('hidden');
+  document.getElementById('pdetailForm').classList.remove('hidden');
+  document.getElementById('pdetailSubmit').disabled=false;
+  populateWilayasDetail();
+  document.getElementById('productDetailOverlay').classList.add('open');document.body.style.overflow='hidden';
 }
-function closeQuickOrder(){document.getElementById('quickOrderModal').classList.remove('open')}
-function submitQuickOrder(e){
+function closeProductDetail(){document.getElementById('productDetailOverlay').classList.remove('open');document.body.style.overflow=''}
+function populateWilayasDetail(){
+  var s=document.getElementById('pdetailWilaya');if(s.options.length>1)return;
+  WILAYAS.forEach(function(w){var o=document.createElement('option');o.value=w.code;o.textContent=w.code+' - '+(currentLang==='ar'?w.ar:w.en);s.appendChild(o)});
+}
+function submitProductOrder(e){
   e.preventDefault();
-  var n=document.getElementById('qorderName').value.trim();
-  var p=document.getElementById('qorderPhone').value.trim();
-  if(!n||!p)return;
-  var pid=document.getElementById('qorderProductId').value;
-  var prod=allProducts.find(function(x){return x.id===pid});
-  if(!prod)return;
-  localStorage.setItem(CUSTOMER_KEY,JSON.stringify({name:n,phone:p}));
-  var qty=1;
-  var items=JSON.stringify([{id:pid,title:currentLang==='ar'?prod.title_ar:prod.title_en,price:prod.price,qty:qty}]);
-  document.getElementById('qorderSubmit').disabled=true;
+  var n=document.getElementById('pdetailName').value.trim();
+  var ph=document.getElementById('pdetailPhone').value.trim();
+  var w=document.getElementById('pdetailWilaya').value;
+  var d=document.getElementById('pdetailDelivery').value;
+  var note=document.getElementById('pdetailNote').value.trim();
+  if(!n||!ph||!w)return;
+  var pid=document.getElementById('pdetailProductId').value;
+  var prod=allProducts.find(function(x){return x.id===pid});if(!prod)return;
+  var wil=WILAYAS.find(function(x){return x.code===w});
+  localStorage.setItem(CUSTOMER_KEY,JSON.stringify({name:n,phone:ph}));
+  var items=JSON.stringify([{id:pid,title:currentLang==='ar'?prod.title_ar:prod.title_en,price:prod.price,qty:1}]);
+  document.getElementById('pdetailSubmit').disabled=true;
   apiCall('order',{
-    name:n,phone:p,wilaya_code:'16',wilaya_ar:'الجزائر',wilaya_en:'Alger',
-    delivery_type:'Home',items_json:items,subtotal:prod.price,note:''
+    name:n,phone:ph,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
+    delivery_type:d==='office'?'Office':'Home',items_json:items,subtotal:prod.price,note:note
   },function(data){
-    document.getElementById('qorderSubmit').disabled=false;
-    if(!data||data.error||!data.ok){alert('Error');return}
-    document.getElementById('quickOrderForm').classList.add('hidden');
-    var sc=document.getElementById('qorderSuccess');sc.classList.remove('hidden');
+    document.getElementById('pdetailSubmit').disabled=false;
+    if(!data||data.error||!data.ok){alert('Error: '+(data?data.error||'Unknown error':'Network error'));return}
+    document.getElementById('pdetailForm').classList.add('hidden');
+    var sc=document.getElementById('pdetailSuccess');sc.classList.remove('hidden');
     var orderId=data.order_id;var wa=storeSettings.phone||'213557543177';
     var msg=encodeURIComponent(t('whatsapp_msg')+' '+orderId);
     sc.innerHTML='<div class="fade-in">'+
-      '<div style="width:40px;height:40px;border-radius:50%;background:#dcfce7;color:var(--success);display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin:0 auto 10px">✓</div>'+
-      '<p style="font-weight:700;color:var(--success);margin-bottom:4px">'+t('qorder_success')+'</p>'+
-      '<div style="font-size:1.2rem;font-weight:800;margin:8px 0;background:var(--bg);padding:6px 16px;border-radius:6px;display:inline-block;letter-spacing:.5px">'+orderId+'</div>'+
-      '<br><a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn" style="display:inline-flex;margin-top:10px">واتساب</a>'+
+      '<div style="width:44px;height:44px;border-radius:50%;background:#dcfce7;color:var(--success);display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin:0 auto 12px">✓</div>'+
+      '<p style="font-weight:800;font-size:1.1rem;color:var(--success);margin-bottom:4px">'+t('order_success')+'</p>'+
+      '<p style="color:var(--text2);font-size:.8rem">'+t('order_num')+':</p>'+
+      '<div style="font-size:1.3rem;font-weight:800;margin:8px 0;background:var(--bg);padding:8px 20px;border-radius:6px;display:inline-block;letter-spacing:.5px">'+orderId+'</div>'+
+      '<br><a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn" style="display:inline-flex;margin-top:12px">واتساب</a>'+
     '</div>';
   });
 }
