@@ -244,23 +244,10 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
 .trust-item h4{font-size:.82rem;font-weight:700;margin:0}
 .trust-item p{font-size:.72rem;color:var(--text2);margin:0;line-height:1.4}
 
-/* Testimonials */
-.testimonials-section{background:var(--bg);padding:40px 0}
-.testimonials-section h2{text-align:center;font-size:1.1rem;font-weight:800;margin-bottom:24px}
-.testimonials-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.testimonial-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative}
-.testimonial-stars{color:#f59e0b;font-size:.85rem;margin-bottom:6px}
-.testimonial-text{font-size:.82rem;color:var(--text);line-height:1.6;margin-bottom:10px}
-.testimonial-author{display:flex;align-items:center;gap:8px}
-.testimonial-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700}
-.testimonial-name{font-size:.75rem;font-weight:600}
-.testimonial-loc{font-size:.65rem;color:var(--text3)}
-
 @media(max-width:768px){
   .trust-bar{grid-template-columns:repeat(2,1fr);gap:8px;padding:20px 0}
   .trust-item{padding:10px 4px}
   .trust-icon{width:42px;height:42px;font-size:1.4rem}
-  .testimonials-grid{grid-template-columns:1fr}
 }
 
 @media(max-width:768px){
@@ -436,38 +423,6 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
 </div>
 </section>
 
-<section class="testimonials-section">
-<div class="container">
-  <h2 data-i18n="testimonials_title">ماذا يقول عملاؤنا</h2>
-  <div class="testimonials-grid" id="testimonialsGrid">
-    <div class="testimonial-card">
-      <div class="testimonial-stars">★★★★★</div>
-      <div class="testimonial-text" data-i18n="testi_1">"خدمة ممتازة وسرعة في التوصيل. المنتج كما هو موضح بالصور. أنصح بالتعامل معهم!"</div>
-      <div class="testimonial-author">
-        <div class="testimonial-avatar">أ</div>
-        <div><div class="testimonial-name" data-i18n="testi_1_name">أحمد م.</div><div class="testimonial-loc" data-i18n="testi_1_loc">الجزائر</div></div>
-      </div>
-    </div>
-    <div class="testimonial-card">
-      <div class="testimonial-stars">★★★★★</div>
-      <div class="testimonial-text" data-i18n="testi_2">"أفضل متجر إلكترونيتعاملت معاه. الدفع عند الاستلام ميزة رائعة."</div>
-      <div class="testimonial-author">
-        <div class="testimonial-avatar">ف</div>
-        <div><div class="testimonial-name" data-i18n="testi_2_name">فاطمة ز.</div><div class="testimonial-loc" data-i18n="testi_2_loc">وهران</div></div>
-      </div>
-    </div>
-    <div class="testimonial-card">
-      <div class="testimonial-stars">★★★★★</div>
-      <div class="testimonial-text" data-i18n="testi_3">"طلبت منتج ووصلني في وقت قياسي. الجودة ممتازة والسعر مناسب جداً."</div>
-      <div class="testimonial-author">
-        <div class="testimonial-avatar">ي</div>
-        <div><div class="testimonial-name" data-i18n="testi_3_name">يوسف ب.</div><div class="testimonial-loc" data-i18n="testi_3_loc">قسنطينة</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
 <footer>
 <div class="container">
   <div class="footer-inner">
@@ -632,14 +587,7 @@ var I18N = {
     trust_ship:"شحن لجميع الولايات",trust_ship_sub:"توصيل سريع لـ 58 ولاية",
     trust_cod:"الدفع عند الاستلام",trust_cod_sub:"ادفع لما تستلم",
     trust_secure:"دفع آمن",trust_secure_sub:"معلوماتك محمية 100%",
-    trust_return:"استرجاع سهل",trust_return_sub:" خلال 7 أيام",
-    testimonials_title:"ماذا يقول عملاؤنا",
-    testi_1:"خدمة ممتازة وسرعة في التوصيل. المنتج كما هو موضح بالصور. أنصح بالتعامل معهم!",
-    testi_1_name:"أحمد م.",testi_1_loc:"الجزائر",
-    testi_2:"أفضل متجر تعاملت معاه. الدفع عند الاستلام ميزة رائعة.",
-    testi_2_name:"فاطمة ز.",testi_2_loc:"وهران",
-    testi_3:"طلبت منتج ووصلني في وقت قياسي. الجودة ممتازة والسعر مناسب جداً.",
-    testi_3_name:"يوسف ب.",testi_3_loc:"قسنطينة"
+    trust_return:"استرجاع سهل",trust_return_sub:" خلال 7 أيام"
   },
   en: {
     announce:"🇩🇿 Cash on delivery — Delivery to all Algerian states",
@@ -670,14 +618,7 @@ var I18N = {
     trust_ship:"Ship to all states",trust_ship_sub:"Fast delivery to 58 states",
     trust_cod:"Cash on Delivery",trust_cod_sub:"Pay when you receive",
     trust_secure:"Secure Payment",trust_secure_sub:"Your info is 100% protected",
-    trust_return:"Easy Returns",trust_return_sub:"Within 7 days",
-    testimonials_title:"What Our Customers Say",
-    testi_1:"Excellent service and fast delivery. Product matches the photos. Highly recommend!",
-    testi_1_name:"Ahmed M.",testi_1_loc:"Algiers",
-    testi_2:"Best online store I've dealt with. Cash on delivery is a great feature.",
-    testi_2_name:"Fatima Z.",testi_2_loc:"Oran",
-    testi_3:"Ordered a product and received it very quickly. Great quality and very fair price.",
-    testi_3_name:"Youcef B.",testi_3_loc:"Constantine"
+    trust_return:"Easy Returns",trust_return_sub:"Within 7 days"
   }
 };
 
