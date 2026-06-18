@@ -130,7 +130,22 @@ body.rtl{font-family:var(--font-ar)}
 .stats{grid-template-columns:1fr 1fr;gap:10px}
 .form-row{grid-template-columns:1fr}
 .top-bar h1{font-size:1.1rem}
+.chart-container{grid-template-columns:1fr}
 }
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px}
+.chart-card h4{font-size:.85rem;font-weight:700;margin-bottom:12px;color:var(--text)}
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:140px;padding-top:10px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar{background:var(--accent);border-radius:4px 4px 0 0;min-height:4px;width:100%;transition:height .3s}
+.bar-label{font-size:.6rem;color:var(--text3);white-space:nowrap}
+.bar-value{font-size:.65rem;font-weight:700;color:var(--text)}
+.top-list{list-style:none;padding:0}
+.top-list li{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.8rem}
+.top-list li:last-child{border-bottom:none}
+.top-list .rank{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;margin-left:8px;flex-shrink:0}
+.top-list .item-info{display:flex;align-items:center;gap:6px}
+.top-list .count{font-weight:700;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -161,6 +176,26 @@ body.rtl{font-family:var(--font-ar)}
       <div class="stat-card"><div class="label">طلبات اليوم</div><div class="value" id="stat-today" style="color:var(--info)">0</div></div>
       <div class="stat-card"><div class="label">إيراد اليوم</div><div class="value success" id="stat-today-revenue">0 DZD</div></div>
     </div>
+    <div class="chart-row">
+      <div class="chart-card">
+        <h4>📈 طلبات آخر 7 أيام</h4>
+        <div class="bar-chart" id="chart-orders-week"></div>
+      </div>
+      <div class="chart-card">
+        <h4>🏆 أكثر المنتجات طلباً</h4>
+        <ul class="top-list" id="top-products"></ul>
+      </div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card">
+        <h4>📍 أكثر الولايات طلباتاً</h4>
+        <ul class="top-list" id="top-wilayas"></ul>
+      </div>
+      <div class="chart-card">
+        <h4>📊 حالة الطلبات</h4>
+        <div class="bar-chart" id="chart-status" style="align-items:flex-end"></div>
+      </div>
+    </div>
     <div class="panel">
       <div class="panel-header"><h3>آخر الطلبات</h3></div>
       <div class="panel-body"><div class="table-wrap"><table><thead><tr>
@@ -184,7 +219,13 @@ body.rtl{font-family:var(--font-ar)}
 
   <!-- Orders -->
   <div id="sec-orders" class="hidden">
-    <div class="top-bar"><h1>الطلبات <span class="count-badge" id="orders-count-badge"></span></h1></div>
+    <div class="top-bar">
+      <h1>الطلبات <span class="count-badge" id="orders-count-badge"></span></h1>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-success btn-sm" onclick="exportOrdersCSV()">📥 تصدير CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSelectedOrders()">🗑 حذف المحدد</button>
+      </div>
+    </div>
     <div class="panel">
       <div class="panel-body">
         <div class="order-filters">
@@ -199,6 +240,7 @@ body.rtl{font-family:var(--font-ar)}
           </select>
         </div>
         <div class="table-wrap"><table><thead><tr>
+          <th><input type="checkbox" id="selectAllOrders" onchange="toggleSelectAll(this)"></th>
           <th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>الولاية</th><th>التوصيل</th><th>المبلغ</th><th>الحالة</th><th>إجراءات</th>
         </tr></thead><tbody id="orders-list"></tbody></table></div>
       </div>
@@ -403,7 +445,122 @@ function loadDashboard() {
         return '<tr><td><strong>' + o.order_id + '</strong></td><td>' + o.name + '</td><td><a href="https://wa.me/' + o.phone + '" target="_blank" style="color:var(--accent)">' + o.phone + '</a></td><td>' + o.wilaya_ar + '</td><td>' + Number(o.subtotal).toLocaleString() + ' DZD</td><td><span class="badge badge-' + o.status + '">' + getStatusText(o.status) + '</span></td></tr>';
       }).join('');
       document.getElementById('dash-orders').innerHTML = html || '<tr><td colspan="6" class="empty">لا توجد طلبات</td></tr>';
+      renderCharts(data.orders);
     }
+  });
+}
+
+function renderCharts(orders) {
+  var days = [];
+  var dayNames = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date(); d.setDate(d.getDate() - i);
+    var key = d.toISOString().substring(0, 10);
+    var label = dayNames[d.getDay()] + ' ' + d.getDate();
+    var count = orders.filter(function(o) { return o.created_at && o.created_at.substring(0, 10) === key; }).length;
+    days.push({ label: label, count: count, key: key });
+  }
+  var maxCount = Math.max.apply(null, days.map(function(d) { return d.count; }).concat([1]));
+  var chartHtml = days.map(function(d) {
+    var h = Math.max(4, (d.count / maxCount) * 120);
+    return '<div class="bar-col"><div class="bar-value">' + d.count + '</div><div class="bar" style="height:' + h + 'px"></div><div class="bar-label">' + d.label + '</div></div>';
+  }).join('');
+  var el = document.getElementById('chart-orders-week');
+  if (el) el.innerHTML = chartHtml;
+
+  var productCounts = {};
+  orders.forEach(function(o) {
+    var items = [];
+    try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
+    items.forEach(function(it) {
+      productCounts[it.title] = (productCounts[it.title] || 0) + it.qty;
+    });
+  });
+  var sortedProducts = Object.keys(productCounts).sort(function(a, b) { return productCounts[b] - productCounts[a]; }).slice(0, 5);
+  var topProductsHtml = sortedProducts.length ? sortedProducts.map(function(name, i) {
+    return '<li><div class="item-info"><span class="rank">' + (i + 1) + '</span><span>' + name + '</span></div><span class="count">x' + productCounts[name] + '</span></li>';
+  }).join('') : '<li class="empty" style="border:none">لا توجد بيانات</li>';
+  var el2 = document.getElementById('top-products');
+  if (el2) el2.innerHTML = topProductsHtml;
+
+  var wilayaCounts = {};
+  orders.forEach(function(o) {
+    var w = o.wilaya_ar || 'غير محدد';
+    wilayaCounts[w] = (wilayaCounts[w] || 0) + 1;
+  });
+  var sortedWilayas = Object.keys(wilayaCounts).sort(function(a, b) { return wilayaCounts[b] - wilayaCounts[a]; }).slice(0, 5);
+  var topWilayasHtml = sortedWilayas.length ? sortedWilayas.map(function(name, i) {
+    return '<li><div class="item-info"><span class="rank">' + (i + 1) + '</span><span>' + name + '</span></div><span class="count">' + wilayaCounts[name] + '</span></li>';
+  }).join('') : '<li class="empty" style="border:none">لا توجد بيانات</li>';
+  var el3 = document.getElementById('top-wilayas');
+  if (el3) el3.innerHTML = topWilayasHtml;
+
+  var statusCounts = { pending: 0, confirmed: 0, shipped: 0, delivered: 0, cancelled: 0 };
+  orders.forEach(function(o) { if (statusCounts[o.status] !== undefined) statusCounts[o.status]++; });
+  var statusColors = { pending: '#f59e0b', confirmed: '#22c55e', shipped: '#3b82f6', delivered: '#0ea5e9', cancelled: '#ef4444' };
+  var statusLabels = { pending: 'انتظار', confirmed: 'تأكيد', shipped: 'شحن', delivered: 'توصيل', cancelled: 'إلغاء' };
+  var maxStatus = Math.max.apply(null, Object.values(statusCounts).concat([1]));
+  var statusHtml = Object.keys(statusCounts).map(function(k) {
+    var h = Math.max(4, (statusCounts[k] / maxStatus) * 120);
+    return '<div class="bar-col"><div class="bar-value">' + statusCounts[k] + '</div><div class="bar" style="height:' + h + 'px;background:' + statusColors[k] + '"></div><div class="bar-label">' + statusLabels[k] + '</div></div>';
+  }).join('');
+  var el4 = document.getElementById('chart-status');
+  if (el4) el4.innerHTML = statusHtml;
+}
+
+// ===== EXPORT CSV =====
+function exportOrdersCSV() {
+  var rows = [['رقم الطلب','التاريخ','العميل','الهاتف','الولاية','التوصيل','المبلغ','الحالة','ملاحظة']];
+  allOrders.forEach(function(o) {
+    var items = [];
+    try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
+    var itemsText = items.map(function(it) { return it.title + ' x' + it.qty; }).join('; ');
+    rows.push([
+      o.order_id, o.created_at, o.name, o.phone,
+      o.wilaya_ar, o.delivery_type === 'Office' ? 'مكتب' : 'منزل',
+      o.subtotal, getStatusText(o.status), o.notes || ''
+    ]);
+  });
+  var csvContent = '\uFEFF' + rows.map(function(r) { return r.map(function(c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+  var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  var link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'orders_' + new Date().toISOString().substring(0, 10) + '.csv';
+  link.click();
+  toast('تم تصدير ' + allOrders.length + ' طلب');
+}
+
+// ===== DELETE ORDERS =====
+function toggleSelectAll(cb) {
+  document.querySelectorAll('.order-check').forEach(function(c) { c.checked = cb.checked; });
+}
+
+function deleteOrder(row, name) {
+  if (!confirm('هل تريد حذف طلب "' + name + '"؟')) return;
+  var url = API_URL + '?action=admin_delete_order&_row=' + row + '&callback=cb_delord_' + Date.now();
+  var cbName = url.split('callback=')[1];
+  window[cbName] = function() { delete window[cbName]; };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onload = function() { toast('تم حذف الطلب'); setTimeout(loadOrders, 2000); };
+  document.head.appendChild(script);
+}
+
+function deleteSelectedOrders() {
+  var checked = document.querySelectorAll('.order-check:checked');
+  if (!checked.length) { toast('لم يتم تحديد أي طلب'); return; }
+  if (!confirm('هل تريد حذف ' + checked.length + ' طلب؟')) return;
+  var rows = [];
+  checked.forEach(function(c) { rows.push(c.value); });
+  var done = 0;
+  rows.forEach(function(row) {
+    var url = API_URL + '?action=admin_delete_order&_row=' + row + '&callback=cb_delord_' + Date.now() + '_' + row;
+    var cbName = url.split('callback=')[1];
+    window[cbName] = function() { delete window[cbName]; };
+    var script = document.createElement('script');
+    script.src = url;
+    script.onload = function() { done++; if (done === rows.length) { toast('تم حذف ' + done + ' طلبات'); setTimeout(loadOrders, 2000); } };
+    document.head.appendChild(script);
   });
 }
 
@@ -642,7 +799,7 @@ function renderOrders() {
   });
   document.getElementById('orders-count-badge').textContent = '(' + filtered.length + ')';
   if (!filtered.length) {
-    document.getElementById('orders-list').innerHTML = '<tr><td colspan="9" class="empty">لا توجد طلبات مطابقة</td></tr>';
+    document.getElementById('orders-list').innerHTML = '<tr><td colspan="10" class="empty">لا توجد طلبات مطابقة</td></tr>';
     return;
   }
   var html = filtered.map(function(o) {
@@ -650,6 +807,7 @@ function renderOrders() {
     try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
     var itemsText = items.map(function(it) { return it.title + ' x' + it.qty; }).join(', ');
     return '<tr>' +
+      '<td><input type="checkbox" class="order-check" value="' + o._row + '"></td>' +
       '<td><strong>' + o.order_id + '</strong></td>' +
       '<td>' + (o.created_at || '').substring(0, 10) + '</td>' +
       '<td>' + o.name + '</td>' +
@@ -665,8 +823,9 @@ function renderOrders() {
         '<option value="cancelled"' + (o.status === 'cancelled' ? ' selected' : '') + '>ملغي</option>' +
       '</select></td>' +
       '<td style="white-space:nowrap">' +
-        '<button class="btn btn-info btn-sm" onclick="viewOrder(' + o._row + ')" style="margin-bottom:2px">تفاصيل</button> ' +
-        '<a href="https://wa.me/' + (o.phone || '') + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-sm">واتساب</a>' +
+        '<button class="btn btn-info btn-xs" onclick="viewOrder(' + o._row + ')">تفاصيل</button> ' +
+        '<a href="https://wa.me/' + (o.phone || '') + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-xs">واتساب</a> ' +
+        '<button class="btn btn-danger btn-xs" onclick="deleteOrder(' + o._row + ',\'' + (o.order_id || '') + '\')">حذف</button>' +
       '</td>' +
     '</tr>';
   }).join('');

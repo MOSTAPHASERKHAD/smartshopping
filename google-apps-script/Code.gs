@@ -21,6 +21,7 @@ function doGet(e) {
     case 'admin_delete_product': result = adminDeleteProduct(params); break;
     case 'admin_update_order': result = adminUpdateOrder(params); break;
     case 'admin_update_settings': result = adminUpdateSettings(params); break;
+    case 'admin_delete_order': result = adminDeleteOrder(params); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -45,6 +46,7 @@ function doPost(e) {
     case 'admin_edit_product': result = adminEditProduct(params); break;
     case 'admin_delete_product': result = adminDeleteProduct(params); break;
     case 'admin_update_order': result = adminUpdateOrder(params); break;
+    case 'admin_delete_order': result = adminDeleteOrder(params); break;
     case 'admin_update_settings': result = adminUpdateSettings(params); break;
     case 'admin_upload_image': result = adminUploadImage(params); break;
     default: result = { error: 'Unknown action' };
@@ -219,6 +221,16 @@ function adminUpdateOrder(params) {
   if (!row || row < 2) return { error: 'Invalid row' };
   if (params.status) sheet.getRange(row, 12).setValue(params.status);
   if (params.notes !== undefined) sheet.getRange(row, 13).setValue(params.notes);
+  return { ok: true };
+}
+
+function adminDeleteOrder(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Orders');
+  if (!sheet) return { error: 'Orders sheet not found' };
+  var row = parseInt(params._row);
+  if (!row || row < 2) return { error: 'Invalid row' };
+  sheet.deleteRow(row);
   return { ok: true };
 }
 
