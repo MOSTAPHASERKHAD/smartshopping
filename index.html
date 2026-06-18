@@ -822,26 +822,28 @@ function trackOrder(){
 // ===== PRODUCT DETAIL =====
 var CUSTOMER_KEY = 'sk_customer';
 function showProductDetail(id){
-  var p=allProducts.find(function(x){return x.id===id});if(!p)return;
-  document.getElementById('pdProductId').value=id;
-  document.getElementById('pdTitle').textContent=currentLang==='ar'?p.title_ar:p.title_en||p.title_ar;
-  var ph='<span>'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>';
-  if(p.old_price>0)ph+=' <span class="pd-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>';
-  document.getElementById('pdPrice').innerHTML=ph;
-  document.getElementById('pdDesc').textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
-  var img=p.image1||'';
-  document.getElementById('pdImage').innerHTML=img?'<img src="'+img+'" alt="" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">':'<div style="color:var(--text2);font-size:.85rem">No Image</div>';
-  var saved=JSON.parse(localStorage.getItem(CUSTOMER_KEY)||'{}');
-  document.getElementById('pdName').value=saved.name||'';
-  document.getElementById('pdPhone').value=saved.phone||'';
-  document.getElementById('pdAddress').value=saved.address||'';
-  document.getElementById('pdSuccess').classList.add('hidden');
-  document.getElementById('pdForm').classList.remove('hidden');
-  document.getElementById('pdSubmit').disabled=false;
-  populatePdWilaya();
-  document.getElementById('products').classList.add('hidden');
-  document.getElementById('productDetailSection').classList.remove('hidden');
-  window.scrollTo({top:0,behavior:'smooth'});
+  try{
+    var p=allProducts.find(function(x){return x.id===id});if(!p)return;
+    document.getElementById('pdProductId').value=id;
+    document.getElementById('pdTitle').textContent=currentLang==='ar'?p.title_ar:p.title_en||p.title_ar;
+    var ph='<span>'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>';
+    if(p.old_price>0)ph+=' <span class="pd-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>';
+    document.getElementById('pdPrice').innerHTML=ph;
+    document.getElementById('pdDesc').textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
+    var img=p.image1||'';
+    document.getElementById('pdImage').innerHTML=img?'<img src="'+img+'" alt="" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">':'<div style="color:var(--text2);font-size:.85rem">No Image</div>';
+    var saved=JSON.parse(localStorage.getItem(CUSTOMER_KEY)||'{}');
+    document.getElementById('pdName').value=saved.name||'';
+    document.getElementById('pdPhone').value=saved.phone||'';
+    document.getElementById('pdAddress').value=saved.address||'';
+    document.getElementById('pdSuccess').classList.add('hidden');
+    document.getElementById('pdForm').classList.remove('hidden');
+    document.getElementById('pdSubmit').disabled=false;
+    populatePdWilaya();
+    document.getElementById('products').classList.add('hidden');
+    document.getElementById('productDetailSection').classList.remove('hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }catch(e){console.error('showProductDetail err',e)}
 }
 function hideProductDetail(){
   document.getElementById('products').classList.remove('hidden');
