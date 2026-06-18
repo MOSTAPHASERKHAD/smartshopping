@@ -537,13 +537,19 @@ function toggleSelectAll(cb) {
 
 function deleteOrder(row, name) {
   if (!confirm('هل تريد حذف طلب "' + name + '"؟')) return;
-  var url = API_URL + '?action=admin_delete_order&_row=' + row + '&callback=cb_delord_' + Date.now();
-  var cbName = url.split('callback=')[1];
-  window[cbName] = function() { delete window[cbName]; };
-  var script = document.createElement('script');
-  script.src = url;
-  script.onload = function() { toast('تم حذف الطلب'); setTimeout(loadOrders, 2000); };
-  document.head.appendChild(script);
+  toast('جاري الحذف...');
+  var cbName = 'cb_del_' + Date.now();
+  window[cbName] = function(res) {
+    delete window[cbName];
+    console.log('Delete response:', res);
+    if (res && res.error) { toast('خطأ: ' + res.error); return; }
+    toast('تم الحذف بنجاح');
+    setTimeout(loadOrders, 1500);
+  };
+  var s = document.createElement('script');
+  s.src = API_URL + '?action=admin_delete_order&_row=' + encodeURIComponent(row) + '&callback=' + cbName;
+  s.onerror = function() { delete window[cbName]; toast('خطأ في الشبكة - تأكد من تحديث Apps Script'); };
+  document.head.appendChild(s);
 }
 
 function deleteSelectedOrders() {
@@ -552,15 +558,21 @@ function deleteSelectedOrders() {
   if (!confirm('هل تريد حذف ' + checked.length + ' طلب؟')) return;
   var rows = [];
   checked.forEach(function(c) { rows.push(c.value); });
-  var done = 0;
+  var done = 0, failed = 0;
   rows.forEach(function(row) {
-    var url = API_URL + '?action=admin_delete_order&_row=' + row + '&callback=cb_delord_' + Date.now() + '_' + row;
-    var cbName = url.split('callback=')[1];
-    window[cbName] = function() { delete window[cbName]; };
-    var script = document.createElement('script');
-    script.src = url;
-    script.onload = function() { done++; if (done === rows.length) { toast('تم حذف ' + done + ' طلبات'); setTimeout(loadOrders, 2000); } };
-    document.head.appendChild(script);
+    var cbName = 'cb_del_' + Date.now() + '_' + row;
+    window[cbName] = function(res) {
+      delete window[cbName];
+      if (res && res.ok) done++; else failed++;
+      if (done + failed === rows.length) {
+        toast('تم حذف ' + done + ' طلب' + (failed ? ' — فشل ' + failed : ''));
+        setTimeout(loadOrders, 2000);
+      }
+    };
+    var s = document.createElement('script');
+    s.src = API_URL + '?action=admin_delete_order&_row=' + encodeURIComponent(row) + '&callback=' + cbName;
+    s.onerror = function() { delete window[cbName]; failed++; if (done + failed === rows.length) { toast('خطأ في الشبكة'); setTimeout(loadOrders, 2000); } };
+    document.head.appendChild(s);
   });
 }
 
