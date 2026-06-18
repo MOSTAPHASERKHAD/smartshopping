@@ -263,6 +263,9 @@ body.rtl{font-family:var(--font-ar)}
           <div class="form-group"><label>رقم الهاتف</label><input id="set_phone"></div>
           <div class="form-group"><label>العملة</label><input id="set_currency" value="DZD"></div>
           <div class="form-group"><label>Facebook Pixel ID</label><input id="set_pixel_id" placeholder=" opcional"></div>
+          <div class="form-group"><label>Google Analytics 4 ID</label><input id="set_ga4_id" placeholder="G-XXXXXXXXXX"></div>
+          <div class="form-group"><label>Snap Pixel ID</label><input id="set_snap_pixel_id" placeholder=" opcional"></div>
+          <div class="form-group"><label>TikTok Pixel ID</label><input id="set_tiktok_pixel_id" placeholder=" opcional"></div>
         </div>
         <button class="btn btn-accent" onclick="saveSettings()" style="margin-top:8px">حفظ الإعدادات</button>
       </div>
@@ -986,6 +989,9 @@ function loadSettings() {
     document.getElementById('set_phone').value = data.phone || '';
     document.getElementById('set_currency').value = data.currency || 'DZD';
     document.getElementById('set_pixel_id').value = data.pixel_id || '';
+    document.getElementById('set_ga4_id').value = data.ga4_id || '';
+    document.getElementById('set_snap_pixel_id').value = data.snap_pixel_id || '';
+    document.getElementById('set_tiktok_pixel_id').value = data.tiktok_pixel_id || '';
   });
 }
 
@@ -996,7 +1002,10 @@ function saveSettings() {
     whatsapp: document.getElementById('set_whatsapp').value,
     phone: document.getElementById('set_phone').value,
     currency: document.getElementById('set_currency').value,
-    pixel_id: document.getElementById('set_pixel_id').value
+    pixel_id: document.getElementById('set_pixel_id').value,
+    ga4_id: document.getElementById('set_ga4_id').value,
+    snap_pixel_id: document.getElementById('set_snap_pixel_id').value,
+    tiktok_pixel_id: document.getElementById('set_tiktok_pixel_id').value
   };
   var url = API_URL + '?action=admin_update_settings';
   for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }

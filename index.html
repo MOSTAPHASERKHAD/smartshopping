@@ -21,6 +21,8 @@
 <meta name="twitter:title" content="Smart Shopping - تسوّق بذكاء">
 <meta name="twitter:description" content="منتجات متنوعة بأفضل الأسعار — الدفع عند الاستلام">
 <link rel="canonical" href="https://MOSTAPHASERKHAD.github.io/smartkiosk/">
+<!-- Tracking Pixels (loaded dynamically from admin settings) -->
+<div id="trackingPixels" style="display:none"></div>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -946,12 +948,62 @@ function apiCall(action,params,callback){
   setTimeout(function(){if(!called){called=true;delete window[cb];document.head.removeChild(s);callback({error:'Timeout'})}},15000);
 }
 
+function loadTrackingPixels(s){
+  // Facebook Pixel
+  if(s.pixel_id){
+    (function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)})(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    window.fbq('init',s.pixel_id);
+    window.fbq('track','PageView');
+  }
+  // Google Analytics 4
+  if(s.ga4_id){
+    var s2=document.createElement('script');s2.async=true;s2.src='https://www.googletagmanager.com/gtag/js?id='+s.ga4_id;
+    document.head.appendChild(s2);
+    window.dataLayer=window.dataLayer||[];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js',new Date());gtag('config',s.ga4_id);
+  }
+  // Snap Pixel
+  if(s.snap_pixel_id){
+    (function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function(){a.handle?a.handle.apply(a,arguments):a.queue.push(arguments)};e.snaptr=n=e.snaptr||[];n.queue=[];n.version='1.0';n.loaded=!0;n.target=n;t=t.createElement('script');t.type='text/javascript';t.async=!0;t.src='https://sc-static.net/scevent.min.js';n=t.parentNode.insertBefore(t,n)})(window,document);
+    window.snaptr('init',s.snap_pixel_id);
+    window.snaptr('track','PAGE_VIEW');
+  }
+  // TikTok Pixel
+  if(s.tiktok_pixel_id){
+    (function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){var o='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{};ttq._i[e]=[];ttq._i[e]._u=o;ttq._t=ttq._t||{};ttq._t[e+'']=+new Date;ttq._o=ttq._o||{};ttq._o[e+'']=n||{};var a=document.createElement('script');a.type='text/javascript';a.async=!0;a.src=o+'?sdkid='+e+'&lib='+t;var r=document.getElementsByTagName('script')[0];r.parentNode.insertBefore(a,r)};ttq.load(s.tiktok_pixel_id);ttq.page();})(window,document,'ttq');
+  }
+}
+
+function trackEvent(event,params){
+  try{
+    if(window.fbq)window.fbq('track',event,params);
+    if(window.gtag)gtag('event',event,params);
+    if(window.snaptr)window.snaptr('track',event,params);
+    if(window.ttq)window.ttq.track&&window.ttq.track(event,params);
+  }catch(e){console.error('trackEvent',e)}
+}
+
+function trackViewContent(product){
+  trackEvent('ViewContent',{content_name:product.name,content_ids:[product.id],content_type:'product',value:product.price,currency:'DZD'});
+}
+function trackAddToCart(product){
+  trackEvent('AddToCart',{content_name:product.name,content_ids:[product.id],content_type:'product',value:product.price,currency:'DZD',num_items:1});
+}
+function trackPurchase(orderId,total){
+  trackEvent('Purchase',{content_name:'Order',content_ids:[orderId],value:total,currency:'DZD',num_items:1});
+}
+function trackInitiateCheckout(total){
+  trackEvent('InitiateCheckout',{value:total,currency:'DZD'});
+}
+
 function init(){
   try{setLang(currentLang)}catch(e){console.error('init setLang',e)}
   apiCall('settings',{},function(d){if(!d||d.error)return;storeSettings=d;
     var n=currentLang==='ar'?d.store_name_ar:d.store_name_en;
     if(n){document.querySelector('.logo').innerHTML=n.replace(/Smart\s*/i,'Smart <span>Shopping</span>')}
     if(d.phone){document.querySelectorAll('a[href*="wa.me"]').forEach(function(a){a.href='https://wa.me/'+d.phone})}
+    loadTrackingPixels(d);
   });
   apiCall('catalog',{},function(d){
     try{
@@ -1186,6 +1238,7 @@ function openCheckout(){
   document.getElementById('checkoutForm').classList.remove('hidden');
   document.getElementById('orderSuccess').classList.add('hidden');
   populateWilayas();renderOrderSummary();
+  try{var total=cart.reduce(function(s,c){var x=allProducts.find(function(p){return p.id===c.id});return s+(x?x.price*c.qty:0)},0);trackInitiateCheckout(total)}catch(e){}
 }
 function closeCheckout(){document.getElementById('checkoutModal').classList.remove('open')}
 
@@ -1214,6 +1267,7 @@ function submitOrder(e){
   var items=JSON.stringify(cart.map(function(c){var x=allProducts.find(function(p){return p.id===c.id});return{id:c.id,title:x?(currentLang==='ar'?x.title_ar:x.title_en):'',price:x?x.price:0,qty:c.qty}}));
   var sub=cart.reduce(function(s,c){var x=allProducts.find(function(p){return p.id===c.id});return s+(x?x.price*c.qty:0)},0);
   document.getElementById('submitBtn').disabled=true;
+  try{var prod=allProducts.find(function(x){return x.id===cart[0].id});trackAddToCart({id:cart[0].id,name:prod?prod.title_ar:'',price:prod?prod.price:0})}catch(e){}
   apiCall('order',{
     name:n,phone:p,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
     delivery_type:d==='office'?'Office':'Home',items_json:items,subtotal:sub,note:note
@@ -1233,6 +1287,7 @@ function submitOrder(e){
       '<a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn">واتساب</a>'+
     '</div>';
     cart=[];saveCart();renderCart();renderProducts();
+    try{trackPurchase(data.order_id,sub)}catch(e){}
   });
 }
 
@@ -1295,6 +1350,7 @@ function showProductDetail(id){
     el=document.getElementById('products');if(el)el.classList.add('hidden');
     el=document.getElementById('productDetailSection');if(el)el.classList.remove('hidden');
     renderSuggested(id);
+    try{trackViewContent({id:p.id,name:p.title_ar,price:Number(p.price)})}catch(e){}
     window.scrollTo({top:0,behavior:'smooth'});
   }catch(e){console.error('showProductDetail err',e)}
 }
