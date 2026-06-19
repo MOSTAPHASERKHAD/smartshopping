@@ -432,9 +432,9 @@ function verifyAdmin(params) {
   var settings = getSettings();
   var storedHash = settings.admin_password || '';
   var providedHash = params.password || '';
-  if (!storedHash) return { ok: true, warning: 'No password set' };
+  if (!storedHash) return { ok: false, error: 'لم يتم تعيين كلمة مرور بعد' };
   if (providedHash === storedHash) return { ok: true };
-  return { ok: false, error: 'Invalid password' };
+  return { ok: false, error: 'كلمة المرور غير صحيحة' };
 }
 
 function validateCoupon(params) {
