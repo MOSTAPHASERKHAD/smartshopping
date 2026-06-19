@@ -414,6 +414,17 @@ body.rtl .chatbot-close{margin-right:0;margin-left:auto}
 .review-form .form-row{display:flex;gap:8px}
 .review-form input{flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.82rem;outline:none}
 .review-form input:focus{border-color:var(--text)}
+.review-photo-upload{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.review-photo-upload label{padding:8px 16px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;font-size:.78rem;color:var(--text2);transition:all .2s}
+.review-photo-upload label:hover{border-color:var(--accent);color:var(--accent)}
+.review-photo-upload input[type=file]{display:none}
+.review-photo-preview{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.review-photo-preview .thumb{position:relative;width:60px;height:60px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.review-photo-preview .thumb img{width:100%;height:100%;object-fit:cover}
+.review-photo-preview .thumb .remove{position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:var(--sale);color:#fff;border:none;font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.review-card .review-photos{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.review-card .review-photos img{width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:transform .2s}
+.review-card .review-photos img:hover{transform:scale(1.05)}
 
 /* Auth Modal */
 .auth-modal{max-width:400px}
@@ -636,6 +647,11 @@ body.rtl .chatbot-close{margin-right:0;margin-left:auto}
         <button onclick="setReviewRating(5)">★</button>
       </div>
       <textarea id="reviewText" placeholder="اكتب رأيك في المنتج..." data-i18n-placeholder="review_ph"></textarea>
+      <div class="review-photo-upload">
+        <label for="reviewPhotoInput">📷 أضف صورة (اختياري)</label>
+        <input type="file" id="reviewPhotoInput" accept="image/*" multiple onchange="previewReviewPhotos(this)">
+      </div>
+      <div class="review-photo-preview" id="reviewPhotoPreview"></div>
       <div class="form-row">
         <input type="text" id="reviewName" placeholder="اسمك" data-i18n-placeholder="review_name">
         <input type="text" id="reviewLocation" placeholder="المدينة" data-i18n-placeholder="review_location">
@@ -2090,6 +2106,34 @@ function updateWishlistButtons() {
 // === Phase 2.3: Reviews ===
 var REVIEWS_CACHE = {};
 var reviewRatingVal = 5;
+var reviewPhotos = [];
+
+function previewReviewPhotos(input) {
+  var preview = document.getElementById('reviewPhotoPreview');
+  preview.innerHTML = '';
+  reviewPhotos = [];
+  var files = input.files;
+  for (var i = 0; i < Math.min(files.length, 3); i++) {
+    (function(file, idx) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var div = document.createElement('div');
+        div.className = 'thumb';
+        div.innerHTML = '<img src="' + e.target.result + '"><button class="remove" onclick="removeReviewPhoto(' + idx + ')">✕</button>';
+        preview.appendChild(div);
+      };
+      reader.readAsDataURL(file);
+      reviewPhotos.push(file);
+    })(files[i], i);
+  }
+}
+
+function removeReviewPhoto(idx) {
+  reviewPhotos.splice(idx, 1);
+  var preview = document.getElementById('reviewPhotoPreview');
+  var thumbs = preview.querySelectorAll('.thumb');
+  if (thumbs[idx]) thumbs[idx].remove();
+}
 
 function loadReviews(productId) {
   try {
@@ -2109,7 +2153,18 @@ function renderReviews(productId, reviews) {
   if (!reviews.length) { list.innerHTML = '<p style="color:var(--text2);font-size:.82rem;padding:8px 0">لا توجد تقييمات بعد</p>'; return; }
   list.innerHTML = reviews.map(function(r) {
     var stars = ''; for (var i = 0; i < (r.rating || 5); i++) stars += '★';
-    return '<div class="review-card"><div class="review-stars">' + stars + '</div><div class="review-text">' + (r.text || '') + '</div><div class="review-author">' + (r.name || '匿名') + (r.location ? ' — ' + r.location : '') + '</div></div>';
+    var photosHtml = '';
+    if (r.photos) {
+      try {
+        var photos = typeof r.photos === 'string' ? JSON.parse(r.photos) : r.photos;
+        if (photos && photos.length) {
+          photosHtml = '<div class="review-photos">' + photos.map(function(url) {
+            return '<img src="' + url + '" onclick="window.open(\'' + url + '\',\'_blank\')">';
+          }).join('') + '</div>';
+        }
+      } catch(e) {}
+    }
+    return '<div class="review-card"><div class="review-stars">' + stars + '</div><div class="review-text">' + (r.text || '') + photosHtml + '</div><div class="review-author">' + (r.name || 'Anonymous') + (r.location ? ' — ' + r.location : '') + '</div></div>';
   }).join('');
 }
 
@@ -2126,17 +2181,57 @@ function submitReview() {
   var loc = document.getElementById('reviewLocation').value.trim();
   if (!text || !name) { alert('اكتب اسمك وتقييمك'); return; }
   var pid = document.getElementById('pdProductId').value;
+
+  if (reviewPhotos.length > 0) {
+    var uploaded = 0;
+    var photoUrls = [];
+    reviewPhotos.forEach(function(file) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var base64 = e.target.result.split(',')[1];
+        var cbName = 'cb_review_img_' + Date.now() + '_' + uploaded;
+        var s = document.createElement('script');
+        s.src = API_URL + '?action=upload_image&base64=' + encodeURIComponent(base64) + '&fileName=' + encodeURIComponent(file.name) + '&callback=' + cbName;
+        window[cbName] = function(data) {
+          delete window[cbName];
+          if (data && data.url) photoUrls.push(data.url);
+          uploaded++;
+          if (uploaded >= reviewPhotos.length || uploaded >= reviewPhotos.length) {
+            doSubmitReview(pid, text, name, loc, JSON.stringify(photoUrls));
+          }
+        };
+        s.onerror = function() {
+          delete window[cbName];
+          uploaded++;
+          if (uploaded >= reviewPhotos.length) {
+            doSubmitReview(pid, text, name, loc, JSON.stringify(photoUrls));
+          }
+        };
+        document.head.appendChild(s);
+      };
+      reader.readAsDataURL(file);
+    });
+  } else {
+    doSubmitReview(pid, text, name, loc, '');
+  }
+}
+
+function doSubmitReview(pid, text, name, loc, photos) {
   apiCall('add_review', {
     product_id: pid,
     name: name,
     location: loc,
     text: text,
-    rating: reviewRatingVal
+    rating: reviewRatingVal,
+    photos: photos
   }, function(data) {
     if (data && data.ok) {
       document.getElementById('reviewText').value = '';
       document.getElementById('reviewName').value = '';
       document.getElementById('reviewLocation').value = '';
+      document.getElementById('reviewPhotoPreview').innerHTML = '';
+      document.getElementById('reviewPhotoInput').value = '';
+      reviewPhotos = [];
       setReviewRating(5);
       delete REVIEWS_CACHE[pid];
       loadReviews(pid);

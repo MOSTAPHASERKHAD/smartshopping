@@ -350,7 +350,7 @@ body.rtl{font-family:var(--font-ar)}
     <div class="top-bar"><h1>التقييمات</h1></div>
     <div class="panel">
       <div class="panel-body"><div class="table-wrap"><table><thead><tr>
-        <th>المنتج</th><th>الاسم</th><th>المدينة</th><th>النص</th><th>التقييم</th><th>التاريخ</th><th>إجراءات</th>
+        <th>المنتج</th><th>الاسم</th><th>المدينة</th><th>النص</th><th>الصور</th><th>التقييم</th><th>التاريخ</th><th>إجراءات</th>
       </tr></thead><tbody id="reviews-list"></tbody></table></div></div>
     </div>
   </div>
@@ -1346,14 +1346,26 @@ function deleteTestimonial(row, name) {
 function loadReviews() {
   apiGet('admin_list_reviews', {}, function(data) {
     var list = document.getElementById('reviews-list');
-    if (!data || !data.reviews || !data.reviews.length) { list.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px">لا توجد تقييمات</td></tr>'; return; }
+    if (!data || !data.reviews || !data.reviews.length) { list.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:24px">لا توجد تقييمات</td></tr>'; return; }
     list.innerHTML = data.reviews.map(function(r) {
       var stars = ''; for (var i = 0; i < (r.rating || 5); i++) stars += '★';
+      var photosHtml = '—';
+      if (r.photos) {
+        try {
+          var photos = typeof r.photos === 'string' ? JSON.parse(r.photos) : r.photos;
+          if (photos && photos.length) {
+            photosHtml = '<div style="display:flex;gap:4px;flex-wrap:wrap">' + photos.map(function(url) {
+              return '<img src="' + url + '" style="width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:pointer" onclick="window.open(\'' + url + '\',\'_blank\')">';
+            }).join('') + '</div>';
+          }
+        } catch(e) {}
+      }
       return '<tr>' +
         '<td>' + (r.product_id || '') + '</td>' +
         '<td>' + (r.name || '') + '</td>' +
         '<td>' + (r.location || '') + '</td>' +
         '<td>' + (r.text || '') + '</td>' +
+        '<td>' + photosHtml + '</td>' +
         '<td style="color:#f59e0b">' + stars + '</td>' +
         '<td>' + (r.created_at || '') + '</td>' +
         '<td><button class="btn btn-danger btn-xs" onclick="deleteReview(' + r._row + ')">حذف</button></td>' +

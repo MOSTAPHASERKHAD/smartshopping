@@ -565,7 +565,7 @@ function addReview(params) {
   var sheet = ss.getSheetByName('Reviews');
   if (!sheet) {
     sheet = ss.insertSheet('Reviews');
-    sheet.appendRow(['product_id', 'name', 'location', 'text', 'rating', 'active', 'created_at']);
+    sheet.appendRow(['product_id', 'name', 'location', 'text', 'rating', 'active', 'created_at', 'photos']);
   }
   var now = Utilities.formatDate(new Date(), 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
   sheet.appendRow([
@@ -575,7 +575,8 @@ function addReview(params) {
     params.text || '',
     params.rating || 5,
     true,
-    now
+    now,
+    params.photos || ''
   ]);
   return { ok: true };
 }
