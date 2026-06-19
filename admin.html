@@ -1558,6 +1558,9 @@ function doLogin() {
     if (data && data.ok) {
       localStorage.setItem(AUTH_KEY, JSON.stringify({ hash: passHash, time: Date.now(), user: user }));
       showAdminPanel();
+      if (data.firstTime) {
+        setTimeout(function() { alert('تم الدخول بكلمة المرور الافتراضية. يُنصح بتعيين كلمة مرور جديدة من الإعدادات.'); }, 500);
+      }
     } else {
       var errEl = document.getElementById('loginError');
       errEl.textContent = (data && data.error) ? data.error : 'كلمة المرور خاطئة';
