@@ -273,6 +273,7 @@ function adminUpdateOrder(params) {
   if (!row || row < 2) return { error: 'Invalid row' };
   if (params.status) sheet.getRange(row, 12).setValue(params.status);
   if (params.notes !== undefined) sheet.getRange(row, 13).setValue(params.notes);
+  SpreadsheetApp.flush();
   return { ok: true };
 }
 
