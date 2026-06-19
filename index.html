@@ -386,6 +386,16 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 .mobile-nav a{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;color:var(--text2);font-size:.62rem;font-weight:600;padding:4px 0;flex:1}
 .mobile-nav a .icon{font-size:1.2rem}
 .mobile-nav a.active{color:var(--sale)}
+
+/* Reels Mode */
+.products-grid.reels-mode{grid-template-columns:1fr;max-width:400px;margin:0 auto;gap:20px}
+.products-grid.reels-mode .product-card{border-radius:16px;overflow:hidden}
+.products-grid.reels-mode .product-image-wrap{aspect-ratio:9/16;max-height:500px}
+.products-grid.reels-mode .product-body{padding:16px}
+.products-grid.reels-mode .product-title{font-size:1rem;font-weight:700}
+.products-grid.reels-mode .product-price{font-size:1.1rem}
+.products-grid.reels-mode .buy-now{padding:12px;font-size:.9rem}
+.view-mode-active{color:var(--sale)!important;background:var(--bg)!important}
 @media(max-width:768px){.mobile-nav{display:flex}}
 .testimonial-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
 .testimonial-stars{color:#f59e0b;font-size:.85rem;margin-bottom:6px}
@@ -457,7 +467,11 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 <div class="container">
   <div class="products-header">
     <h2 data-i18n="products_title">المنتجات</h2>
-    <a href="#track-section" style="font-size:.8rem;color:var(--text2);text-decoration:none" data-i18n="track_link">تتبع طلبك ←</a>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="icon-btn" id="viewGrid" onclick="setViewMode('grid')" title="Grid" style="font-size:1rem">⊞</button>
+      <button class="icon-btn" id="viewReels" onclick="setViewMode('reels')" title="Reels" style="font-size:1rem">☰</button>
+      <a href="#track-section" style="font-size:.8rem;color:var(--text2);text-decoration:none" data-i18n="track_link">تتبع طلبك ←</a>
+    </div>
   </div>
   <div id="productsGrid" class="products-grid">
     <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
@@ -903,6 +917,15 @@ body.rtl .wishlist-btn{left:10px;right:auto}
         <h4 data-i18n="account_my_orders">طلباتي</h4>
         <div id="accountOrdersList"></div>
       </div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:12px">
+        <h4 style="font-size:.85rem;font-weight:700;margin-bottom:6px" data-i18n="referral_title"> برنامج الإحالة</h4>
+        <p style="font-size:.78rem;color:var(--text2);margin-bottom:8px" data-i18n="referral_desc">شارك رابطك واحصل على خصم 10% لكل صديق يطلب</p>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="referralLink" readonly style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:#fff">
+          <button class="btn btn-primary btn-sm" onclick="copyReferral()" data-i18n="referral_copy">نسخ</button>
+        </div>
+        <p id="referralMsg" style="font-size:.72rem;color:var(--success);margin-top:4px;display:none"></p>
+      </div>
       <button class="btn btn-outline btn-block" onclick="doLogout()" style="margin-top:12px" data-i18n="auth_logout">تسجيل الخروج</button>
     </div>
   </div>
@@ -910,7 +933,7 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 </div>
 
 <script>
-var _V='4.1.0';var _SV=localStorage.getItem('_v');
+var _V='4.2.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycbzT4O-GjIiN555hb1Yb5mLEC9kJObnTs6gjNXe1svniZmnyC0xDyioho35DRdguFMM_gQ/exec';
 var LANG_KEY = 'sk_lang';
@@ -1010,6 +1033,10 @@ var I18N = {
     newsletter_btn:"اشترك",
     newsletter_success:"تم الاشتراك بنجاح!",
     newsletter_exists:"أنت مشترك بالفعل!",
+    referral_title:"برنامج الإحالة",
+    referral_desc:"شارك رابطك واحصل على خصم 10% لكل صديق يطلب",
+    referral_copy:"نسخ",
+    referral_copied:"تم النسخ!",
     nav_about:"من نحن",nav_return:"سياسة الاسترجاع",
     about_title:"من نحن",
     about_p1:"Smart Shopping هو متجر إلكتروني جزائري يهدف لتوفير أفضل المنتجات بأسعار مناسبة للجميع.",
@@ -1122,6 +1149,10 @@ var I18N = {
     newsletter_btn:"Subscribe",
     newsletter_success:"Subscribed successfully!",
     newsletter_exists:"Already subscribed!",
+    referral_title:"Referral Program",
+    referral_desc:"Share your link and get 10% discount for each friend who orders",
+    referral_copy:"Copy",
+    referral_copied:"Copied!",
     nav_about:"About Us",nav_return:"Return Policy",
     about_title:"About Us",
     about_p1:"Smart Shopping is an Algerian online store aiming to provide the best products at affordable prices.",
@@ -1260,6 +1291,8 @@ function trackInitiateCheckout(total){
 function init(){
   try{setLang(currentLang)}catch(e){console.error('init setLang',e)}
   loadCustomerSession();
+  initViewMode();
+  checkReferralParam();
   genCaptcha('pdCaptchaQ','pdCaptchaE');
   apiCall('settings',{},function(d){if(!d||d.error)return;storeSettings=d;
     var n=currentLang==='ar'?d.store_name_ar:d.store_name_en;
@@ -2067,6 +2100,8 @@ function showAccountView() {
   document.getElementById('accountName').textContent = currentCustomer.name || 'عميل';
   document.getElementById('accountPhone').textContent = currentCustomer.phone || '';
   document.getElementById('accountSince').textContent = currentCustomer.created_at ? currentCustomer.created_at.split(' ')[0] : '';
+  var refLink = window.location.origin + window.location.pathname + '?ref=' + (currentCustomer.phone || '');
+  document.getElementById('referralLink').value = refLink;
   loadCustomerOrders();
 }
 
@@ -2225,6 +2260,43 @@ function checkLandingPage(){
   });
 }
 function closeLanding(){document.getElementById('landingPage').classList.remove('open')}
+
+// === View Mode (Grid/Reels) ===
+var VIEW_KEY = 'sk_view_mode';
+var viewMode = localStorage.getItem(VIEW_KEY) || 'grid';
+
+function setViewMode(mode) {
+  viewMode = mode;
+  localStorage.setItem(VIEW_KEY, mode);
+  var grid = document.getElementById('productsGrid');
+  if (grid) grid.classList.toggle('reels-mode', mode === 'reels');
+  document.getElementById('viewGrid').classList.toggle('view-mode-active', mode === 'grid');
+  document.getElementById('viewReels').classList.toggle('view-mode-active', mode === 'reels');
+  renderProducts();
+}
+
+function initViewMode() {
+  var grid = document.getElementById('productsGrid');
+  if (grid) grid.classList.toggle('reels-mode', viewMode === 'reels');
+  document.getElementById('viewGrid').classList.toggle('view-mode-active', viewMode === 'grid');
+  document.getElementById('viewReels').classList.toggle('view-mode-active', viewMode === 'reels');
+}
+
+// === Referral Program ===
+function copyReferral() {
+  var input = document.getElementById('referralLink');
+  if (!input) return;
+  input.select();
+  document.execCommand('copy');
+  var msg = document.getElementById('referralMsg');
+  if (msg) { msg.style.display = 'block'; msg.textContent = t('referral_copied'); setTimeout(function() { msg.style.display = 'none'; }, 2000); }
+}
+
+function checkReferralParam() {
+  var params = new URLSearchParams(window.location.search);
+  var ref = params.get('ref');
+  if (ref) localStorage.setItem('sk_referral', ref);
+}
 </script>
 
 <button class="back-to-top" onclick="scrollToTop()">↑</button>
