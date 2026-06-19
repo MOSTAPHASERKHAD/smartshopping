@@ -306,6 +306,9 @@ body.rtl{font-family:var(--font-ar)}
           <div class="form-group"><label>Snap Pixel ID</label><input id="set_snap_pixel_id" placeholder=" opcional"></div>
           <div class="form-group"><label>TikTok Pixel ID</label><input id="set_tiktok_pixel_id" placeholder=" opcional"></div>
           <div class="form-group"><label>الحد الأدنى للطلب (دج)</label><input id="set_minimum_order_amount" type="number" value="0" placeholder="0 = بدون حد"></div>
+          <div class="form-group"><label>تكلفة الشحن - المنزل (دج)</label><input id="set_shipping_home" type="number" value="0" placeholder="0 = يُحدد بعد التواصل"></div>
+          <div class="form-group"><label>تكلفة الشحن - المكتب (دج)</label><input id="set_shipping_office" type="number" value="0" placeholder="0 = يُحدد بعد التواصل"></div>
+          <div class="form-group"><label>إضافة للشحن بعيدالبوادي (دج)</label><input id="set_shipping_remote" type="number" value="0" placeholder="إضافة للولايات البعيدة"></div>
           <div class="form-group"><label>كلمة مرور الأدمن</label><input id="set_admin_password" type="password" placeholder="اتركه فارغاً لتعطيل الحماية"></div>
         </div>
         <button class="btn btn-accent" onclick="saveSettings()" style="margin-top:8px">حفظ الإعدادات</button>
@@ -861,7 +864,7 @@ function loadProducts() {
         '<td><strong>' + (p.title_ar || '') + '</strong><br><small style="color:#999">' + (p.title_en || '') + '</small></td>' +
         '<td>' + Number(p.price).toLocaleString() + ' DZD</td>' +
         '<td>' + (p.category_ar || '-') + '</td>' +
-        '<td>' + p.stock + '</td>' +
+        '<td>' + (p.stock <= 0 ? '<span class="badge badge-cancelled">نفذ</span>' : p.stock <= 5 ? '<span class="badge badge-pending">متبقي ' + p.stock + '</span>' : p.stock) + '</td>' +
         '<td>' + (p.active ? '<span class="badge badge-confirmed">نشط</span>' : '<span class="badge badge-cancelled">غير نشط</span>') + '</td>' +
         '<td><button class="btn btn-info btn-sm" onclick="editProduct(' + p._row + ')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p._row + ',\'' + (p.title_ar || '') + '\')">حذف</button></td>' +
       '</tr>';
@@ -1113,7 +1116,20 @@ function updateOrderStatus(row, status) {
   window[cbName] = function() { delete window[cbName]; };
   var script = document.createElement('script');
   script.src = url;
-  script.onload = function() { toast('تم تحديث الحالة'); };
+  script.onload = function() {
+    toast('تم تحديث الحالة');
+    var o = allOrders.find(function(x) { return x._row === row; });
+    if (o && o.phone) {
+      var statusNames = { pending: 'قيد الانتظار', confirmed: 'تم التأكيد', shipped: 'تم الشحن', delivered: 'تم التوصيل', cancelled: 'تم الإلغاء' };
+      var msg = 'مرحبا ' + (o.name || '') + '\n' +
+        'طلبك رقم ' + (o.order_id || '') + '\n' +
+        'الحالة الجديدة: ' + (statusNames[status] || status) + '\n\n' +
+        'تتبع طلبك: https://MOSTAPHASERKHAD.github.io/smartkiosk/';
+      if (confirm('إرسال تحديث الحالة لعميل ' + o.name + ' عبر واتساب؟')) {
+        window.open('https://wa.me/' + o.phone + '?text=' + encodeURIComponent(msg), '_blank');
+      }
+    }
+  };
   document.head.appendChild(script);
 }
 
@@ -1171,6 +1187,9 @@ function loadSettings() {
     document.getElementById('set_snap_pixel_id').value = data.snap_pixel_id || '';
     document.getElementById('set_tiktok_pixel_id').value = data.tiktok_pixel_id || '';
     document.getElementById('set_minimum_order_amount').value = data.minimum_order_amount || '0';
+    document.getElementById('set_shipping_home').value = data.shipping_home || '0';
+    document.getElementById('set_shipping_office').value = data.shipping_office || '0';
+    document.getElementById('set_shipping_remote').value = data.shipping_remote || '0';
     document.getElementById('set_admin_password').value = '';
   });
 }
@@ -1187,7 +1206,10 @@ function saveSettings() {
     ga4_id: document.getElementById('set_ga4_id').value,
     snap_pixel_id: document.getElementById('set_snap_pixel_id').value,
     tiktok_pixel_id: document.getElementById('set_tiktok_pixel_id').value,
-    minimum_order_amount: document.getElementById('set_minimum_order_amount').value || '0'
+    minimum_order_amount: document.getElementById('set_minimum_order_amount').value || '0',
+    shipping_home: document.getElementById('set_shipping_home').value || '0',
+    shipping_office: document.getElementById('set_shipping_office').value || '0',
+    shipping_remote: document.getElementById('set_shipping_remote').value || '0'
   };
   if (passHash) {
     data.admin_password = hashPassword(passHash);

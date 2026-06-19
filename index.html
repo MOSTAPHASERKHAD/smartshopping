@@ -894,7 +894,7 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 </div>
 
 <script>
-var _V='3.1.0';var _SV=localStorage.getItem('_v');
+var _V='3.2.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycbzT4O-GjIiN555hb1Yb5mLEC9kJObnTs6gjNXe1svniZmnyC0xDyioho35DRdguFMM_gQ/exec';
 var LANG_KEY = 'sk_lang';
@@ -987,6 +987,8 @@ var I18N = {
     account_member_since:"عضو منذ",
     account_my_orders:"طلباتي",
     account_no_orders:"لا توجد طلبات بعد",
+    shipping_cost:"الشحن",
+    shipping_tbd:"يُحدد بعد التواصل",
     nav_about:"من نحن",nav_return:"سياسة الاسترجاع",
     about_title:"من نحن",
     about_p1:"Smart Shopping هو متجر إلكتروني جزائري يهدف لتوفير أفضل المنتجات بأسعار مناسبة للجميع.",
@@ -1092,6 +1094,8 @@ var I18N = {
     account_member_since:"Member since",
     account_my_orders:"My Orders",
     account_no_orders:"No orders yet",
+    shipping_cost:"Shipping",
+    shipping_tbd:"Confirmed after contact",
     nav_about:"About Us",nav_return:"Return Policy",
     about_title:"About Us",
     about_p1:"Smart Shopping is an Algerian online store aiming to provide the best products at affordable prices.",
@@ -1477,7 +1481,10 @@ function openCheckout(){
   document.getElementById('orderSuccess').classList.add('hidden');
   populateWilayas();renderOrderSummary();
   genCaptcha('captchaQ1','captchaE');
+  autoFillOrderForms();
   try{var total=getCartSubtotal();trackInitiateCheckout(total)}catch(e){}
+  document.getElementById('orderWilaya').onchange=function(){renderOrderSummary()};
+  document.getElementById('orderDelivery').onchange=function(){renderOrderSummary()};
 }
 function closeCheckout(){document.getElementById('checkoutModal').classList.remove('open')}
 
@@ -1493,7 +1500,13 @@ function renderOrderSummary(){
   if (cartDiscount > 0) {
     h+='<div class="summary-line" style="color:var(--success)"><span>خصم ('+cartCouponCode+')</span><span>-'+Number(cartDiscount).toLocaleString()+' '+t('currency')+'</span></div>';
   }
-  var total = s - cartDiscount;
+  var shippingCost = getShippingCost();
+  if (shippingCost > 0) {
+    h+='<div class="summary-line"><span>'+t('shipping_cost')+'</span><span>'+Number(shippingCost).toLocaleString()+' '+t('currency')+'</span></div>';
+  } else {
+    h+='<div class="summary-line"><span>'+t('shipping_cost')+'</span><span style="color:var(--text2)">'+t('shipping_tbd')+'</span></div>';
+  }
+  var total = s - cartDiscount + shippingCost;
   if (total < 0) total = 0;
   h+='<div class="summary-line summary-total"><span>'+t('subtotal')+'</span><span>'+Number(total).toLocaleString()+' '+t('currency')+'</span></div>';
   document.getElementById('orderSummary').innerHTML=h;
@@ -1538,7 +1551,8 @@ function submitOrder(e){
     document.getElementById('checkoutForm').classList.add('hidden');
     var sc=document.getElementById('orderSuccess');sc.classList.remove('hidden');
     var id=data.order_id;var wa=storeSettings.phone||'213557543177';
-    var msg=encodeURIComponent(t('whatsapp_msg')+' '+id);
+    var trackUrl='https://MOSTAPHASERKHAD.github.io/smartkiosk/';
+    var msg=encodeURIComponent(t('whatsapp_msg')+' '+id+'\n\nتتبع طلبك: '+trackUrl);
     sc.innerHTML='<div class="success-wrap fade-in">'+
       '<div class="success-icon">✓</div>'+
       '<h2>'+t('order_success')+'</h2>'+
@@ -1773,6 +1787,22 @@ function getCartSubtotal() {
     var x = allProducts.find(function(p) { return p.id === c.id });
     return s + (x ? x.price * c.qty : 0);
   }, 0);
+}
+
+// === Shipping Cost Calculator ===
+var REMOTE_WILAYAS = ['01','08','11','30','33','37','47','50','51','52','53','54','55','56','57','58'];
+function getShippingCost() {
+  try {
+    var delivery = (document.getElementById('orderDelivery') || {}).value || 'home';
+    var wilaya = (document.getElementById('orderWilaya') || {}).value || '';
+    var base = parseInt(storeSettings['shipping_' + delivery]) || 0;
+    if (base <= 0) return 0;
+    var remote = parseInt(storeSettings.shipping_remote) || 0;
+    if (remote > 0 && REMOTE_WILAYAS.indexOf(wilaya) > -1) {
+      return base + remote;
+    }
+    return base;
+  } catch(e) { return 0; }
 }
 
 // === Phase 2.1: Promo Banners ===
