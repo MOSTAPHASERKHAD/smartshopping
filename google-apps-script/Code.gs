@@ -27,6 +27,12 @@ function doGet(e) {
     case 'admin_add_testimonial': result = adminAddTestimonial(params); break;
     case 'admin_edit_testimonial': result = adminEditTestimonial(params); break;
     case 'admin_delete_testimonial': result = adminDeleteTestimonial(params); break;
+    case 'verify_admin': result = verifyAdmin(params); break;
+    case 'validate_coupon': result = validateCoupon(params); break;
+    case 'admin_list_coupons': result = adminListCoupons(); break;
+    case 'admin_add_coupon': result = adminAddCoupon(params); break;
+    case 'admin_edit_coupon': result = adminEditCoupon(params); break;
+    case 'admin_delete_coupon': result = adminDeleteCoupon(params); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -57,6 +63,11 @@ function doPost(e) {
     case 'admin_delete_testimonial': result = adminDeleteTestimonial(params); break;
     case 'admin_update_settings': result = adminUpdateSettings(params); break;
     case 'admin_upload_image': result = adminUploadImage(params); break;
+    case 'verify_admin': result = verifyAdmin(params); break;
+    case 'validate_coupon': result = validateCoupon(params); break;
+    case 'admin_add_coupon': result = adminAddCoupon(params); break;
+    case 'admin_edit_coupon': result = adminEditCoupon(params); break;
+    case 'admin_delete_coupon': result = adminDeleteCoupon(params); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -382,4 +393,114 @@ function adminUploadImageGet(params) {
   } catch(ex) {
     return { error: ex.toString() };
   }
+}
+
+function verifyAdmin(params) {
+  var settings = getSettings();
+  var storedHash = settings.admin_password || '';
+  var providedHash = params.password || '';
+  if (!storedHash) return { ok: true, warning: 'No password set' };
+  if (providedHash === storedHash) return { ok: true };
+  return { ok: false, error: 'Invalid password' };
+}
+
+function validateCoupon(params) {
+  var code = (params.coupon_code || '').toUpperCase().trim();
+  if (!code) return { valid: false, error: 'Enter a coupon code' };
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Coupons');
+  if (!sheet) return { valid: false, error: 'No coupons available' };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { valid: false, error: 'Invalid coupon' };
+  var headers = data[0];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var coupon = {};
+    for (var j = 0; j < headers.length; j++) { coupon[headers[j]] = row[j]; }
+    if ((coupon.code || '').toUpperCase() === code) {
+      if (coupon.active === false || coupon.active === 'FALSE' || coupon.active === 'false') {
+        return { valid: false, error: 'Coupon is inactive' };
+      }
+      if (coupon.expiry) {
+        var expiryDate = new Date(coupon.expiry);
+        if (expiryDate < new Date()) return { valid: false, error: 'Coupon expired' };
+      }
+      var maxUses = parseInt(coupon.max_uses) || 999999;
+      var usedCount = parseInt(coupon.used_count) || 0;
+      if (usedCount >= maxUses) return { valid: false, error: 'Coupon usage limit reached' };
+      var minOrder = parseInt(coupon.min_order) || 0;
+      var subtotal = parseInt(params.subtotal) || 0;
+      if (subtotal < minOrder) return { valid: false, error: 'Minimum order for this coupon is ' + minOrder + ' DZD' };
+      var percent = parseFloat(coupon.percent) || 0;
+      var discount = Math.round(subtotal * percent / 100);
+      sheet.getRange(i + 1, headers.indexOf('used_count') + 1).setValue(usedCount + 1);
+      return { valid: true, percent: percent, discount: discount, code: code };
+    }
+  }
+  return { valid: false, error: 'Invalid coupon code' };
+}
+
+function adminListCoupons() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Coupons');
+  if (!sheet) return { coupons: [] };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { coupons: [] };
+  var headers = data[0];
+  var coupons = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var coupon = { _row: i + 1 };
+    for (var j = 0; j < headers.length; j++) { coupon[headers[j]] = row[j]; }
+    coupons.push(coupon);
+  }
+  return { coupons: coupons };
+}
+
+function adminAddCoupon(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Coupons');
+  if (!sheet) {
+    sheet = ss.insertSheet('Coupons');
+    sheet.appendRow(['code', 'percent', 'min_order', 'max_uses', 'used_count', 'expiry', 'active']);
+  }
+  sheet.appendRow([
+    (params.code || '').toUpperCase().trim(),
+    params.percent || 10,
+    params.min_order || 0,
+    params.max_uses || 100,
+    0,
+    params.expiry || '',
+    params.active === false || params.active === 'false' ? false : true
+  ]);
+  return { ok: true };
+}
+
+function adminEditCoupon(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Coupons');
+  if (!sheet) return { error: 'Coupons sheet not found' };
+  var row = parseInt(params._row);
+  if (!row || row < 2) return { error: 'Invalid row' };
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  for (var j = 0; j < headers.length; j++) {
+    if (params[headers[j]] !== undefined) {
+      var val = params[headers[j]];
+      if (headers[j] === 'active') { val = (val === true || val === 'true' || val === 'TRUE' || val === 1 || val === '1'); }
+      if (headers[j] === 'code') { val = (val || '').toUpperCase().trim(); }
+      sheet.getRange(row, j + 1).setValue(val);
+    }
+  }
+  return { ok: true };
+}
+
+function adminDeleteCoupon(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Coupons');
+  if (!sheet) return { error: 'Coupons sheet not found' };
+  var row = parseInt(params._row);
+  if (!row || row < 2) return { error: 'Invalid row' };
+  sheet.deleteRow(row);
+  return { ok: true };
 }

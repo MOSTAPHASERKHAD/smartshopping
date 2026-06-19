@@ -148,10 +148,46 @@ body.rtl{font-family:var(--font-ar)}
 .top-list .rank{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;margin-left:8px;flex-shrink:0}
 .top-list .item-info{display:flex;align-items:center;gap:6px}
 .top-list .count{font-weight:700;color:var(--accent)}
+
+/* Login Screen */
+.login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);position:fixed;top:0;left:0;right:0;z-index:9999}
+.login-card{background:var(--card);border-radius:var(--radius);padding:40px;width:100%;max-width:380px;box-shadow:var(--shadow-lg);text-align:center}
+.login-card .login-logo{font-size:2.5rem;margin-bottom:8px}
+.login-card h2{font-size:1.2rem;font-weight:800;margin-bottom:4px}
+.login-card p{font-size:.8rem;color:var(--text2);margin-bottom:24px}
+.login-card .form-group{text-align:right;margin-bottom:16px}
+.login-card .form-group label{display:block;font-size:.8rem;font-weight:600;margin-bottom:4px;color:var(--text2)}
+.login-card .form-group input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.85rem;font-family:inherit;transition:border .2s}
+.login-card .form-group input:focus{outline:none;border-color:var(--accent)}
+.login-card .login-error{color:var(--danger);font-size:.78rem;margin-bottom:12px;display:none}
+.login-card .btn-login{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s}
+.login-card .btn-login:hover{opacity:.9}
+.login-card .btn-login:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body>
 
+<!-- Login Screen -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">🛒</div>
+    <h2>Smart Shopping</h2>
+    <p>لوحة التحكم</p>
+    <div class="login-error" id="loginError">كلمة المرور خاطئة</div>
+    <div class="form-group">
+      <label>اسم المستخدم</label>
+      <input type="text" id="loginUser" value="admin" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>كلمة المرور</label>
+      <input type="password" id="loginPass" placeholder="أدخل كلمة المرور" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" id="loginBtn" onclick="doLogin()">تسجيل الدخول</button>
+  </div>
+</div>
+
+<!-- Admin Panel -->
+<div id="adminPanel" class="hidden">
 <div class="sidebar">
   <div class="sidebar-header">
     <div class="logo">Smart <span>Shopping</span></div>
@@ -162,10 +198,11 @@ body.rtl{font-family:var(--font-ar)}
     <a href="#" onclick="showSection('products')" id="nav-products"><span class="icon">📦</span><span>المنتجات</span></a>
     <a href="#" onclick="showSection('orders')" id="nav-orders"><span class="icon">🛒</span><span>الطلبات</span></a>
     <a href="#" onclick="showSection('settings')" id="nav-settings"><span class="icon">⚙️</span><span>الإعدادات</span></a>
+    <a href="#" onclick="showSection('coupons')" id="nav-coupons"><span class="icon">🎟️</span><span>الكوبونات</span></a>
     <a href="#" onclick="showSection('testimonials')" id="nav-testimonials"><span class="icon">⭐</span><span>الشهادات</span></a>
     <a href="#" onclick="showSection('pages')" id="nav-pages"><span class="icon">📄</span><span>الصفحات</span></a>
   </nav>
-  <div class="sidebar-footer">Smart Shopping v1.0</div>
+  <div class="sidebar-footer"><span id="adminUserLabel">Admin</span> · <a href="#" onclick="doLogout()" style="color:var(--accent);text-decoration:none">خروج</a></div>
 </div>
 
 <div class="main">
@@ -266,9 +303,24 @@ body.rtl{font-family:var(--font-ar)}
           <div class="form-group"><label>Google Analytics 4 ID</label><input id="set_ga4_id" placeholder="G-XXXXXXXXXX"></div>
           <div class="form-group"><label>Snap Pixel ID</label><input id="set_snap_pixel_id" placeholder=" opcional"></div>
           <div class="form-group"><label>TikTok Pixel ID</label><input id="set_tiktok_pixel_id" placeholder=" opcional"></div>
+          <div class="form-group"><label>الحد الأدنى للطلب (دج)</label><input id="set_minimum_order_amount" type="number" value="0" placeholder="0 = بدون حد"></div>
+          <div class="form-group"><label>كلمة مرور الأدمن</label><input id="set_admin_password" type="password" placeholder="اتركه فارغاً لتعطيل الحماية"></div>
         </div>
         <button class="btn btn-accent" onclick="saveSettings()" style="margin-top:8px">حفظ الإعدادات</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Coupons -->
+  <div id="sec-coupons" class="hidden">
+    <div class="top-bar">
+      <h1>الكوبونات</h1>
+      <button class="btn btn-accent" onclick="openCouponModal()">+ إضافة كوبون</button>
+    </div>
+    <div class="panel">
+      <div class="panel-body"><div class="table-wrap"><table><thead><tr>
+        <th>الكود</th><th>الخصم %</th><th>الحد الأدنى</th><th>الاستخدامات</th><th>تاريخ الانتهاء</th><th>الحالة</th><th>إجراءات</th>
+      </tr></thead><tbody id="coupons-list"></tbody></table></div></div>
     </div>
   </div>
 
@@ -389,6 +441,37 @@ body.rtl{font-family:var(--font-ar)}
 </div>
 </div>
 
+<!-- Coupon Modal -->
+<div class="modal-overlay" id="couponModal">
+<div class="modal">
+  <div class="modal-header">
+    <h3 id="couponModalTitle">إضافة كوبون</h3>
+    <button class="modal-close" onclick="closeCouponModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <form onsubmit="saveCoupon(event)">
+      <input type="hidden" id="c_row">
+      <div class="form-row">
+        <div class="form-group"><label>كود الخصم *</label><input id="c_code" required placeholder="مثلاً: RAMADAN10" style="text-transform:uppercase"></div>
+        <div class="form-group"><label>نسبة الخصم (%) *</label><input id="c_percent" type="number" min="1" max="99" required value="10"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>الحد الأدنى للطلب (دج)</label><input id="c_min_order" type="number" value="0" placeholder="0 = بدون حد"></div>
+        <div class="form-group"><label>الحد الأقصى للاستخدام</label><input id="c_max_uses" type="number" value="100"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>تاريخ الانتهاء</label><input id="c_expiry" type="date"></div>
+        <div class="form-group"><label>الحالة</label><select id="c_active"><option value="true">نشط</option><option value="false">معطّل</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button type="submit" class="btn btn-accent">حفظ</button>
+        <button type="button" class="btn btn-outline" onclick="closeCouponModal()">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+</div>
+
 <!-- Testimonial Modal -->
 <div class="modal-overlay" id="testimonialModal">
 <div class="modal">
@@ -464,14 +547,17 @@ function apiGet(action, params, callback) {
 
 // ===== NAV =====
 function showSection(name) {
-  ['dashboard','products','orders','settings','testimonials','pages'].forEach(function(s) {
-    document.getElementById('sec-' + s).classList.toggle('hidden', s !== name);
-    document.getElementById('nav-' + s).classList.toggle('active', s === name);
+  ['dashboard','products','orders','settings','coupons','testimonials','pages'].forEach(function(s) {
+    var sec = document.getElementById('sec-' + s);
+    if (sec) sec.classList.toggle('hidden', s !== name);
+    var nav = document.getElementById('nav-' + s);
+    if (nav) nav.classList.toggle('active', s === name);
   });
   if (name === 'dashboard') loadDashboard();
   if (name === 'products') loadProducts();
   if (name === 'orders') loadOrders();
   if (name === 'settings') loadSettings();
+  if (name === 'coupons') loadCoupons();
   if (name === 'testimonials') loadTestimonials();
   if (name === 'pages') loadPages();
 }
@@ -496,6 +582,76 @@ function playNotification() {
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
     osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
   } catch(e) {}
+}
+
+// ===== COUPONS =====
+function loadCoupons() {
+  apiGet('admin_list_coupons', {}, function(data) {
+    var list = document.getElementById('coupons-list');
+    if (!data || !data.coupons || !data.coupons.length) { list.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px">لا توجد كوبونات</td></tr>'; return; }
+    list.innerHTML = data.coupons.map(function(c) {
+      var active = (c.active === true || c.active === 'TRUE' || c.active === 'true' || c.active === 1);
+      return '<tr>' +
+        '<td><strong>' + (c.code || '') + '</strong></td>' +
+        '<td>' + (c.percent || 0) + '%</td>' +
+        '<td>' + Number(c.min_order || 0).toLocaleString() + ' دج</td>' +
+        '<td>' + (c.used_count || 0) + ' / ' + (c.max_uses || '∞') + '</td>' +
+        '<td>' + (c.expiry || '—') + '</td>' +
+        '<td><span class="status-badge ' + (active ? 'status-confirmed' : 'status-cancelled') + '">' + (active ? 'نشط' : 'معطّل') + '</span></td>' +
+        '<td><button class="btn btn-sm btn-outline" onclick="editCoupon(' + c._row + ')">تعديل</button> <button class="btn btn-sm" style="color:var(--danger)" onclick="deleteCoupon(' + c._row + ')">حذف</button></td>' +
+      '</tr>';
+    }).join('');
+  });
+}
+function openCouponModal(coupon) {
+  document.getElementById('couponModal').classList.add('open');
+  document.getElementById('couponModalTitle').textContent = coupon ? 'تعديل كوبون' : 'إضافة كوبون';
+  document.getElementById('c_row').value = coupon ? coupon._row : '';
+  document.getElementById('c_code').value = coupon ? coupon.code : '';
+  document.getElementById('c_percent').value = coupon ? coupon.percent : 10;
+  document.getElementById('c_min_order').value = coupon ? (coupon.min_order || 0) : 0;
+  document.getElementById('c_max_uses').value = coupon ? (coupon.max_uses || 100) : 100;
+  document.getElementById('c_expiry').value = coupon ? (coupon.expiry || '') : '';
+  document.getElementById('c_active').value = coupon ? (coupon.active === false || coupon.active === 'FALSE' ? 'false' : 'true') : 'true';
+}
+function closeCouponModal() { document.getElementById('couponModal').classList.remove('open'); }
+function editCoupon(row) {
+  apiGet('admin_list_coupons', {}, function(data) {
+    if (data && data.coupons) {
+      var c = data.coupons.find(function(x) { return x._row === row; });
+      if (c) openCouponModal(c);
+    }
+  });
+}
+function saveCoupon(e) {
+  e.preventDefault();
+  var row = document.getElementById('c_row').value;
+  var data = {
+    code: document.getElementById('c_code').value.toUpperCase().trim(),
+    percent: document.getElementById('c_percent').value,
+    min_order: document.getElementById('c_min_order').value || 0,
+    max_uses: document.getElementById('c_max_uses').value || 100,
+    expiry: document.getElementById('c_expiry').value,
+    active: document.getElementById('c_active').value
+  };
+  if (row) data._row = row;
+  var action = row ? 'admin_edit_coupon' : 'admin_add_coupon';
+  var url = API_URL + '?action=' + action;
+  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
+  var cb = 'cb_' + Date.now(); window[cb] = function() { delete window[cb]; };
+  url += '&callback=' + cb;
+  var s = document.createElement('script'); s.src = url;
+  s.onload = function() { closeCouponModal(); loadCoupons(); toast(row ? 'تم تعديل الكوبون' : 'تم إضافة الكوبون'); };
+  document.head.appendChild(s);
+}
+function deleteCoupon(row) {
+  if (!confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
+  var url = API_URL + '?action=admin_delete_coupon&_row=' + row;
+  var cb = 'cb_' + Date.now(); window[cb] = function() { delete window[cb]; };
+  url += '&callback=' + cb;
+  var s = document.createElement('script'); s.src = url;
+  s.onload = function() { loadCoupons(); toast('تم حذف الكوبون'); };
+  document.head.appendChild(s);
 }
 
 // ===== DASHBOARD =====
@@ -992,10 +1148,13 @@ function loadSettings() {
     document.getElementById('set_ga4_id').value = data.ga4_id || '';
     document.getElementById('set_snap_pixel_id').value = data.snap_pixel_id || '';
     document.getElementById('set_tiktok_pixel_id').value = data.tiktok_pixel_id || '';
+    document.getElementById('set_minimum_order_amount').value = data.minimum_order_amount || '0';
+    document.getElementById('set_admin_password').value = '';
   });
 }
 
 function saveSettings() {
+  var passHash = document.getElementById('set_admin_password').value.trim();
   var data = {
     store_name_ar: document.getElementById('set_store_name_ar').value,
     store_name_en: document.getElementById('set_store_name_en').value,
@@ -1005,8 +1164,12 @@ function saveSettings() {
     pixel_id: document.getElementById('set_pixel_id').value,
     ga4_id: document.getElementById('set_ga4_id').value,
     snap_pixel_id: document.getElementById('set_snap_pixel_id').value,
-    tiktok_pixel_id: document.getElementById('set_tiktok_pixel_id').value
+    tiktok_pixel_id: document.getElementById('set_tiktok_pixel_id').value,
+    minimum_order_amount: document.getElementById('set_minimum_order_amount').value || '0'
   };
+  if (passHash) {
+    data.admin_password = hashPassword(passHash);
+  }
   var url = API_URL + '?action=admin_update_settings';
   for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
   var cbName = 'settings_' + Date.now();
@@ -1175,6 +1338,63 @@ function startAutoRefresh() {
 
 loadDashboard();
 startAutoRefresh();
+
+// === Auth Functions ===
+var AUTH_KEY = 'admin_auth';
+var AUTH_TTL = 24 * 60 * 60 * 1000;
+
+function hashPassword(str) {
+  var hash = 0;
+  for (var i = 0; i < str.length; i++) {
+    var ch = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + ch;
+    hash = hash & hash;
+  }
+  return 'h' + Math.abs(hash).toString(36);
+}
+
+function checkAuth() {
+  try {
+    var auth = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
+    if (!auth || !auth.hash || !auth.time) return false;
+    if (Date.now() - auth.time > AUTH_TTL) { localStorage.removeItem(AUTH_KEY); return false; }
+    return true;
+  } catch(e) { return false; }
+}
+
+function doLogin() {
+  var user = document.getElementById('loginUser').value.trim();
+  var pass = document.getElementById('loginPass').value;
+  if (!user || !pass) return;
+  var btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'جاري التحقق...';
+  document.getElementById('loginError').style.display = 'none';
+  var passHash = hashPassword(pass);
+  apiGet('verify_admin', { password: passHash }, function(data) {
+    btn.disabled = false; btn.textContent = 'تسجيل الدخول';
+    if (data && data.ok) {
+      localStorage.setItem(AUTH_KEY, JSON.stringify({ hash: passHash, time: Date.now(), user: user }));
+      showAdminPanel();
+    } else {
+      document.getElementById('loginError').style.display = 'block';
+    }
+  });
+}
+
+function doLogout() {
+  localStorage.removeItem(AUTH_KEY);
+  document.getElementById('adminPanel').classList.add('hidden');
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function showAdminPanel() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminPanel').classList.remove('hidden');
+}
+
+// Check on load
+if (checkAuth()) { showAdminPanel(); } else { doLogout(); }
 </script>
+</div>
 </body>
 </html>
