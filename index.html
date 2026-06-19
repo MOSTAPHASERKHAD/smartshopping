@@ -623,6 +623,14 @@ body.rtl .wishlist-btn{left:10px;right:auto}
     <div class="footer-brand">
       <div class="logo">Smart <span>Shopping</span></div>
       <p data-i18n="footer_desc">متجر إلكتروني جزائري — نوفر لكم أفضل المنتجات بأفضل الأسعار مع التوصيل لجميع الولايات.</p>
+      <div class="newsletter" style="margin-top:16px">
+        <h4 style="color:#fff;font-size:.8rem;margin-bottom:8px" data-i18n="newsletter_title">النشرة البريدية</h4>
+        <div style="display:flex;gap:6px">
+          <input type="email" id="newsletterEmail" placeholder="بريدك الإلكتروني" data-i18n-placeholder="newsletter_ph" style="flex:1;padding:8px 12px;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:transparent;color:#fff;font-family:var(--font);font-size:.8rem;outline:none">
+          <button class="btn btn-accent btn-sm" onclick="subscribeNewsletter()" data-i18n="newsletter_btn">اشترك</button>
+        </div>
+        <p id="newsletterMsg" style="font-size:.72rem;margin-top:6px;display:none"></p>
+      </div>
     </div>
     <div>
       <h4 data-i18n="footer_links">روابط</h4>
@@ -894,7 +902,7 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 </div>
 
 <script>
-var _V='3.2.0';var _SV=localStorage.getItem('_v');
+var _V='4.0.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycbzT4O-GjIiN555hb1Yb5mLEC9kJObnTs6gjNXe1svniZmnyC0xDyioho35DRdguFMM_gQ/exec';
 var LANG_KEY = 'sk_lang';
@@ -989,6 +997,11 @@ var I18N = {
     account_no_orders:"لا توجد طلبات بعد",
     shipping_cost:"الشحن",
     shipping_tbd:"يُحدد بعد التواصل",
+    newsletter_title:"النشرة البريدية",
+    newsletter_ph:"بريدك الإلكتروني",
+    newsletter_btn:"اشترك",
+    newsletter_success:"تم الاشتراك بنجاح!",
+    newsletter_exists:"أنت مشترك بالفعل!",
     nav_about:"من نحن",nav_return:"سياسة الاسترجاع",
     about_title:"من نحن",
     about_p1:"Smart Shopping هو متجر إلكتروني جزائري يهدف لتوفير أفضل المنتجات بأسعار مناسبة للجميع.",
@@ -1096,6 +1109,11 @@ var I18N = {
     account_no_orders:"No orders yet",
     shipping_cost:"Shipping",
     shipping_tbd:"Confirmed after contact",
+    newsletter_title:"Newsletter",
+    newsletter_ph:"Your email",
+    newsletter_btn:"Subscribe",
+    newsletter_success:"Subscribed successfully!",
+    newsletter_exists:"Already subscribed!",
     nav_about:"About Us",nav_return:"Return Policy",
     about_title:"About Us",
     about_p1:"Smart Shopping is an Algerian online store aiming to provide the best products at affordable prices.",
@@ -2140,6 +2158,26 @@ window.addEventListener('scroll',function(){
   });
 });
 function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
+
+// === Newsletter ===
+function subscribeNewsletter(){
+  var email=document.getElementById('newsletterEmail').value.trim();
+  if(!email||email.indexOf('@')<1){return}
+  var msg=document.getElementById('newsletterMsg');
+  apiCall('newsletter_subscribe',{email:email},function(d){
+    msg.style.display='block';
+    if(d&&d.ok){
+      msg.style.color='#22c55e';msg.textContent=t('newsletter_success');
+      document.getElementById('newsletterEmail').value='';
+    }else if(d&&d.exists){
+      msg.style.color='#f59e0b';msg.textContent=t('newsletter_exists');
+    }else{
+      msg.style.color='#ef4444';msg.textContent='خطأ، حاول مرة أخرى';
+    }
+    setTimeout(function(){msg.style.display='none'},4000);
+  });
+}
+
 function scrollToSection(id){
   var el=document.getElementById(id);
   if(el)el.scrollIntoView({behavior:'smooth',block:'start'});

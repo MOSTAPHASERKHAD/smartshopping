@@ -44,6 +44,8 @@ function doGet(e) {
     case 'customer_login': result = customerLogin(params); break;
     case 'customer_profile': result = customerProfile(params); break;
     case 'admin_list_customers': result = adminListCustomers(); break;
+    case 'newsletter_subscribe': result = newsletterSubscribe(params); break;
+    case 'admin_list_subscribers': result = adminListSubscribers(); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -90,6 +92,8 @@ function doPost(e) {
     case 'customer_login': result = customerLogin(params); break;
     case 'customer_profile': result = customerProfile(params); break;
     case 'admin_list_customers': result = adminListCustomers(); break;
+    case 'newsletter_subscribe': result = newsletterSubscribe(params); break;
+    case 'admin_list_subscribers': result = adminListSubscribers(); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -722,4 +726,41 @@ function adminListCustomers() {
   }
   customers.reverse();
   return { customers: customers };
+}
+
+// === Newsletter ===
+function newsletterSubscribe(params) {
+  var email = (params.email || '').toLowerCase().trim();
+  if (!email || email.indexOf('@') < 1) return { ok: false, error: 'Invalid email' };
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Newsletter');
+  if (!sheet) {
+    sheet = ss.insertSheet('Newsletter');
+    sheet.appendRow(['email', 'subscribed_at']);
+  }
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === email) return { ok: false, exists: true };
+  }
+  var now = Utilities.formatDate(new Date(), 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
+  sheet.appendRow([email, now]);
+  return { ok: true };
+}
+
+function adminListSubscribers() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Newsletter');
+  if (!sheet) return { subscribers: [] };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { subscribers: [] };
+  var headers = data[0];
+  var subs = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var s = { _row: i + 1 };
+    for (var j = 0; j < headers.length; j++) { s[headers[j]] = row[j]; }
+    subs.push(s);
+  }
+  subs.reverse();
+  return { subscribers: subs };
 }

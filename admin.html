@@ -202,6 +202,7 @@ body.rtl{font-family:var(--font-ar)}
     <a href="#" onclick="showSection('testimonials')" id="nav-testimonials"><span class="icon">⭐</span><span>الشهادات</span></a>
     <a href="#" onclick="showSection('reviews')" id="nav-reviews"><span class="icon">💬</span><span>التقييمات</span></a>
     <a href="#" onclick="showSection('banners')" id="nav-banners"><span class="icon">🖼️</span><span>البانرات</span></a>
+    <a href="#" onclick="showSection('newsletter')" id="nav-newsletter"><span class="icon">📧</span><span>النشرة البريدية</span></a>
     <a href="#" onclick="showSection('pages')" id="nav-pages"><span class="icon">📄</span><span>الصفحات</span></a>
   </nav>
   <div class="sidebar-footer"><span id="adminUserLabel">Admin</span> · <a href="#" onclick="doLogout()" style="color:var(--accent);text-decoration:none">خروج</a></div>
@@ -358,6 +359,16 @@ body.rtl{font-family:var(--font-ar)}
     <p style="color:var(--text2);font-size:.82rem;margin-bottom:16px">أضف صور البانرات التي تظهر في أعلى الصفحة الرئيسية. الحد الأقصى 5 بانرات.</p>
     <div id="bannersList"></div>
     <button class="btn btn-accent" onclick="saveBanners()" style="margin-top:12px">حفظ البانرات</button>
+  </div>
+
+  <!-- Newsletter -->
+  <div id="sec-newsletter" class="hidden">
+    <div class="top-bar"><h1>النشرة البريدية</h1></div>
+    <div class="panel">
+      <div class="panel-body"><div class="table-wrap"><table><thead><tr>
+        <th>البريد الإلكتروني</th><th>تاريخ الاشتراك</th>
+      </tr></thead><tbody id="newsletter-list"></tbody></table></div></div>
+    </div>
   </div>
 
   <!-- Pages -->
@@ -570,7 +581,7 @@ function apiGet(action, params, callback) {
 
 // ===== NAV =====
 function showSection(name) {
-  ['dashboard','products','orders','settings','coupons','testimonials','reviews','banners','pages'].forEach(function(s) {
+  ['dashboard','products','orders','settings','coupons','testimonials','reviews','banners','newsletter','pages'].forEach(function(s) {
     var sec = document.getElementById('sec-' + s);
     if (sec) sec.classList.toggle('hidden', s !== name);
     var nav = document.getElementById('nav-' + s);
@@ -584,6 +595,7 @@ function showSection(name) {
   if (name === 'testimonials') loadTestimonials();
   if (name === 'reviews') loadReviews();
   if (name === 'banners') loadBanners();
+  if (name === 'newsletter') loadNewsletter();
   if (name === 'pages') loadPages();
 }
 
@@ -1396,6 +1408,17 @@ function saveBanners() {
   script.src = url;
   script.onerror = function() { toast('خطأ'); };
   document.head.appendChild(script);
+}
+
+// ===== NEWSLETTER =====
+function loadNewsletter() {
+  apiGet('admin_list_subscribers', {}, function(data) {
+    var list = document.getElementById('newsletter-list');
+    if (!data || !data.subscribers || !data.subscribers.length) { list.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--text2);padding:24px">لا يوجد مشتركين</td></tr>'; return; }
+    list.innerHTML = data.subscribers.map(function(s) {
+      return '<tr><td>' + (s.email || '') + '</td><td>' + (s.subscribed_at || '') + '</td></tr>';
+    }).join('');
+  });
 }
 
 // ===== PAGES =====
