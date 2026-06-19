@@ -33,6 +33,13 @@ function doGet(e) {
     case 'admin_add_coupon': result = adminAddCoupon(params); break;
     case 'admin_edit_coupon': result = adminEditCoupon(params); break;
     case 'admin_delete_coupon': result = adminDeleteCoupon(params); break;
+    case 'get_reviews': result = getReviews(params); break;
+    case 'add_review': result = addReview(params); break;
+    case 'admin_list_reviews': result = adminListReviews(); break;
+    case 'admin_delete_review': result = adminDeleteReview(params); break;
+    case 'admin_list_pages': result = adminListPages(); break;
+    case 'admin_save_page': result = adminSavePage(params); break;
+    case 'get_pages': result = getPages(); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -68,6 +75,13 @@ function doPost(e) {
     case 'admin_add_coupon': result = adminAddCoupon(params); break;
     case 'admin_edit_coupon': result = adminEditCoupon(params); break;
     case 'admin_delete_coupon': result = adminDeleteCoupon(params); break;
+    case 'get_reviews': result = getReviews(params); break;
+    case 'add_review': result = addReview(params); break;
+    case 'admin_list_reviews': result = adminListReviews(); break;
+    case 'admin_delete_review': result = adminDeleteReview(params); break;
+    case 'admin_list_pages': result = adminListPages(); break;
+    case 'admin_save_page': result = adminSavePage(params); break;
+    case 'get_pages': result = getPages(); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -502,5 +516,117 @@ function adminDeleteCoupon(params) {
   var row = parseInt(params._row);
   if (!row || row < 2) return { error: 'Invalid row' };
   sheet.deleteRow(row);
+  return { ok: true };
+}
+
+// === Reviews ===
+function getReviews(params) {
+  var pid = params.product_id || '';
+  if (!pid) return { reviews: [] };
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Reviews');
+  if (!sheet) return { reviews: [] };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { reviews: [] };
+  var headers = data[0];
+  var reviews = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var r = {};
+    for (var j = 0; j < headers.length; j++) { r[headers[j]] = row[j]; }
+    if (r.product_id === pid && (r.active === true || r.active === 'TRUE' || r.active === 'true' || r.active === 1)) {
+      reviews.push(r);
+    }
+  }
+  return { reviews: reviews };
+}
+
+function addReview(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Reviews');
+  if (!sheet) {
+    sheet = ss.insertSheet('Reviews');
+    sheet.appendRow(['product_id', 'name', 'location', 'text', 'rating', 'active', 'created_at']);
+  }
+  var now = Utilities.formatDate(new Date(), 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
+  sheet.appendRow([
+    params.product_id || '',
+    params.name || '',
+    params.location || '',
+    params.text || '',
+    params.rating || 5,
+    true,
+    now
+  ]);
+  return { ok: true };
+}
+
+function adminListReviews() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Reviews');
+  if (!sheet) return { reviews: [] };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { reviews: [] };
+  var headers = data[0];
+  var reviews = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var r = { _row: i + 1 };
+    for (var j = 0; j < headers.length; j++) { r[headers[j]] = row[j]; }
+    reviews.push(r);
+  }
+  reviews.reverse();
+  return { reviews: reviews };
+}
+
+function adminDeleteReview(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Reviews');
+  if (!sheet) return { error: 'Reviews sheet not found' };
+  var row = parseInt(params._row);
+  if (!row || row < 2) return { error: 'Invalid row' };
+  sheet.deleteRow(row);
+  return { ok: true };
+}
+
+// === Pages ===
+function getPages() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Pages');
+  if (!sheet) return {};
+  var data = sheet.getDataRange().getValues();
+  var pages = {};
+  for (var i = 1; i < data.length; i++) { pages[data[i][0]] = data[i][1]; }
+  return pages;
+}
+
+function adminListPages() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Pages');
+  if (!sheet) return { pages: {} };
+  var data = sheet.getDataRange().getValues();
+  var pages = {};
+  for (var i = 1; i < data.length; i++) { pages[data[i][0]] = data[i][1]; }
+  return { pages: pages };
+}
+
+function adminSavePage(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Pages');
+  if (!sheet) {
+    sheet = ss.insertSheet('Pages');
+    sheet.appendRow(['key', 'content']);
+  }
+  var key = params.key || '';
+  var content = params.content || '';
+  if (!key) return { error: 'No key' };
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === key) {
+      sheet.getRange(i + 1, 2).setValue(content);
+      return { ok: true };
+    }
+  }
+  sheet.appendRow([key, content]);
   return { ok: true };
 }

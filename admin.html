@@ -200,6 +200,8 @@ body.rtl{font-family:var(--font-ar)}
     <a href="#" onclick="showSection('settings')" id="nav-settings"><span class="icon">⚙️</span><span>الإعدادات</span></a>
     <a href="#" onclick="showSection('coupons')" id="nav-coupons"><span class="icon">🎟️</span><span>الكوبونات</span></a>
     <a href="#" onclick="showSection('testimonials')" id="nav-testimonials"><span class="icon">⭐</span><span>الشهادات</span></a>
+    <a href="#" onclick="showSection('reviews')" id="nav-reviews"><span class="icon">💬</span><span>التقييمات</span></a>
+    <a href="#" onclick="showSection('banners')" id="nav-banners"><span class="icon">🖼️</span><span>البانرات</span></a>
     <a href="#" onclick="showSection('pages')" id="nav-pages"><span class="icon">📄</span><span>الصفحات</span></a>
   </nav>
   <div class="sidebar-footer"><span id="adminUserLabel">Admin</span> · <a href="#" onclick="doLogout()" style="color:var(--accent);text-decoration:none">خروج</a></div>
@@ -335,6 +337,24 @@ body.rtl{font-family:var(--font-ar)}
         <th>الاسم</th><th>الموقع</th><th>النص</th><th>التقييم</th><th>الحالة</th><th>إجراءات</th>
       </tr></thead><tbody id="testimonials-list"></tbody></table></div></div>
     </div>
+  </div>
+
+  <!-- Reviews -->
+  <div id="sec-reviews" class="hidden">
+    <div class="top-bar"><h1>التقييمات</h1></div>
+    <div class="panel">
+      <div class="panel-body"><div class="table-wrap"><table><thead><tr>
+        <th>المنتج</th><th>الاسم</th><th>المدينة</th><th>النص</th><th>التقييم</th><th>التاريخ</th><th>إجراءات</th>
+      </tr></thead><tbody id="reviews-list"></tbody></table></div></div>
+    </div>
+  </div>
+
+  <!-- Banners -->
+  <div id="sec-banners" class="hidden">
+    <div class="top-bar"><h1>بانرات الترويج</h1></div>
+    <p style="color:var(--text2);font-size:.82rem;margin-bottom:16px">أضف صور البانرات التي تظهر في أعلى الصفحة الرئيسية. الحد الأقصى 5 بانرات.</p>
+    <div id="bannersList"></div>
+    <button class="btn btn-accent" onclick="saveBanners()" style="margin-top:12px">حفظ البانرات</button>
   </div>
 
   <!-- Pages -->
@@ -502,7 +522,7 @@ body.rtl{font-family:var(--font-ar)}
 
 
 <script>
-var API_URL = 'https://script.google.com/macros/s/AKfycbwjYUNjvWErv7Eqib2js-lxswxifw_7fLv7yVIbE_TcxCvGUQLvU_9TQ619l1PQfwrjdw/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzp2Af3r1GwlI__LIdegIfKtu7di0kU8VgWeDXqvbZJupSZro8JXIsuz68SRmcOvt-ceQ/exec';
 var allProducts = [];
 var allOrders = [];
 var settings = {};
@@ -547,7 +567,7 @@ function apiGet(action, params, callback) {
 
 // ===== NAV =====
 function showSection(name) {
-  ['dashboard','products','orders','settings','coupons','testimonials','pages'].forEach(function(s) {
+  ['dashboard','products','orders','settings','coupons','testimonials','reviews','banners','pages'].forEach(function(s) {
     var sec = document.getElementById('sec-' + s);
     if (sec) sec.classList.toggle('hidden', s !== name);
     var nav = document.getElementById('nav-' + s);
@@ -559,6 +579,8 @@ function showSection(name) {
   if (name === 'settings') loadSettings();
   if (name === 'coupons') loadCoupons();
   if (name === 'testimonials') loadTestimonials();
+  if (name === 'reviews') loadReviews();
+  if (name === 'banners') loadBanners();
   if (name === 'pages') loadPages();
 }
 
@@ -1269,6 +1291,89 @@ function deleteTestimonial(row, name) {
   s.src = API_URL + '?action=admin_delete_testimonial&_row=' + encodeURIComponent(row) + '&callback=' + cbName;
   s.onerror = function() { delete window[cbName]; toast('خطأ'); };
   document.head.appendChild(s);
+}
+
+// ===== REVIEWS =====
+function loadReviews() {
+  apiGet('admin_list_reviews', {}, function(data) {
+    var list = document.getElementById('reviews-list');
+    if (!data || !data.reviews || !data.reviews.length) { list.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px">لا توجد تقييمات</td></tr>'; return; }
+    list.innerHTML = data.reviews.map(function(r) {
+      var stars = ''; for (var i = 0; i < (r.rating || 5); i++) stars += '★';
+      return '<tr>' +
+        '<td>' + (r.product_id || '') + '</td>' +
+        '<td>' + (r.name || '') + '</td>' +
+        '<td>' + (r.location || '') + '</td>' +
+        '<td>' + (r.text || '') + '</td>' +
+        '<td style="color:#f59e0b">' + stars + '</td>' +
+        '<td>' + (r.created_at || '') + '</td>' +
+        '<td><button class="btn btn-danger btn-xs" onclick="deleteReview(' + r._row + ')">حذف</button></td>' +
+      '</tr>';
+    }).join('');
+  });
+}
+
+function deleteReview(row) {
+  if (!confirm('حذف هذا التقييم؟')) return;
+  var cbName = 'cb_' + Date.now();
+  var s = document.createElement('script');
+  s.src = API_URL + '?action=admin_delete_review&_row=' + encodeURIComponent(row) + '&callback=' + cbName;
+  window[cbName] = function() { delete window[cbName]; loadReviews(); toast('تم الحذف'); };
+  s.onerror = function() { delete window[cbName]; toast('خطأ'); };
+  document.head.appendChild(s);
+}
+
+// ===== BANNERS =====
+var bannerData = {};
+function loadBanners() {
+  apiGet('admin_settings', {}, function(data) {
+    if (!data) return;
+    bannerData = data;
+    renderBannersList();
+  });
+}
+
+function renderBannersList() {
+  var el = document.getElementById('bannersList');
+  if (!el) return;
+  var html = '';
+  for (var i = 1; i <= 5; i++) {
+    var img = bannerData['banner' + i + '_img'] || '';
+    var title = bannerData['banner' + i + '_title'] || '';
+    var subtitle = bannerData['banner' + i + '_subtitle'] || '';
+    var link = bannerData['banner' + i + '_link'] || '';
+    html += '<div class="panel" style="margin-bottom:12px">' +
+      '<div class="panel-header"><h3>بانر ' + i + '</h3>' +
+      (img ? '<img src="' + img + '" style="height:50px;border-radius:4px;object-fit:cover">' : '') +
+      '</div>' +
+      '<div class="panel-body">' +
+        '<div class="form-group"><label>رابط الصورة</label><input id="banner' + i + '_img" value="' + img + '" placeholder="https://i.ibb.co/..."></div>' +
+        '<div class="form-group"><label>العنوان (عربي)</label><input id="banner' + i + '_title" value="' + title + '"></div>' +
+        '<div class="form-group"><label>العنوان الفرعي (عربي)</label><input id="banner' + i + '_subtitle" value="' + subtitle + '"></div>' +
+        '<div class="form-group"><label>رابط عند الضغط</label><input id="banner' + i + '_link" value="' + link + '" placeholder="https://..."></div>' +
+      '</div>' +
+    '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function saveBanners() {
+  var data = {};
+  for (var i = 1; i <= 5; i++) {
+    var img = (document.getElementById('banner' + i + '_img') || {}).value || '';
+    data['banner' + i + '_img'] = img;
+    data['banner' + i + '_title'] = (document.getElementById('banner' + i + '_title') || {}).value || '';
+    data['banner' + i + '_subtitle'] = (document.getElementById('banner' + i + '_subtitle') || {}).value || '';
+    data['banner' + i + '_link'] = (document.getElementById('banner' + i + '_link') || {}).value || '';
+  }
+  var url = API_URL + '?action=admin_update_settings&callback=bn_' + Date.now();
+  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
+  var cbName = url.split('callback=')[1];
+  window[cbName] = function() { delete window[cbName]; toast('تم حفظ البانرات'); };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() { toast('خطأ'); };
+  document.head.appendChild(script);
 }
 
 // ===== PAGES =====
