@@ -330,10 +330,6 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
 .wishlist-btn.active{color:var(--sale)}
 body.rtl .wishlist-btn{left:8px;right:auto}
 
-/* Recently Viewed */
-.recently-viewed{border-top:1px solid var(--border);padding:32px 0}
-.recently-viewed h2{font-size:1rem;font-weight:700;margin-bottom:16px}
-
 /* Reviews */
 .reviews-section{border-top:1px solid var(--border);padding:28px 0}
 
@@ -671,12 +667,6 @@ body.rtl .back-to-top{left:auto;right:24px}
 </div>
 </section>
 
-<section id="recentlyViewedSection" class="recently-viewed" style="display:none">
-<div class="container">
-  <h2 data-i18n="recently_viewed">شوهد مؤخراً</h2>
-  <div id="recentlyViewedGrid" class="products-grid" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px"></div>
-</div>
-</section>
 
 <section id="track-section" style="padding-bottom:48px">
 <div class="container">
@@ -1405,7 +1395,7 @@ function init(){
   apiCall('catalog',{},function(d){
     try{
       if(!d||d.error||!d.products){document.getElementById('productsGrid').innerHTML='<p style="text-align:center;padding:40px;color:var(--text2);grid-column:1/-1">'+t('no_results')+'</p>';return}
-      allProducts=d.products;buildCategories();renderProducts();renderRecentlyViewed();
+      allProducts=d.products;buildCategories();renderProducts();
     }catch(e){console.error('catalog err',e)}
   });
   apiCall('testimonials',{},function(d){
@@ -1802,7 +1792,6 @@ function showProductDetail(id){
   renderSuggested(id);
   genCaptcha('pdCaptchaQ','pdCaptchaE');
   try{trackViewContent({id:p.id,name:p.title_ar,price:Number(p.price)})}catch(e){}
-  trackRecentlyViewed(id);
   loadReviews(id);
   var detailEl=document.getElementById('productDetailSection');
   if(detailEl){detailEl.scrollIntoView({behavior:'smooth',block:'start'});}
@@ -2054,34 +2043,6 @@ function promoGo(idx) {
 }
 
 // === Phase 2.2: Recently Viewed ===
-var RV_KEY = 'sk_recently_viewed';
-function trackRecentlyViewed(productId) {
-  try {
-    var rv = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
-    rv = rv.filter(function(id) { return id !== productId; });
-    rv.unshift(productId);
-    if (rv.length > 8) rv = rv.slice(0, 8);
-    localStorage.setItem(RV_KEY, JSON.stringify(rv));
-  } catch(e) {}
-}
-
-function renderRecentlyViewed() {
-  try {
-    var section = document.getElementById('recentlyViewedSection');
-    var grid = document.getElementById('recentlyViewedGrid');
-    if (!section || !grid) return;
-    var rv = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
-    if (!rv.length) { section.style.display = 'none'; return; }
-    var products = rv.map(function(id) { return allProducts.find(function(p) { return p.id === id; }); }).filter(Boolean);
-    if (!products.length) { section.style.display = 'none'; return; }
-    section.style.display = 'block';
-    grid.innerHTML = products.map(function(p) {
-      var img = p.image1 || '';
-      return '<div class="product-card" style="cursor:pointer" onclick="showProductDetail(\'' + p.id + '\')"><div class="product-image-wrap"><img class="product-image" src="' + img + '" loading="lazy" alt=""></div><div class="product-body"><div class="product-title">' + (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + '</div><div class="product-price"><span class="price-current">' + Number(p.price).toLocaleString() + ' ' + t('currency') + '</span></div></div></div>';
-    }).join('');
-  } catch(e) {}
-}
-
 // === Phase 2.4: Wishlist ===
 var WL_KEY = 'sk_wishlist';
 function getWishlist() { return JSON.parse(localStorage.getItem(WL_KEY) || '[]'); }
