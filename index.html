@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Smart Shopping</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
+<meta http-equiv="Cache-Control" content="public, max-age=3600">
 <meta name="description" content="متجر إلكتروني جزائري — منتجات متنوعة بأفضل الأسعار مع التوصيل لجميع الولايات والدفع عند الاستلام">
 <meta name="robots" content="index, follow">
 <meta property="og:type" content="website">
@@ -47,12 +45,12 @@ src="https://www.facebook.com/tr?id=1908987803278785&ev=PageView&noscript=1"
 <!-- Tracking Pixels (loaded dynamically from admin settings) -->
 <div id="trackingPixels" style="display:none"></div>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#fafafa;--card:#fff;--text:#111;--text2:#6b6b6b;--border:#e8e8e8;--border2:#ddd;
-  --accent:#1a1a2e;--sale:#e94560;--sale-hover:#d63050;--success:#22c55e;
+  --bg:#fafafa;--card:#fff;--text:#111;--text2:#6b6b6b;--text3:#999;--border:#e8e8e8;--border2:#ddd;
+  --accent:#1a1a2e;--sale:#e94560;--sale-hover:#d63050;--success:#22c55e;--danger:#ef4444;
   --shadow:0 2px 8px rgba(0,0,0,.06);--radius:12px;--max-w:1200px;
   --font:'Inter','Cairo',sans-serif
 }
@@ -147,6 +145,8 @@ body.rtl .cart-drawer.open{transform:translateX(0)}
 
 /* Buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border:none;border-radius:8px;font-family:var(--font);font-weight:600;font-size:.85rem;cursor:pointer;transition:all .2s;text-decoration:none}
+.btn-sm{padding:5px 10px;font-size:.72rem}
+.btn-accent{background:var(--accent);color:#fff}.btn-accent:hover{opacity:.85}
 .btn-primary{background:var(--text);color:#fff}
 .btn-primary:hover{opacity:.85}
 .btn-sale{background:var(--sale);color:#fff}
@@ -495,9 +495,9 @@ body.rtl .back-to-top{left:auto;right:24px}
   .products-grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
   .product-body{padding:10px 10px 12px}
   .product-title{font-size:.8rem}
-  .search-bar{display:none}
+  .search-bar{max-width:100%;flex:1}
+  .header-cat-bar{display:none}
   .header-inner{height:52px;gap:6px}
-  .header-cat-bar{max-width:200px}
   .cart-drawer{width:100%}
   .modal-body{padding:16px}
   .form-row{grid-template-columns:1fr}
@@ -2207,16 +2207,14 @@ function submitReview() {
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           var base64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
           var cb = 'rev_img_' + Date.now() + '_' + uploaded;
-          window[cb] = function(r) {
-            delete window[cb];
-            if (r && r.url) photoUrls.push(r.url);
-            uploaded++;
-            uploadNext();
-          };
           var s = document.createElement('script');
           s.src = API_URL + '?action=upload_image&base64=' + encodeURIComponent(base64) + '&fileName=review_' + Date.now() + '.jpg&callback=' + cb;
+          var sRemoved = false;
+          function removeScript() { if (!sRemoved) { sRemoved = true; try { document.head.removeChild(s); } catch(e) {} } }
+          window[cb] = function(r) { delete window[cb]; removeScript(); if (r && r.url) photoUrls.push(r.url); uploaded++; uploadNext(); };
           s.onerror = function() {
             delete window[cb];
+            removeScript();
             uploaded++;
             uploadNext();
           };
@@ -2258,7 +2256,7 @@ function doSubmitReview(pid, text, name, loc, photos) {
 }
 
 // === Phase 3.1: Customer Accounts ===
-var CUSTOMER_AUTH_KEY = 'sk_customer';
+var CUSTOMER_AUTH_KEY = 'sk_customer_auth';
 var currentCustomer = null;
 
 function loadCustomerSession() {
