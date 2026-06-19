@@ -2185,29 +2185,41 @@ function submitReview() {
   if (reviewPhotos.length > 0) {
     var uploaded = 0;
     var photoUrls = [];
-    reviewPhotos.forEach(function(file) {
+    var total = Math.min(reviewPhotos.length, 3);
+    reviewPhotos = reviewPhotos.slice(0, 3);
+
+    reviewPhotos.forEach(function(file, idx) {
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      var img = new Image();
       var reader = new FileReader();
       reader.onload = function(e) {
-        var base64 = e.target.result.split(',')[1];
-        var cbName = 'cb_review_img_' + Date.now() + '_' + uploaded;
-        var s = document.createElement('script');
-        s.src = API_URL + '?action=upload_image&base64=' + encodeURIComponent(base64) + '&fileName=' + encodeURIComponent(file.name) + '&callback=' + cbName;
-        window[cbName] = function(data) {
-          delete window[cbName];
-          if (data && data.url) photoUrls.push(data.url);
-          uploaded++;
-          if (uploaded >= reviewPhotos.length || uploaded >= reviewPhotos.length) {
-            doSubmitReview(pid, text, name, loc, JSON.stringify(photoUrls));
-          }
+        img.onload = function() {
+          var size = 200;
+          var ratio = Math.min(size / img.width, size / img.height);
+          canvas.width = img.width * ratio;
+          canvas.height = img.height * ratio;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          var compressed = canvas.toDataURL('image/jpeg', 0.4);
+          var base64 = compressed.split(',')[1];
+
+          var cbName = 'cb_rev_' + idx + '_' + Date.now();
+          window[cbName] = function(data) {
+            delete window[cbName];
+            if (data && data.url) photoUrls.push(data.url);
+            uploaded++;
+            if (uploaded >= total) doSubmitReview(pid, text, name, loc, JSON.stringify(photoUrls));
+          };
+          var s = document.createElement('script');
+          s.src = API_URL + '?action=upload_image&base64=' + encodeURIComponent(base64) + '&fileName=review_' + Date.now() + '_' + idx + '.jpg&callback=' + cbName;
+          s.onerror = function() {
+            delete window[cbName];
+            uploaded++;
+            if (uploaded >= total) doSubmitReview(pid, text, name, loc, JSON.stringify(photoUrls));
+          };
+          document.head.appendChild(s);
         };
-        s.onerror = function() {
-          delete window[cbName];
-          uploaded++;
-          if (uploaded >= reviewPhotos.length) {
-            doSubmitReview(pid, text, name, loc, JSON.stringify(photoUrls));
-          }
-        };
-        document.head.appendChild(s);
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     });
