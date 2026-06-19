@@ -311,6 +311,8 @@ body.rtl{font-family:var(--font-ar)}
           <div class="form-group"><label>تكلفة الشحن - المكتب (دج)</label><input id="set_shipping_office" type="number" value="0" placeholder="0 = يُحدد بعد التواصل"></div>
           <div class="form-group"><label>إضافة للشحن بعيدالبوادي (دج)</label><input id="set_shipping_remote" type="number" value="0" placeholder="إضافة للولايات البعيدة"></div>
           <div class="form-group"><label>كلمة مرور الأدمن</label><input id="set_admin_password" type="password" placeholder="اتركه فارغاً لتعطيل الحماية"></div>
+          <div class="form-group"><label>Gemini API Key</label><input id="set_gemini_api_key" type="password" placeholder="AIzaSy..."></div>
+          <div class="form-group"><label>AI System Prompt (Custom instructions)</label><textarea id="set_ai_prompt" rows="5" placeholder="Leave empty for default (honest + transparent)">You are Smart Assistant for Smart Shopping Algeria. Help customers with product search, prices, shipping, returns, payment, order tracking. Reply in Arabic or Darja as the customer prefers. Be friendly and professional. If asked about a product defect, mention it honestly without exaggeration. If a product is not suitable, tell them honestly instead of pushing them to buy. If you are not sure, say you are not sure and give WhatsApp 0557543177. Do not exaggerate or make up information.</textarea></div>
         </div>
         <button class="btn btn-accent" onclick="saveSettings()" style="margin-top:8px">حفظ الإعدادات</button>
       </div>
@@ -545,7 +547,7 @@ body.rtl{font-family:var(--font-ar)}
 
 
 <script>
-var API_URL = 'https://script.google.com/macros/s/AKfycby0PERaO9RD4tYwTFXPjO-YihIOqbeHKRBwsJFRWABtktsPGESsks8dZk831U6XpMbKVg/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzVnF_UD45nJ9gVSyV6jsapTm3JO0NRcV_-3IKhP3MSLkzzhtKLuophevy1IjQ_IJ-nKQ/exec';
 var allProducts = [];
 var allOrders = [];
 var settings = {};
@@ -1212,6 +1214,8 @@ function loadSettings() {
     document.getElementById('set_shipping_office').value = data.shipping_office || '0';
     document.getElementById('set_shipping_remote').value = data.shipping_remote || '0';
     document.getElementById('set_admin_password').value = '';
+    if(document.getElementById('set_gemini_api_key')) document.getElementById('set_gemini_api_key').value = data.gemini_api_key || '';
+    if(document.getElementById('set_ai_prompt')) document.getElementById('set_ai_prompt').value = data.ai_prompt || '';
   });
 }
 
@@ -1230,7 +1234,9 @@ function saveSettings() {
     minimum_order_amount: document.getElementById('set_minimum_order_amount').value || '0',
     shipping_home: document.getElementById('set_shipping_home').value || '0',
     shipping_office: document.getElementById('set_shipping_office').value || '0',
-    shipping_remote: document.getElementById('set_shipping_remote').value || '0'
+    shipping_remote: document.getElementById('set_shipping_remote').value || '0',
+    gemini_api_key: (document.getElementById('set_gemini_api_key')||{}).value || '',
+    ai_prompt: (document.getElementById('set_ai_prompt')||{}).value || ''
   };
   if (passHash) {
     data.admin_password = hashPassword(passHash);

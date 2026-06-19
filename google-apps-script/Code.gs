@@ -46,6 +46,7 @@ function doGet(e) {
     case 'admin_list_customers': result = adminListCustomers(); break;
     case 'newsletter_subscribe': result = newsletterSubscribe(params); break;
     case 'admin_list_subscribers': result = adminListSubscribers(); break;
+    case 'ai_chat': result = aiChat(params); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -94,6 +95,7 @@ function doPost(e) {
     case 'admin_list_customers': result = adminListCustomers(); break;
     case 'newsletter_subscribe': result = newsletterSubscribe(params); break;
     case 'admin_list_subscribers': result = adminListSubscribers(); break;
+    case 'ai_chat': result = aiChat(params); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -763,4 +765,58 @@ function adminListSubscribers() {
   }
   subs.reverse();
   return { subscribers: subs };
+}
+
+// === AI Chat with Gemini ===
+function aiChat(params) {
+  var message = params.message || '';
+  var history = params.history || '';
+  if (!message) return { reply: 'Please send a message.' };
+
+  var settings = getSettings();
+  var apiKey = settings.gemini_api_key || '';
+  if (!apiKey) return { reply: 'AI not configured. Please set Gemini API key in settings.' };
+
+  var systemPrompt = settings.ai_prompt || 'You are Smart Assistant for Smart Shopping Algeria. Help customers with product search, prices, shipping, returns, payment, order tracking. Reply in Arabic or Darja as the customer prefers. Be friendly and professional. If asked about a product defect, mention it honestly without exaggeration. If a product is not suitable, tell them honestly instead of pushing them to buy. If you are not sure, say you are not sure and give WhatsApp 0557543177. Do not exaggerate or make up information.';
+
+  var chatHistory = [];
+  if (history) {
+    try { chatHistory = JSON.parse(history); } catch(e) {}
+  }
+
+  var contents = [];
+  // Build conversation history
+  chatHistory.forEach(function(h) {
+    contents.push({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.text }] });
+  });
+  contents.push({ role: 'user', parts: [{ text: message }] });
+
+  var payload = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: contents,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 1024
+    }
+  };
+
+  try {
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
+    var options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+    var response = UrlFetchApp.fetch(url, options);
+    var json = JSON.parse(response.getContentText());
+
+    if (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) {
+      var reply = json.candidates[0].content.parts[0].text;
+      return { reply: reply };
+    }
+    return { reply: 'عذراً، صارت مشكلة. حاول مرة أخرى.' };
+  } catch(e) {
+    return { reply: 'خطأ في الاتصال: ' + e.toString() };
+  }
 }

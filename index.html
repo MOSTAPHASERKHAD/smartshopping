@@ -1011,7 +1011,7 @@ body.rtl .chatbot-close{margin-right:0;margin-left:auto}
 <script>
 var _V='5.1.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
-var API_URL = 'https://script.google.com/macros/s/AKfycby0PERaO9RD4tYwTFXPjO-YihIOqbeHKRBwsJFRWABtktsPGESsks8dZk831U6XpMbKVg/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzVnF_UD45nJ9gVSyV6jsapTm3JO0NRcV_-3IKhP3MSLkzzhtKLuophevy1IjQ_IJ-nKQ/exec';
 var LANG_KEY = 'sk_lang';
 var CART_KEY = 'sk_cart';
 var currentLang = localStorage.getItem(LANG_KEY) || 'ar';
@@ -2477,13 +2477,19 @@ function closeCompareModal() {
 // === AI Chatbot ===
 var chatHistory = [];
 var chatOpen = false;
+var chatAIEnabled = false;
 
 function toggleChatbot() {
   chatOpen = !chatOpen;
   document.getElementById('chatbotWindow').classList.toggle('open', chatOpen);
   document.getElementById('chatUnread').style.display = 'none';
   if (chatOpen && chatHistory.length === 0) {
-    addBotMsg(t('chat_welcome'));
+    if (storeSettings.gemini_api_key) {
+      chatAIEnabled = true;
+      addBotMsg('مرحباً! 👋 أنا مساعد Smart Shopping بالذكاء الاصطناعي. اسألني عن أي شيء!');
+    } else {
+      addBotMsg(t('chat_welcome'));
+    }
     showQuickReplies([
       { text: currentLang === 'ar' ? '📦 تتبع طلبي' : '📦 Track my order', value: 'track' },
       { text: currentLang === 'ar' ? '🔍 أبحث عن منتج' : '🔍 Search product', value: 'search' },
@@ -2562,35 +2568,67 @@ function sendChatMsg() {
 
 function processChatInput(text) {
   var lower = text.toLowerCase();
-  showTyping();
 
+  // Quick responses for common store queries
+  if (lower.match(/(تتبع|طلب|track|order)/) && lower.match(/(sk-|رقم)/)) {
+    showTyping();
+    var orderId = lower.match(/(sk-[a-z0-9-]+)/i);
+    if (orderId) {
+      apiCall('track', { order_id: orderId[1].toUpperCase() }, function(d) {
+        hideTyping();
+        if (d && d.found) {
+          var o = d.order;
+          var statusMap = { pending: '⏳ قيد الانتظار', confirmed: '✅ تم التأكيد', shipped: '🚚 في الطريق', delivered: '📦 تم التوصيل' };
+          addBotMsg('📦 طلبك ' + o.order_id + ':<br>الحالة: ' + (statusMap[o.status] || o.status) + '<br>الولاية: ' + (o.wilaya_ar || '') + '<br>المجموع: ' + Number(o.subtotal).toLocaleString() + ' دج');
+        } else {
+          addBotMsg('❌ الطلب غير موجود. تأكد من الرقم.');
+        }
+      });
+    } else {
+      hideTyping();
+      addBotMsg('📝 أرسل رقم طلبك:<br><strong>SK-20260619-0001</strong>');
+    }
+    return;
+  }
+
+  // If AI is enabled, send to Gemini
+  if (chatAIEnabled && storeSettings.gemini_api_key) {
+    showTyping();
+    // Build context about store
+    var storeContext = 'Store info: name Smart Shopping, Algeria e-commerce, COD payment, ships to all 58 wilayas, WhatsApp 0557543177. ';
+    if (allProducts.length) {
+      storeContext += 'Products count: ' + allProducts.length + '. ';
+      var topProducts = allProducts.slice(0, 10).map(function(p) {
+        var info = (currentLang === 'ar' ? p.title_ar : p.title_en || '') + ' - ' + p.price + ' DZD';
+        if (p.old_price > 0) info += ' (was ' + p.old_price + ', discount ' + Math.round((p.old_price - p.price) / p.old_price * 100) + '%)';
+        if (p.desc_ar) info += ' - desc: ' + p.desc_ar.substring(0, 120);
+        if (p.desc_en) info += ' - desc_en: ' + p.desc_en.substring(0, 120);
+        if (p.stock !== undefined) info += ' - stock: ' + p.stock;
+        if (p.category_ar) info += ' - category: ' + p.category_ar;
+        return info;
+      });
+      storeContext += 'Products: ' + topProducts.join(' || ');
+    }
+    var historyStr = JSON.stringify(chatHistory.slice(-10));
+
+    apiCall('ai_chat', { message: storeContext + '\n\nCustomer message: ' + text, history: historyStr }, function(d) {
+      hideTyping();
+      if (d && d.reply) {
+        addBotMsg(d.reply.replace(/\n/g, '<br>'));
+        chatHistory.push({ role: 'user', text: text });
+        chatHistory.push({ role: 'bot', text: d.reply });
+      } else {
+        addBotMsg('عذراً، صارت مشكلة. حاول مرة أخرى.');
+      }
+    });
+    return;
+  }
+
+  // Fallback: built-in responses (when AI not configured)
+  showTyping();
   setTimeout(function() {
     hideTyping();
 
-    // Track order
-    if (lower.match(/(تتبع|طلب|track|order| رقم الطلب)/)) {
-      if (lower.match(/sk-|订单/)) {
-        var orderId = lower.match(/(sk-[a-z0-9-]+)/i);
-        if (orderId) {
-          apiCall('track', { order_id: orderId[1].toUpperCase() }, function(d) {
-            if (d && d.found) {
-              var o = d.order;
-              var statusMap = { pending: '⏳ قيد الانتظار', confirmed: '✅ تم التأكيد', shipped: '🚚 في الطريق', delivered: '📦 تم التوصيل' };
-              addBotMsg('📦 طلبك ' + o.order_id + ':<br>الحالة: ' + (statusMap[o.status] || o.status) + '<br>الولاية: ' + (o.wilaya_ar || '') + '<br>المجموع: ' + Number(o.subtotal).toLocaleString() + ' دج');
-            } else {
-              addBotMsg('❌ الطلب غير موجود. تأكد من الرقم وحاول مرة أخرى.');
-            }
-          });
-        } else {
-          addBotMsg('📝 أرسل رقم طلبك بالشكل:<br><strong>SK-20260619-0001</strong>');
-        }
-      } else {
-        addBotMsg('📝 أرسل رقم طلبك بالشكل:<br><strong>SK-20260619-0001</strong>');
-      }
-      return;
-    }
-
-    // Search product
     if (lower.match(/(بحث|منتج|search|product|عندي|أبي|اريد|ابي)/)) {
       var q = lower.replace(/(بحث|عن|عندي|أبي|اريد|ابي|product|search|about|looking for)/g, '').trim();
       if (q.length > 1) {
@@ -2604,112 +2642,57 @@ function processChatInput(text) {
           }).join('');
           addBotMsg(html);
         } else {
-          addBotMsg('❌ ما لقيت منتج اسمه "' + q + '"<br>جرّب اسم ثاني أو تصفح المنتجات.');
+          addBotMsg('❌ ما لقيت منتج اسمه "' + q + '"');
         }
       } else {
-        addBotMsg('🔍 وش تبي أبحث لك عنه؟ اكتب اسم المنتج.');
+        addBotMsg('🔍 وش تبي أبحث لك عنه؟');
       }
       return;
     }
 
-    // Shipping
-    if (lower.match(/(شحن|توصيل|سعر|shipping|delivery|cost|price|多少钱)/)) {
-      addBotMsg('🚚 <strong>معلومات الشحن:</strong><br><br>• التوصيل لجميع الولايات (58 ولاية)<br>• الدفع عند الاستلام<br>• سعر الشحن يُحدد بعد التواصل معك<br>• التوصيل خلال 2-5 أيام عمل<br><br>تبي تطلب؟ اضغط على أي منتج واملأ الطلب!');
-      showQuickReplies([
-        { text: currentLang === 'ar' ? '🛒 تصفح المنتجات' : '🛒 Browse products', value: 'browse' },
-        { text: currentLang === 'ar' ? '📞 تواصل معنا' : '📞 Contact us', value: 'contact' }
-      ]);
+    if (lower.match(/(شحن|توصيل|shipping|delivery)/)) {
+      addBotMsg('🚚 الشحن لجميع الولايات — الدفع عند الاستلام — التوصيل خلال 2-5 أيام');
       return;
     }
-
-    // Return policy
-    if (lower.match(/(ارجاع|استرجاع|return|refund|مرتجع)/)) {
-      addBotMsg('↩️ <strong>سياسة الإرجاع:</strong><br><br>• يمكنك إرجاع المنتج خلال 7 أيام<br>• المنتج يجب أن يكون في حالته الأصلية<br>• التغليف سليم<br>• تكلفة الشحن على العميل<br><br>تبي ترجع منتج؟ تواصل معنا واتساب.');
-      showQuickReplies([
-        { text: currentLang === 'ar' ? '📞 واتساب' : '📞 WhatsApp', value: 'whatsapp' }
-      ]);
+    if (lower.match(/(ارجاع|استرجاع|return)/)) {
+      addBotMsg('↩️ إرجاع خلال 7 أيام — المنتج في حالته الأصلية');
       return;
     }
-
-    // Payment
-    if (lower.match(/(دفع|payment|فلوس|cash|cod|فيزا|بطاقة)/)) {
-      addBotMsg('💳 <strong>طرق الدفع:</strong><br><br>✅ الدفع عند الاستلام (COD)<br><br>ادفع لما تستلم الطرد عند باب بيتك!<br>لا نطلب أي معلومات بطاقة ائتمان.');
+    if (lower.match(/(دفع|payment|cod)/)) {
+      addBotMsg('💳 الدفع عند الاستلام فقط');
       return;
     }
-
-    // Contact
-    if (lower.match(/(تواصل|هاتف|جوال|واتساب|contact|phone|whatsapp|اتصل)/)) {
-      addBotMsg('📞 <strong>تواصل معنا:</strong><br><br>💬 واتساب: <a href="https://wa.me/213557543177" target="_blank" style="color:var(--sale)">+213557543177</a><br><br>نتواصل معك خلال دقائق! ⚡');
+    if (lower.match(/(تواصل|هاتف|واتساب|contact|whatsapp)/)) {
+      addBotMsg('📞 واتساب: <a href="https://wa.me/213557543177" target="_blank" style="color:var(--sale)">+213557543177</a>');
       return;
     }
-
-    // Browse
-    if (lower.match(/(تصفح|منتجات|browse|products|كل المنتجات)/)) {
-      addBotMsg('🛒 <a href="#products" onclick="toggleChatbot();scrollToSection(\'products\')" style="color:var(--sale);font-weight:700">اضغط هنا لتصفح جميع المنتجات</a>');
-      return;
-    }
-
-    // Greetings
-    if (lower.match(/(مرحبا|هلا|سلام|أهلا|hello|hi|hey|السلام)/)) {
+    if (lower.match(/(مرحبا|هلا|سلام|أهلا|hello|hi)/)) {
       addBotMsg('مرحباً! 👋 وش تبي اليوم؟');
-      showQuickReplies([
-        { text: currentLang === 'ar' ? '🛒 تصفح المنتجات' : '🛒 Browse products', value: 'browse' },
-        { text: currentLang === 'ar' ? '📦 تتبع طلب' : '📦 Track order', value: 'track' },
-        { text: currentLang === 'ar' ? '💰 معلومات الشحن' : '💰 Shipping info', value: 'shipping' }
-      ]);
       return;
     }
-
-    // Thanks
-    if (lower.match(/(شكر|ممنون|thanks|thank you|مشكور)/)) {
-      addBotMsg('العفو! 😊 هل تحتاج شيء ثاني؟');
+    if (lower.match(/(شكر|ممنون|thanks)/)) {
+      addBotMsg('العفو! 😊');
       return;
     }
-
-    // Best sellers
-    if (lower.match(/(الأكثر|most|popular|رائج|مميز|افضل|best)/)) {
-      var sorted = allProducts.filter(function(p) { return p.active !== false; }).sort(function(a, b) { return (b.stock || 0) - (a.stock || 0); }).slice(0, 3);
-      if (sorted.length) {
-        var html2 = '⭐ <strong>الأكثر مبيعاً:</strong>' + sorted.map(function(p) {
-          return '<div class="chat-product-card" onclick="toggleChatbot();showProductDetail(\'' + p.id + '\')"><img src="' + (p.image1 || '') + '" onerror="this.style.display=\'none\'"><div class="chat-pinfo"><div class="chat-pname">' + (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + '</div><div class="chat-pprice">' + Number(p.price).toLocaleString() + ' دج</div></div></div>';
-        }).join('');
-        addBotMsg(html2);
-      } else {
-        addBotMsg('عندنا منتجات متنوعة — تصفح المتجر!');
-      }
-      return;
-    }
-
-    // Offers
-    if (lower.match(/(عرض|خصم|offer|discount| Sale|تخفيض)/)) {
-      var offers = allProducts.filter(function(p) { return p.old_price > 0 && p.active !== false; }).slice(0, 3);
+    if (lower.match(/(عرض|خصم|offer|discount)/)) {
+      var offers = allProducts.filter(function(p) { return p.old_price > 0; }).slice(0, 3);
       if (offers.length) {
-        var html3 = '🔥 <strong>عروض خاصة:</strong>' + offers.map(function(p) {
-          var disc = Math.round((p.old_price - p.price) / p.old_price * 100);
-          return '<div class="chat-product-card" onclick="toggleChatbot();showProductDetail(\'' + p.id + '\')"><img src="' + (p.image1 || '') + '" onerror="this.style.display=\'none\'"><div class="chat-pinfo"><div class="chat-pname">' + (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + '</div><div class="chat-pprice">' + Number(p.price).toLocaleString() + ' دج <span style="text-decoration:line-through;color:var(--text2);font-size:.7rem">' + Number(p.old_price).toLocaleString() + '</span> <span style="color:#22c55e;font-size:.7rem">-' + disc + '%</span></div></div></div>';
-        }).join('');
-        addBotMsg(html3);
+        addBotMsg('🔥 عروض:' + offers.map(function(p) {
+          return '<div class="chat-product-card" onclick="toggleChatbot();showProductDetail(\'' + p.id + '\')"><img src="' + (p.image1 || '') + '"><div class="chat-pinfo"><div class="chat-pname">' + (currentLang === 'ar' ? p.title_ar : p.title_en || '') + '</div><div class="chat-pprice">' + Number(p.price).toLocaleString() + ' دج</div></div></div>';
+        }).join(''));
       } else {
-        addBotMsg('لا توجد عروض حالياً — تابعنا للعروض القادمة! 🔔');
+        addBotMsg('لا توجد عروض حالياً');
       }
       return;
     }
 
-    // Help
-    if (lower.match(/(مساعدة|help|وش تسوي| كيف)/)) {
-      addBotMsg('🤖 <strong>أقدر أساعدك في:</strong><br><br>📦 تتبع طلباتك<br>🔍 البحث عن منتجات<br>💰 معلومات الأسعار والشحن<br>↩️ سياسة الإرجاع<br>💳 طرق الدفع<br>📞 التواصل معنا<br>🔥 عروض وخصومات');
-      return;
-    }
-
-    // Default
-    addBotMsg('🤔 ما فهمت قصدك. جرّب أسأل عن:<br><br>• تتبع طلب<br>• بحث عن منتج<br>• الأسعار والشحن<br>• الإرجاع<br>• الدفع');
+    addBotMsg('🤔 جرّب اسأل عن: تتبع طلب، بحث عن منتج، الشحن، الإرجاع، الدفع، أو تواصل معنا');
     showQuickReplies([
-      { text: currentLang === 'ar' ? '📦 تتبع طلب' : '📦 Track order', value: 'track' },
-      { text: currentLang === 'ar' ? '🔍 بحث' : '🔍 Search', value: 'search' },
-      { text: currentLang === 'ar' ? '💰 شحن' : '💰 Shipping', value: 'shipping' },
-      { text: currentLang === 'ar' ? '📞 تواصل' : '📞 Contact', value: 'contact' }
+      { text: '📦 تتبع طلب', value: 'track' },
+      { text: '🔍 بحث', value: 'search' },
+      { text: '💰 شحن', value: 'shipping' },
+      { text: '📞 تواصل', value: 'contact' }
     ]);
-
   }, 600);
 }
 
