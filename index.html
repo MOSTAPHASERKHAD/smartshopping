@@ -347,6 +347,46 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 .compare-check{position:absolute;bottom:10px;right:10px;width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:rgba(255,255,255,.9);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;z-index:3;color:transparent}
 body.rtl .compare-check{right:auto;left:10px}
 .compare-check.active{background:var(--sale);color:#fff;border-color:var(--sale)}
+
+/* AI Chatbot */
+.chatbot-btn{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border:none;border-radius:50%;background:var(--sale);color:#fff;font-size:1.5rem;cursor:pointer;z-index:98;box-shadow:0 4px 16px rgba(233,69,96,.4);transition:all .3s;display:flex;align-items:center;justify-content:center}
+body.rtl .chatbot-btn{right:auto;left:24px}
+.chatbot-btn:hover{transform:scale(1.1)}
+.chatbot-btn .unread-dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;background:#22c55e;border-radius:50%;border:2px solid #fff;display:none}
+.chatbot-window{position:fixed;bottom:90px;right:24px;width:380px;max-width:calc(100vw - 32px);max-height:520px;background:var(--card);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:99;display:none;flex-direction:column;overflow:hidden}
+body.rtl .chatbot-window{right:auto;left:24px}
+.chatbot-window.open{display:flex}
+.chatbot-header{background:var(--accent);color:#fff;padding:16px;display:flex;align-items:center;gap:10px}
+.chatbot-header .bot-avatar{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.chatbot-header .bot-info h4{font-size:.9rem;font-weight:700;margin:0}
+.chatbot-header .bot-info p{font-size:.7rem;opacity:.7;margin:0}
+.chatbot-close{margin-right:auto;background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer}
+body.rtl .chatbot-close{margin-right:0;margin-left:auto}
+.chatbot-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.chat-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:.82rem;line-height:1.5;animation:fadeIn .3s ease}
+.chat-msg.bot{background:var(--bg);align-self:flex-start;border-bottom-left-radius:4px}
+.chat-msg.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.chat-msg .bot-name{font-size:.65rem;color:var(--sale);font-weight:700;margin-bottom:2px}
+.chat-quick-replies{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px}
+.chat-quick-btn{padding:6px 12px;border:1px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;font-family:var(--font);font-size:.72rem;font-weight:600;transition:all .2s;color:var(--text)}
+.chat-quick-btn:hover{border-color:var(--sale);color:var(--sale)}
+.chatbot-input{display:flex;gap:6px;padding:12px 16px;border-top:1px solid var(--border)}
+.chatbot-input input{flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:24px;font-family:var(--font);font-size:.82rem;outline:none}
+.chatbot-input input:focus{border-color:var(--sale)}
+.chatbot-input button{width:40px;height:40px;border:none;border-radius:50%;background:var(--sale);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:opacity .2s}
+.chatbot-input button:hover{opacity:.85}
+.chat-product-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:8px;display:flex;gap:10px;cursor:pointer;transition:box-shadow .2s}
+.chat-product-card:hover{box-shadow:var(--shadow)}
+.chat-product-card img{width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0}
+.chat-product-card .chat-pinfo{flex:1;min-width:0}
+.chat-product-card .chat-pname{font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-product-card .chat-pprice{color:var(--sale);font-weight:700;font-size:.82rem}
+.chat-typing{display:flex;gap:4px;padding:10px 14px;align-self:flex-start}
+.chat-typing span{width:6px;height:6px;border-radius:50%;background:var(--text2);animation:typing .8s infinite}
+.chat-typing span:nth-child(2){animation-delay:.15s}
+.chat-typing span:nth-child(3){animation-delay:.3s}
+@keyframes typing{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+@media(max-width:480px){.chatbot-window{bottom:0;right:0;left:0;width:100%;max-width:100%;max-height:100vh;border-radius:0}}
 .compare-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all .25s;padding:16px}
 .compare-overlay.open{opacity:1;visibility:visible}
 .compare-modal{background:var(--card);border-radius:var(--radius);width:700px;max-width:100%;max-height:85vh;overflow-y:auto}
@@ -969,7 +1009,7 @@ body.rtl .compare-check{right:auto;left:10px}
 </div>
 
 <script>
-var _V='5.0.0';var _SV=localStorage.getItem('_v');
+var _V='5.1.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycby0PERaO9RD4tYwTFXPjO-YihIOqbeHKRBwsJFRWABtktsPGESsks8dZk831U6XpMbKVg/exec';
 var LANG_KEY = 'sk_lang';
@@ -1073,6 +1113,9 @@ var I18N = {
     referral_desc:"شارك رابطك واحصل على خصم 10% لكل صديق يطلب",
     referral_copy:"نسخ",
     referral_copied:"تم النسخ!",
+    chat_online:"متصل الآن",
+    chat_ph:"اكتب رسالة...",
+    chat_welcome:"مرحباً! 👋 أنا مساعد Smart Shopping الذكي. كيف أقدر أساعدك؟",
     nav_about:"من نحن",nav_return:"سياسة الاسترجاع",
     about_title:"من نحن",
     about_p1:"Smart Shopping هو متجر إلكتروني جزائري يهدف لتوفير أفضل المنتجات بأسعار مناسبة للجميع.",
@@ -1189,6 +1232,9 @@ var I18N = {
     referral_desc:"Share your link and get 10% discount for each friend who orders",
     referral_copy:"Copy",
     referral_copied:"Copied!",
+    chat_online:"Online now",
+    chat_ph:"Type a message...",
+    chat_welcome:"Hello! 👋 I'm Smart Shopping AI assistant. How can I help you?",
     nav_about:"About Us",nav_return:"Return Policy",
     about_title:"About Us",
     about_p1:"Smart Shopping is an Algerian online store aiming to provide the best products at affordable prices.",
@@ -2427,6 +2473,251 @@ function openCompareModal() {
 function closeCompareModal() {
   document.getElementById('compareOverlay').classList.remove('open');
 }
+
+// === AI Chatbot ===
+var chatHistory = [];
+var chatOpen = false;
+
+function toggleChatbot() {
+  chatOpen = !chatOpen;
+  document.getElementById('chatbotWindow').classList.toggle('open', chatOpen);
+  document.getElementById('chatUnread').style.display = 'none';
+  if (chatOpen && chatHistory.length === 0) {
+    addBotMsg(t('chat_welcome'));
+    showQuickReplies([
+      { text: currentLang === 'ar' ? '📦 تتبع طلبي' : '📦 Track my order', value: 'track' },
+      { text: currentLang === 'ar' ? '🔍 أبحث عن منتج' : '🔍 Search product', value: 'search' },
+      { text: currentLang === 'ar' ? '💰 الأسعار والشحن' : '💰 Prices & shipping', value: 'shipping' },
+      { text: currentLang === 'ar' ? '↩️ سياسة الإرجاع' : '↩️ Return policy', value: 'return' },
+      { text: currentLang === 'ar' ? '💳 طرق الدفع' : '💳 Payment methods', value: 'payment' },
+      { text: currentLang === 'ar' ? '📞 تواصل معنا' : '📞 Contact us', value: 'contact' }
+    ]);
+  }
+}
+
+function addBotMsg(text, extra) {
+  var el = document.getElementById('chatMessages');
+  var msg = document.createElement('div');
+  msg.className = 'chat-msg bot';
+  msg.innerHTML = '<div class="bot-name">🤖 Smart Assistant</div>' + text + (extra || '');
+  el.appendChild(msg);
+  el.scrollTop = el.scrollHeight;
+  chatHistory.push({ role: 'bot', text: text });
+}
+
+function addUserMsg(text) {
+  var el = document.getElementById('chatMessages');
+  var msg = document.createElement('div');
+  msg.className = 'chat-msg user';
+  msg.textContent = text;
+  el.appendChild(msg);
+  el.scrollTop = el.scrollHeight;
+  chatHistory.push({ role: 'user', text: text });
+}
+
+function showTyping() {
+  var el = document.getElementById('chatMessages');
+  var typing = document.createElement('div');
+  typing.className = 'chat-typing';
+  typing.id = 'chatTyping';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  el.appendChild(typing);
+  el.scrollTop = el.scrollHeight;
+}
+
+function hideTyping() {
+  var t = document.getElementById('chatTyping');
+  if (t) t.remove();
+}
+
+function showQuickReplies(replies) {
+  var el = document.getElementById('chatQuickReplies');
+  el.innerHTML = replies.map(function(r) {
+    return '<button class="chat-quick-btn" onclick="handleQuickReply(\'' + r.value + '\')">' + r.text + '</button>';
+  }).join('');
+}
+
+function handleQuickReply(value) {
+  document.getElementById('chatQuickReplies').innerHTML = '';
+  var replies = {
+    track: currentLang === 'ar' ? '📦 تتبع طلبي' : '📦 Track my order',
+    search: currentLang === 'ar' ? '🔍 أبحث عن منتج' : '🔍 Search product',
+    shipping: currentLang === 'ar' ? '💰 الأسعار والشحن' : '💰 Prices & shipping',
+    return: currentLang === 'ar' ? '↩️ سياسة الإرجاع' : '↩️ Return policy',
+    payment: currentLang === 'ar' ? '💳 طرق الدفع' : '💳 Payment methods',
+    contact: currentLang === 'ar' ? '📞 تواصل معنا' : '📞 Contact us'
+  };
+  addUserMsg(replies[value] || value);
+  processChatInput(value);
+}
+
+function sendChatMsg() {
+  var input = document.getElementById('chatInput');
+  var text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addUserMsg(text);
+  processChatInput(text);
+}
+
+function processChatInput(text) {
+  var lower = text.toLowerCase();
+  showTyping();
+
+  setTimeout(function() {
+    hideTyping();
+
+    // Track order
+    if (lower.match(/(تتبع|طلب|track|order| رقم الطلب)/)) {
+      if (lower.match(/sk-|订单/)) {
+        var orderId = lower.match(/(sk-[a-z0-9-]+)/i);
+        if (orderId) {
+          apiCall('track', { order_id: orderId[1].toUpperCase() }, function(d) {
+            if (d && d.found) {
+              var o = d.order;
+              var statusMap = { pending: '⏳ قيد الانتظار', confirmed: '✅ تم التأكيد', shipped: '🚚 في الطريق', delivered: '📦 تم التوصيل' };
+              addBotMsg('📦 طلبك ' + o.order_id + ':<br>الحالة: ' + (statusMap[o.status] || o.status) + '<br>الولاية: ' + (o.wilaya_ar || '') + '<br>المجموع: ' + Number(o.subtotal).toLocaleString() + ' دج');
+            } else {
+              addBotMsg('❌ الطلب غير موجود. تأكد من الرقم وحاول مرة أخرى.');
+            }
+          });
+        } else {
+          addBotMsg('📝 أرسل رقم طلبك بالشكل:<br><strong>SK-20260619-0001</strong>');
+        }
+      } else {
+        addBotMsg('📝 أرسل رقم طلبك بالشكل:<br><strong>SK-20260619-0001</strong>');
+      }
+      return;
+    }
+
+    // Search product
+    if (lower.match(/(بحث|منتج|search|product|عندي|أبي|اريد|ابي)/)) {
+      var q = lower.replace(/(بحث|عن|عندي|أبي|اريد|ابي|product|search|about|looking for)/g, '').trim();
+      if (q.length > 1) {
+        var found = allProducts.filter(function(p) {
+          var name = (currentLang === 'ar' ? p.title_ar : p.title_en || '').toLowerCase();
+          return name.indexOf(q) > -1;
+        }).slice(0, 3);
+        if (found.length) {
+          var html = '🔍 وجدت ' + found.length + ' منتج:' + found.map(function(p) {
+            return '<div class="chat-product-card" onclick="toggleChatbot();showProductDetail(\'' + p.id + '\')"><img src="' + (p.image1 || '') + '" onerror="this.style.display=\'none\'"><div class="chat-pinfo"><div class="chat-pname">' + (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + '</div><div class="chat-pprice">' + Number(p.price).toLocaleString() + ' دج</div></div></div>';
+          }).join('');
+          addBotMsg(html);
+        } else {
+          addBotMsg('❌ ما لقيت منتج اسمه "' + q + '"<br>جرّب اسم ثاني أو تصفح المنتجات.');
+        }
+      } else {
+        addBotMsg('🔍 وش تبي أبحث لك عنه؟ اكتب اسم المنتج.');
+      }
+      return;
+    }
+
+    // Shipping
+    if (lower.match(/(شحن|توصيل|سعر|shipping|delivery|cost|price|多少钱)/)) {
+      addBotMsg('🚚 <strong>معلومات الشحن:</strong><br><br>• التوصيل لجميع الولايات (58 ولاية)<br>• الدفع عند الاستلام<br>• سعر الشحن يُحدد بعد التواصل معك<br>• التوصيل خلال 2-5 أيام عمل<br><br>تبي تطلب؟ اضغط على أي منتج واملأ الطلب!');
+      showQuickReplies([
+        { text: currentLang === 'ar' ? '🛒 تصفح المنتجات' : '🛒 Browse products', value: 'browse' },
+        { text: currentLang === 'ar' ? '📞 تواصل معنا' : '📞 Contact us', value: 'contact' }
+      ]);
+      return;
+    }
+
+    // Return policy
+    if (lower.match(/(ارجاع|استرجاع|return|refund|مرتجع)/)) {
+      addBotMsg('↩️ <strong>سياسة الإرجاع:</strong><br><br>• يمكنك إرجاع المنتج خلال 7 أيام<br>• المنتج يجب أن يكون في حالته الأصلية<br>• التغليف سليم<br>• تكلفة الشحن على العميل<br><br>تبي ترجع منتج؟ تواصل معنا واتساب.');
+      showQuickReplies([
+        { text: currentLang === 'ar' ? '📞 واتساب' : '📞 WhatsApp', value: 'whatsapp' }
+      ]);
+      return;
+    }
+
+    // Payment
+    if (lower.match(/(دفع|payment|فلوس|cash|cod|فيزا|بطاقة)/)) {
+      addBotMsg('💳 <strong>طرق الدفع:</strong><br><br>✅ الدفع عند الاستلام (COD)<br><br>ادفع لما تستلم الطرد عند باب بيتك!<br>لا نطلب أي معلومات بطاقة ائتمان.');
+      return;
+    }
+
+    // Contact
+    if (lower.match(/(تواصل|هاتف|جوال|واتساب|contact|phone|whatsapp|اتصل)/)) {
+      addBotMsg('📞 <strong>تواصل معنا:</strong><br><br>💬 واتساب: <a href="https://wa.me/213557543177" target="_blank" style="color:var(--sale)">+213557543177</a><br><br>نتواصل معك خلال دقائق! ⚡');
+      return;
+    }
+
+    // Browse
+    if (lower.match(/(تصفح|منتجات|browse|products|كل المنتجات)/)) {
+      addBotMsg('🛒 <a href="#products" onclick="toggleChatbot();scrollToSection(\'products\')" style="color:var(--sale);font-weight:700">اضغط هنا لتصفح جميع المنتجات</a>');
+      return;
+    }
+
+    // Greetings
+    if (lower.match(/(مرحبا|هلا|سلام|أهلا|hello|hi|hey|السلام)/)) {
+      addBotMsg('مرحباً! 👋 وش تبي اليوم؟');
+      showQuickReplies([
+        { text: currentLang === 'ar' ? '🛒 تصفح المنتجات' : '🛒 Browse products', value: 'browse' },
+        { text: currentLang === 'ar' ? '📦 تتبع طلب' : '📦 Track order', value: 'track' },
+        { text: currentLang === 'ar' ? '💰 معلومات الشحن' : '💰 Shipping info', value: 'shipping' }
+      ]);
+      return;
+    }
+
+    // Thanks
+    if (lower.match(/(شكر|ممنون|thanks|thank you|مشكور)/)) {
+      addBotMsg('العفو! 😊 هل تحتاج شيء ثاني؟');
+      return;
+    }
+
+    // Best sellers
+    if (lower.match(/(الأكثر|most|popular|رائج|مميز|افضل|best)/)) {
+      var sorted = allProducts.filter(function(p) { return p.active !== false; }).sort(function(a, b) { return (b.stock || 0) - (a.stock || 0); }).slice(0, 3);
+      if (sorted.length) {
+        var html2 = '⭐ <strong>الأكثر مبيعاً:</strong>' + sorted.map(function(p) {
+          return '<div class="chat-product-card" onclick="toggleChatbot();showProductDetail(\'' + p.id + '\')"><img src="' + (p.image1 || '') + '" onerror="this.style.display=\'none\'"><div class="chat-pinfo"><div class="chat-pname">' + (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + '</div><div class="chat-pprice">' + Number(p.price).toLocaleString() + ' دج</div></div></div>';
+        }).join('');
+        addBotMsg(html2);
+      } else {
+        addBotMsg('عندنا منتجات متنوعة — تصفح المتجر!');
+      }
+      return;
+    }
+
+    // Offers
+    if (lower.match(/(عرض|خصم|offer|discount| Sale|تخفيض)/)) {
+      var offers = allProducts.filter(function(p) { return p.old_price > 0 && p.active !== false; }).slice(0, 3);
+      if (offers.length) {
+        var html3 = '🔥 <strong>عروض خاصة:</strong>' + offers.map(function(p) {
+          var disc = Math.round((p.old_price - p.price) / p.old_price * 100);
+          return '<div class="chat-product-card" onclick="toggleChatbot();showProductDetail(\'' + p.id + '\')"><img src="' + (p.image1 || '') + '" onerror="this.style.display=\'none\'"><div class="chat-pinfo"><div class="chat-pname">' + (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + '</div><div class="chat-pprice">' + Number(p.price).toLocaleString() + ' دج <span style="text-decoration:line-through;color:var(--text2);font-size:.7rem">' + Number(p.old_price).toLocaleString() + '</span> <span style="color:#22c55e;font-size:.7rem">-' + disc + '%</span></div></div></div>';
+        }).join('');
+        addBotMsg(html3);
+      } else {
+        addBotMsg('لا توجد عروض حالياً — تابعنا للعروض القادمة! 🔔');
+      }
+      return;
+    }
+
+    // Help
+    if (lower.match(/(مساعدة|help|وش تسوي| كيف)/)) {
+      addBotMsg('🤖 <strong>أقدر أساعدك في:</strong><br><br>📦 تتبع طلباتك<br>🔍 البحث عن منتجات<br>💰 معلومات الأسعار والشحن<br>↩️ سياسة الإرجاع<br>💳 طرق الدفع<br>📞 التواصل معنا<br>🔥 عروض وخصومات');
+      return;
+    }
+
+    // Default
+    addBotMsg('🤔 ما فهمت قصدك. جرّب أسأل عن:<br><br>• تتبع طلب<br>• بحث عن منتج<br>• الأسعار والشحن<br>• الإرجاع<br>• الدفع');
+    showQuickReplies([
+      { text: currentLang === 'ar' ? '📦 تتبع طلب' : '📦 Track order', value: 'track' },
+      { text: currentLang === 'ar' ? '🔍 بحث' : '🔍 Search', value: 'search' },
+      { text: currentLang === 'ar' ? '💰 شحن' : '💰 Shipping', value: 'shipping' },
+      { text: currentLang === 'ar' ? '📞 تواصل' : '📞 Contact', value: 'contact' }
+    ]);
+
+  }, 600);
+}
+
+function showChatNotification() {
+  if (!chatOpen) {
+    document.getElementById('chatUnread').style.display = 'block';
+  }
+}
 </script>
 
 <!-- Compare Bar -->
@@ -2435,6 +2726,28 @@ function closeCompareModal() {
   <span>منتج محدد للمقارنة</span>
   <button class="btn btn-compare" onclick="openCompareModal()">قارن</button>
   <button class="btn btn-clear" onclick="clearCompare()">مسح</button>
+</div>
+
+<!-- AI Chatbot -->
+<button class="chatbot-btn" id="chatbotBtn" onclick="toggleChatbot()">
+  💬
+  <span class="unread-dot" id="chatUnread"></span>
+</button>
+<div class="chatbot-window" id="chatbotWindow">
+  <div class="chatbot-header">
+    <div class="bot-avatar">🤖</div>
+    <div class="bot-info">
+      <h4>Smart Assistant</h4>
+      <p data-i18n="chat_online">متصل الآن</p>
+    </div>
+    <button class="chatbot-close" onclick="toggleChatbot()">✕</button>
+  </div>
+  <div class="chatbot-messages" id="chatMessages"></div>
+  <div class="chat-quick-replies" id="chatQuickReplies"></div>
+  <div class="chatbot-input">
+    <input type="text" id="chatInput" placeholder="اكتب رسالة..." data-i18n-placeholder="chat_ph" onkeypress="if(event.key==='Enter')sendChatMsg()">
+    <button onclick="sendChatMsg()">➤</button>
+  </div>
 </div>
 
 <!-- Compare Modal -->
