@@ -1140,8 +1140,9 @@ function updateOrderStatus(row, status) {
   var script = document.createElement('script');
   script.src = url;
   script.onload = function() {
-    toast('تم تحديث الحالة');
     var o = allOrders.find(function(x) { return x._row === row; });
+    if (o) { o.status = status; o._statusLocal = true; }
+    toast('تم تحديث الحالة');
     if (o && o.phone) {
       var statusNames = { pending: 'قيد الانتظار', confirmed: 'تم التأكيد', shipped: 'تم الشحن', delivered: 'تم التوصيل', cancelled: 'تم الإلغاء' };
       var msg = 'مرحبا ' + (o.name || '') + '\n' +
@@ -1507,6 +1508,12 @@ function startAutoRefresh() {
       apiGet('admin_orders', {}, function(data) {
         if (data && data.orders) {
           var oldCount = allOrders.length;
+          data.orders.forEach(function(serverOrder) {
+            var localOrder = allOrders.find(function(x) { return x._row === serverOrder._row; });
+            if (localOrder && localOrder._statusLocal) {
+              serverOrder.status = localOrder.status;
+            }
+          });
           allOrders = data.orders;
           renderOrders();
           if (oldCount > 0 && data.orders.length > oldCount) {
