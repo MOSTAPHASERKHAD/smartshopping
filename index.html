@@ -356,36 +356,36 @@ body.rtl .chatbot-btn{right:auto;left:24px}
 .chatbot-window{position:fixed;bottom:90px;right:24px;width:380px;max-width:calc(100vw - 32px);max-height:520px;background:var(--card);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:99;display:none;flex-direction:column;overflow:hidden}
 body.rtl .chatbot-window{right:auto;left:24px}
 .chatbot-window.open{display:flex}
-.chatbot-header{background:var(--accent);color:#fff;padding:16px;display:flex;align-items:center;gap:10px}
-.chatbot-header .bot-avatar{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.2rem}
-.chatbot-header .bot-info h4{font-size:.9rem;font-weight:700;margin:0}
-.chatbot-header .bot-info p{font-size:.7rem;opacity:.7;margin:0}
+.chatbot-header{background:var(--accent);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.chatbot-header .bot-avatar{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.chatbot-header .bot-info h4{font-size:.88rem;font-weight:700;margin:0}
+.chatbot-header .bot-info p{font-size:.7rem;opacity:.8;margin:0}
 .chatbot-close{margin-right:auto;background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer}
 body.rtl .chatbot-close{margin-right:0;margin-left:auto}
-.chatbot-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
-.chat-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:.82rem;line-height:1.5;animation:fadeIn .3s ease}
-.chat-msg.bot{background:var(--bg);align-self:flex-start;border-bottom-left-radius:4px}
+.chatbot-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.chat-msg{max-width:85%;padding:12px 16px;border-radius:16px;font-size:.85rem;line-height:1.6;animation:fadeIn .3s ease;word-wrap:break-word}
+.chat-msg.bot{background:var(--bg);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid var(--border)}
 .chat-msg.user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
 .chat-msg .bot-name{font-size:.65rem;color:var(--sale);font-weight:700;margin-bottom:2px}
 .chat-quick-replies{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px}
-.chat-quick-btn{padding:6px 12px;border:1px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;font-family:var(--font);font-size:.72rem;font-weight:600;transition:all .2s;color:var(--text)}
-.chat-quick-btn:hover{border-color:var(--sale);color:var(--sale)}
-.chatbot-input{display:flex;gap:6px;padding:12px 16px;border-top:1px solid var(--border)}
-.chatbot-input input{flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:24px;font-family:var(--font);font-size:.82rem;outline:none}
-.chatbot-input input:focus{border-color:var(--sale)}
-.chatbot-input button{width:40px;height:40px;border:none;border-radius:50%;background:var(--sale);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:opacity .2s}
-.chatbot-input button:hover{opacity:.85}
+.chat-quick-btn{padding:6px 14px;border:1px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;font-family:var(--font);font-size:.75rem;font-weight:500;transition:all .2s;color:var(--text)}
+.chat-quick-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(233,69,96,.05)}
+.chatbot-input{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);align-items:flex-end}
+.chatbot-input input{flex:1;padding:10px 16px;border:1px solid var(--border);border-radius:24px;font-family:var(--font);font-size:.85rem;outline:none;transition:border-color .2s}
+.chatbot-input input:focus{border-color:var(--accent)}
+.chatbot-input button{width:40px;height:40px;border:none;border-radius:50%;background:var(--accent);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .2s;flex-shrink:0}
+.chatbot-input button:hover{opacity:.85;transform:scale(1.05)}
 .chat-product-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:8px;display:flex;gap:10px;cursor:pointer;transition:box-shadow .2s}
 .chat-product-card:hover{box-shadow:var(--shadow)}
 .chat-product-card img{width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0}
 .chat-product-card .chat-pinfo{flex:1;min-width:0}
 .chat-product-card .chat-pname{font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-product-card .chat-pprice{color:var(--sale);font-weight:700;font-size:.82rem}
-.chat-typing{display:flex;gap:4px;padding:10px 14px;align-self:flex-start}
-.chat-typing span{width:6px;height:6px;border-radius:50%;background:var(--text2);animation:typing .8s infinite}
-.chat-typing span:nth-child(2){animation-delay:.15s}
-.chat-typing span:nth-child(3){animation-delay:.3s}
-@keyframes typing{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+.chat-typing{display:flex;gap:4px;padding:10px 14px;align-self:flex-start;background:var(--bg);border:1px solid var(--border);border-radius:14px;border-bottom-left-radius:4px}
+.chat-typing span{width:7px;height:7px;border-radius:50%;background:var(--text2);animation:typing .8s infinite}
+.chat-typing span:nth-child(2){animation-delay:.2s}
+.chat-typing span:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-5px)}}
 @media(max-width:480px){.chatbot-window{bottom:0;right:0;left:0;width:100%;max-width:100%;max-height:100vh;border-radius:0}}
 .compare-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all .25s;padding:16px}
 .compare-overlay.open{opacity:1;visibility:visible}
@@ -2486,18 +2486,20 @@ function toggleChatbot() {
   if (chatOpen && chatHistory.length === 0) {
     if (storeSettings && storeSettings.gemini_api_key) {
       chatAIEnabled = true;
-      addBotMsg('مرحباً! 👋 أنا مساعد Smart Shopping بالذكاء الاصطناعي. اسألني عن أي شيء!');
+      addBotMsg('مرحباً! 👋 أنا مساعد Smart Shopping الذكي.\n\nأقدر أساعدك في:\n• البحث عن منتجات\n• معلومات الأسعار والشحن\n• تتبع الطلبات\n• سياسة الإرجاع\n\nوش تبي اليوم؟ 😊');
     } else {
       addBotMsg(t('chat_welcome'));
     }
     showQuickReplies([
-      { text: currentLang === 'ar' ? '📦 تتبع طلبي' : '📦 Track my order', value: 'track' },
       { text: currentLang === 'ar' ? '🔍 أبحث عن منتج' : '🔍 Search product', value: 'search' },
+      { text: currentLang === 'ar' ? '📦 تتبع طلبي' : '📦 Track order', value: 'track' },
       { text: currentLang === 'ar' ? '💰 الأسعار والشحن' : '💰 Prices & shipping', value: 'shipping' },
-      { text: currentLang === 'ar' ? '↩️ سياسة الإرجاع' : '↩️ Return policy', value: 'return' },
-      { text: currentLang === 'ar' ? '💳 طرق الدفع' : '💳 Payment methods', value: 'payment' },
+      { text: currentLang === 'ar' ? '🔥 عروض وخصومات' : '🔥 Offers', value: 'offers' },
       { text: currentLang === 'ar' ? '📞 تواصل معنا' : '📞 Contact us', value: 'contact' }
     ]);
+  }
+  if (chatOpen) {
+    document.getElementById('chatInput').focus();
   }
 }
 
@@ -2505,7 +2507,8 @@ function addBotMsg(text, extra) {
   var el = document.getElementById('chatMessages');
   var msg = document.createElement('div');
   msg.className = 'chat-msg bot';
-  msg.innerHTML = '<div class="bot-name">🤖 Smart Assistant</div>' + text + (extra || '');
+  var formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+  msg.innerHTML = '<div class="bot-name">🤖 Smart Assistant</div>' + formatted + (extra || '');
   el.appendChild(msg);
   el.scrollTop = el.scrollHeight;
   chatHistory.push({ role: 'bot', text: text });
@@ -2563,6 +2566,7 @@ function sendChatMsg() {
   if (!text) return;
   input.value = '';
   addUserMsg(text);
+  document.getElementById('chatQuickReplies').innerHTML = '';
   processChatInput(text);
 }
 
@@ -2603,9 +2607,12 @@ function processChatInput(text) {
       });
       storeContext += topProducts.join(', ') + '. ';
     }
-    var historyStr = JSON.stringify(chatHistory.slice(-6));
+    var historyForAI = chatHistory.slice(-8).map(function(h) {
+      return (h.role === 'user' ? 'Customer' : 'Assistant') + ': ' + h.text;
+    }).join('\n');
+    var fullMessage = storeContext + '\n\nConversation:\n' + historyForAI + '\nCustomer: ' + text + '\nAssistant:';
 
-    apiCall('ai_chat', { message: storeContext + '\nCustomer: ' + text, history: historyStr }, function(d) {
+    apiCall('ai_chat', { message: fullMessage, history: '' }, function(d) {
       hideTyping();
       if (d && d.reply) {
         addBotMsg(d.reply.replace(/\n/g, '<br>'));
@@ -2722,7 +2729,7 @@ function showChatNotification() {
   <div class="chatbot-messages" id="chatMessages"></div>
   <div class="chat-quick-replies" id="chatQuickReplies"></div>
   <div class="chatbot-input">
-    <input type="text" id="chatInput" placeholder="اكتب رسالة..." data-i18n-placeholder="chat_ph" onkeypress="if(event.key==='Enter')sendChatMsg()">
+    <input type="text" id="chatInput" placeholder="اكتب رسالتك هنا..." data-i18n-placeholder="chat_ph" onkeypress="if(event.key==='Enter')sendChatMsg()">
     <button onclick="sendChatMsg()">➤</button>
   </div>
 </div>
