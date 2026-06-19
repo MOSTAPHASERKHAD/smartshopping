@@ -815,7 +815,8 @@ function aiChat(params) {
       var reply = json.candidates[0].content.parts[0].text;
       return { reply: reply };
     }
-    return { reply: 'عذراً، صارت مشكلة. حاول مرة أخرى.' };
+    var errMsg = json.error ? JSON.stringify(json.error) : JSON.stringify(json);
+    return { reply: 'Error: ' + errMsg };
   } catch(e) {
     return { reply: 'خطأ في الاتصال: ' + e.toString() };
   }
