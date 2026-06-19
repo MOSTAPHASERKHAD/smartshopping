@@ -254,11 +254,17 @@ function adminListOrders() {
   if (!sheet) return { orders: [] };
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
+  var statusCol = -1;
+  for (var k = 0; k < headers.length; k++) {
+    var h = headers[k].toString().toLowerCase().trim();
+    if (h === 'status' || h === 'shipping_note') { statusCol = k; break; }
+  }
   var orders = [];
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     var order = { _row: i + 1 };
     for (var j = 0; j < headers.length; j++) { order[headers[j]] = row[j]; }
+    if (statusCol >= 0) { order.status = row[statusCol]; }
     orders.push(order);
   }
   orders.reverse();
@@ -274,10 +280,26 @@ function adminUpdateOrder(params) {
     if (!row || row < 2) return { error: 'Invalid row: ' + params._row };
     var lastRow = sheet.getLastRow();
     if (row > lastRow) return { error: 'Row ' + row + ' exceeds sheet rows (' + lastRow + ')' };
-    if (params.status) sheet.getRange(row, 12).setValue(params.status);
-    if (params.notes !== undefined) sheet.getRange(row, 13).setValue(params.notes);
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (params.status) {
+      var statusCol = -1;
+      for (var i = 0; i < headers.length; i++) {
+        var h = headers[i].toString().toLowerCase().trim();
+        if (h === 'status' || h === 'shipping_note') { statusCol = i + 1; break; }
+      }
+      if (statusCol === -1) return { error: 'Status column not found. Headers: ' + headers.join(', ') };
+      sheet.getRange(row, statusCol).setValue(params.status);
+    }
+    if (params.notes !== undefined) {
+      var notesCol = -1;
+      for (var i = 0; i < headers.length; i++) {
+        var h = headers[i].toString().toLowerCase().trim();
+        if (h === 'notes' || h === 'note') { notesCol = i + 1; break; }
+      }
+      if (notesCol > 0) sheet.getRange(row, notesCol).setValue(params.notes);
+    }
     SpreadsheetApp.flush();
-    return { ok: true, row: row, status: params.status };
+    return { ok: true, row: row, status: params.status, statusCol: statusCol };
   } catch(ex) {
     return { error: ex.toString() };
   }
