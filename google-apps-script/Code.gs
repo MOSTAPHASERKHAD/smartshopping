@@ -40,6 +40,10 @@ function doGet(e) {
     case 'admin_list_pages': result = adminListPages(); break;
     case 'admin_save_page': result = adminSavePage(params); break;
     case 'get_pages': result = getPages(); break;
+    case 'customer_register': result = customerRegister(params); break;
+    case 'customer_login': result = customerLogin(params); break;
+    case 'customer_profile': result = customerProfile(params); break;
+    case 'admin_list_customers': result = adminListCustomers(); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -82,6 +86,10 @@ function doPost(e) {
     case 'admin_list_pages': result = adminListPages(); break;
     case 'admin_save_page': result = adminSavePage(params); break;
     case 'get_pages': result = getPages(); break;
+    case 'customer_register': result = customerRegister(params); break;
+    case 'customer_login': result = customerLogin(params); break;
+    case 'customer_profile': result = customerProfile(params); break;
+    case 'admin_list_customers': result = adminListCustomers(); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -629,4 +637,89 @@ function adminSavePage(params) {
   }
   sheet.appendRow([key, content]);
   return { ok: true };
+}
+
+// === Customers ===
+function customerRegister(params) {
+  var phone = (params.phone || '').replace(/\s/g, '').trim();
+  var password = params.password || '';
+  var name = params.name || '';
+  if (!phone || !password) return { ok: false, error: 'Phone and password required' };
+  if (password.length < 4) return { ok: false, error: 'Password must be at least 4 characters' };
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Customers');
+  if (!sheet) {
+    sheet = ss.insertSheet('Customers');
+    sheet.appendRow(['phone', 'password', 'name', 'email', 'created_at', 'orders_count', 'total_spent']);
+  }
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === phone) return { ok: false, error: 'Phone number already registered' };
+  }
+  var now = Utilities.formatDate(new Date(), 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
+  sheet.appendRow([phone, password, name, '', now, 0, 0]);
+  return { ok: true, customer: { phone: phone, name: name } };
+}
+
+function customerLogin(params) {
+  var phone = (params.phone || '').replace(/\s/g, '').trim();
+  var password = params.password || '';
+  if (!phone || !password) return { ok: false, error: 'Phone and password required' };
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Customers');
+  if (!sheet) return { ok: false, error: 'No accounts found' };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { ok: false, error: 'Account not found' };
+  var headers = data[0];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (row[0] === phone) {
+      if (row[1] === password) {
+        var customer = {};
+        for (var j = 0; j < headers.length; j++) { customer[headers[j]] = row[j]; }
+        delete customer.password;
+        return { ok: true, customer: customer };
+      }
+      return { ok: false, error: 'Wrong password' };
+    }
+  }
+  return { ok: false, error: 'Account not found' };
+}
+
+function customerProfile(params) {
+  var phone = (params.phone || '').replace(/\s/g, '').trim();
+  if (!phone) return { ok: false, error: 'Phone required' };
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Customers');
+  if (!sheet) return { ok: false, error: 'No accounts' };
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === phone) {
+      var customer = {};
+      for (var j = 0; j < headers.length; j++) { customer[headers[j]] = data[i][j]; }
+      delete customer.password;
+      return { ok: true, customer: customer };
+    }
+  }
+  return { ok: false, error: 'Account not found' };
+}
+
+function adminListCustomers() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Customers');
+  if (!sheet) return { customers: [] };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { customers: [] };
+  var headers = data[0];
+  var customers = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var c = { _row: i + 1 };
+    for (var j = 0; j < headers.length; j++) { c[headers[j]] = row[j]; }
+    delete c.password;
+    customers.push(c);
+  }
+  customers.reverse();
+  return { customers: customers };
 }
