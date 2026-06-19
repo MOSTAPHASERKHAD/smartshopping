@@ -266,15 +266,21 @@ function adminListOrders() {
 }
 
 function adminUpdateOrder(params) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('Orders');
-  if (!sheet) return { error: 'Orders sheet not found' };
-  var row = parseInt(params._row);
-  if (!row || row < 2) return { error: 'Invalid row' };
-  if (params.status) sheet.getRange(row, 12).setValue(params.status);
-  if (params.notes !== undefined) sheet.getRange(row, 13).setValue(params.notes);
-  SpreadsheetApp.flush();
-  return { ok: true };
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('Orders');
+    if (!sheet) return { error: 'Orders sheet not found' };
+    var row = parseInt(params._row);
+    if (!row || row < 2) return { error: 'Invalid row: ' + params._row };
+    var lastRow = sheet.getLastRow();
+    if (row > lastRow) return { error: 'Row ' + row + ' exceeds sheet rows (' + lastRow + ')' };
+    if (params.status) sheet.getRange(row, 12).setValue(params.status);
+    if (params.notes !== undefined) sheet.getRange(row, 13).setValue(params.notes);
+    SpreadsheetApp.flush();
+    return { ok: true, row: row, status: params.status };
+  } catch(ex) {
+    return { error: ex.toString() };
+  }
 }
 
 function adminDeleteOrder(params) {

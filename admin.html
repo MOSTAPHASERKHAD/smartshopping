@@ -1134,27 +1134,52 @@ function renderOrders() {
 }
 
 function updateOrderStatus(row, status) {
-  var url = API_URL + '?action=admin_update_order&_row=' + row + '&status=' + status + '&callback=cb_ord_' + Date.now();
-  var cbName = url.split('callback=')[1];
-  window[cbName] = function() { delete window[cbName]; };
-  var script = document.createElement('script');
-  script.src = url;
-  script.onload = function() {
-    var o = allOrders.find(function(x) { return x._row === row; });
-    if (o) { o.status = status; o._statusLocal = true; }
-    toast('تم تحديث الحالة');
-    if (o && o.phone) {
-      var statusNames = { pending: 'قيد الانتظار', confirmed: 'تم التأكيد', shipped: 'تم الشحن', delivered: 'تم التوصيل', cancelled: 'تم الإلغاء' };
-      var msg = 'مرحبا ' + (o.name || '') + '\n' +
-        'طلبك رقم ' + (o.order_id || '') + '\n' +
-        'الحالة الجديدة: ' + (statusNames[status] || status) + '\n\n' +
-        'تتبع طلبك: https://MOSTAPHASERKHAD.github.io/smartkiosk/';
-      if (confirm('إرسال تحديث الحالة لعميل ' + o.name + ' عبر واتساب؟')) {
-        window.open('https://wa.me/' + o.phone + '?text=' + encodeURIComponent(msg), '_blank');
+  var cbName = 'cb_ord_' + Date.now();
+  var url = API_URL + '?action=admin_update_order&_row=' + encodeURIComponent(row) + '&status=' + encodeURIComponent(status) + '&callback=' + cbName;
+  var done = false;
+  window[cbName] = function(data) {
+    if (done) return;
+    done = true;
+    document.head.removeChild(script);
+    delete window[cbName];
+    if (data && data.ok) {
+      var o = allOrders.find(function(x) { return x._row === row; });
+      if (o) { o.status = status; o._statusLocal = true; }
+      toast('تم تحديث الحالة');
+      if (o && o.phone) {
+        var statusNames = { pending: 'قيد الانتظار', confirmed: 'تم التأكيد', shipped: 'تم الشحن', delivered: 'تم التوصيل', cancelled: 'تم الإلغاء' };
+        var msg = 'مرحبا ' + (o.name || '') + '\n' +
+          'طلبك رقم ' + (o.order_id || '') + '\n' +
+          'الحالة الجديدة: ' + (statusNames[status] || status) + '\n\n' +
+          'تتبع طلبك: https://MOSTAPHASERKHAD.github.io/smartkiosk/';
+        if (confirm('إرسال تحديث الحالة لعميل ' + o.name + ' عبر واتساب؟')) {
+          window.open('https://wa.me/' + o.phone + '?text=' + encodeURIComponent(msg), '_blank');
+        }
       }
+    } else {
+      toast('خطأ في تحديث الحالة: ' + ((data && data.error) || 'خطأ غير معروف'));
+      loadOrders();
     }
   };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() {
+    if (done) return;
+    done = true;
+    delete window[cbName];
+    toast('خطأ في الشبكة');
+    loadOrders();
+  };
   document.head.appendChild(script);
+  setTimeout(function() {
+    if (!done) {
+      done = true;
+      delete window[cbName];
+      try { document.head.removeChild(script); } catch(e) {}
+      toast('انتهت المهلة - جاري إعادة التحميل');
+      loadOrders();
+    }
+  }, 15000);
 }
 
 function viewOrder(row) {
