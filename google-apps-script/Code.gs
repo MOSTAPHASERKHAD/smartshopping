@@ -790,7 +790,6 @@ function aiChat(params) {
   }
 
   var contents = [];
-  // Build conversation history
   chatHistory.forEach(function(h) {
     contents.push({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.text }] });
   });
@@ -805,24 +804,44 @@ function aiChat(params) {
     }
   };
 
-  try {
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
-    var options = {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    };
-    var response = UrlFetchApp.fetch(url, options);
-    var json = JSON.parse(response.getContentText());
+  var models = [
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+    'gemini-1.5-flash-8b'
+  ];
 
-    if (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) {
-      var reply = json.candidates[0].content.parts[0].text;
-      return { reply: reply };
+  for (var i = 0; i < models.length; i++) {
+    try {
+      var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + apiKey;
+      var options = {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      };
+      var response = UrlFetchApp.fetch(url, options);
+      var json = JSON.parse(response.getContentText());
+
+      if (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) {
+        var reply = json.candidates[0].content.parts[0].text;
+        return { reply: reply };
+      }
+
+      if (json.error && json.error.status === 'RESOURCE_EXHAUSTED') {
+        continue;
+      }
+
+      if (json.error) {
+        continue;
+      }
+
+      continue;
+    } catch(e) {
+      continue;
     }
-    var errMsg = json.error ? JSON.stringify(json.error) : JSON.stringify(json);
-    return { reply: 'Error: ' + errMsg };
-  } catch(e) {
-    return { reply: 'خطأ في الاتصال: ' + e.toString() };
   }
+
+  return { reply: 'All AI models are currently unavailable. Please contact us on WhatsApp: +213557543177' };
 }
