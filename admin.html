@@ -1559,7 +1559,9 @@ function doLogin() {
       localStorage.setItem(AUTH_KEY, JSON.stringify({ hash: passHash, time: Date.now(), user: user }));
       showAdminPanel();
     } else {
-      document.getElementById('loginError').style.display = 'block';
+      var errEl = document.getElementById('loginError');
+      errEl.textContent = (data && data.error) ? data.error : 'كلمة المرور خاطئة';
+      errEl.style.display = 'block';
     }
   });
 }
