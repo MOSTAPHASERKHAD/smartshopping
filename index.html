@@ -21,6 +21,12 @@
 <meta name="twitter:title" content="Smart Shopping - تسوّق بذكاء">
 <meta name="twitter:description" content="منتجات متنوعة بأفضل الأسعار — الدفع عند الاستلام">
 <link rel="canonical" href="https://MOSTAPHASERKHAD.github.io/smartkiosk/">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Smart Shopping">
+<link rel="apple-touch-icon" href="icon-192.svg">
 <!-- Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -940,7 +946,7 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 </div>
 
 <script>
-var _V='4.3.0';var _SV=localStorage.getItem('_v');
+var _V='4.4.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycby0PERaO9RD4tYwTFXPjO-YihIOqbeHKRBwsJFRWABtktsPGESsks8dZk831U6XpMbKVg/exec';
 var LANG_KEY = 'sk_lang';
@@ -2200,6 +2206,11 @@ function loadCustomerOrders() {
 }
 
 document.addEventListener('DOMContentLoaded',function(){init()});
+
+// === PWA: Register Service Worker ===
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/smartkiosk/sw.js').catch(function() {});
+}
 
 window.addEventListener('scroll',function(){
   var btn=document.querySelector('.back-to-top');
