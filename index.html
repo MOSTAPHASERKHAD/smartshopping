@@ -75,7 +75,7 @@ header{background:var(--card);border-bottom:1px solid var(--border);position:sti
 
 /* Products */
 section{padding:40px 0}
-.products-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.products-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .products-header h2{font-size:1.1rem;font-weight:700}
 .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
 .product-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:box-shadow .25s}
@@ -254,11 +254,11 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
 .buy-now:hover{opacity:.85!important}
 
 /* Category & Sort */
-.cat-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.cat-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;align-items:center;justify-content:space-between}
 .cat-btn{padding:5px 14px;border:1px solid var(--border);border-radius:50px;background:transparent;cursor:pointer;font-family:var(--font);font-size:.78rem;font-weight:600;transition:all .2s;color:var(--text2)}
 .cat-btn:hover{border-color:var(--text);color:var(--text)}
 .cat-btn.active{background:var(--text);color:#fff;border-color:var(--text)}
-.sort-select{padding:5px 10px;border:1px solid var(--border);border-radius:50px;font-family:var(--font);font-size:.78rem;outline:none;background:transparent;color:var(--text2);cursor:pointer;margin-right:auto}
+.sort-select{padding:5px 10px;border:1px solid var(--border);border-radius:50px;font-family:var(--font);font-size:.78rem;outline:none;background:transparent;color:var(--text2);cursor:pointer}
 
 /* Trust Badges */
 .trust-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:32px 0;border-bottom:1px solid var(--border)}
@@ -379,10 +379,11 @@ body.rtl .wishlist-btn{left:10px;right:auto}
   .form-row{grid-template-columns:1fr}
   .footer-inner{grid-template-columns:1fr;gap:20px}
   section{padding:28px 0}
-  .cat-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
+  .cat-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;justify-content:flex-start}
   .cat-btn{white-space:nowrap;font-size:.72rem;padding:4px 10px}
   .sort-select{font-size:.72rem;padding:4px 8px}
   body{padding-bottom:64px}
+  .products-header{margin-bottom:12px;padding-bottom:8px}
 }
 @media(max-width:480px){
   .products-grid{grid-template-columns:1fr 1fr;gap:8px}
@@ -1293,13 +1294,17 @@ function buildCategories(){
     keys.forEach(function(k){
       html+='<button class="cat-btn" data-cat="'+k.replace(/'/g,"\\'")+'" onclick="filterByCategory(this)">'+k+'</button>';
     });
-    html+='<select class="sort-select" id="sortSelect" onchange="filterProducts()">'+
+    bar.innerHTML=html;
+    var sortHtml='<select class="sort-select" id="sortSelect" onchange="filterProducts()">'+
       '<option value="default">'+t('sort_default')+'</option>'+
       '<option value="price-asc">'+t('sort_price_asc')+'</option>'+
       '<option value="price-desc">'+t('sort_price_desc')+'</option>'+
       '<option value="name">'+t('sort_name')+'</option>'+
     '</select>';
-    bar.innerHTML=html;
+    var sortWrap=document.createElement('div');
+    sortWrap.style.marginRight='auto';
+    sortWrap.innerHTML=sortHtml;
+    bar.appendChild(sortWrap);
   }catch(e){console.error('buildCategories err',e)}
 }
 
