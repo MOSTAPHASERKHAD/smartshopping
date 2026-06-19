@@ -184,7 +184,34 @@ function createOrder(params) {
     params.delivery_type || '', params.items_json || '[]',
     params.subtotal || '0', 'سعر التوصيل يُحدد بعد التأكيد', 'pending', params.note || ''
   ]);
+  decrementStock(params.items_json);
   return { ok: true, order_id: orderId };
+}
+
+function decrementStock(itemsJson) {
+  try {
+    var items = JSON.parse(itemsJson || '[]');
+    if (!items.length) return;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var catalog = ss.getSheetByName('Catalog');
+    if (!catalog) return;
+    var data = catalog.getDataRange().getValues();
+    var headers = data[0];
+    var idCol = headers.indexOf('id');
+    var stockCol = headers.indexOf('stock');
+    if (idCol < 0 || stockCol < 0) return;
+    for (var i = 1; i < data.length; i++) {
+      var productId = data[i][idCol];
+      for (var j = 0; j < items.length; j++) {
+        if (items[j].id === productId) {
+          var currentStock = parseInt(data[i][stockCol]) || 0;
+          var newStock = Math.max(0, currentStock - (items[j].qty || 1));
+          catalog.getRange(i + 1, stockCol + 1).setValue(newStock);
+        }
+      }
+    }
+    SpreadsheetApp.flush();
+  } catch(ex) {}
 }
 
 function generateOrderId() {
