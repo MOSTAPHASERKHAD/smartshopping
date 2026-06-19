@@ -2595,24 +2595,17 @@ function processChatInput(text) {
   if (storeSettings && storeSettings.gemini_api_key) {
     chatAIEnabled = true;
     showTyping();
-    // Build context about store
-    var storeContext = 'Store info: name Smart Shopping, Algeria e-commerce, COD payment, ships to all 58 wilayas, WhatsApp 0557543177. ';
+    var storeContext = 'Smart Shopping Algeria store. COD payment. Ships to 58 wilayas. WhatsApp: 0557543177. ';
     if (allProducts.length) {
-      storeContext += 'Products count: ' + allProducts.length + '. ';
-      var topProducts = allProducts.slice(0, 10).map(function(p) {
-        var info = (currentLang === 'ar' ? p.title_ar : p.title_en || '') + ' - ' + p.price + ' DZD';
-        if (p.old_price > 0) info += ' (was ' + p.old_price + ', discount ' + Math.round((p.old_price - p.price) / p.old_price * 100) + '%)';
-        if (p.desc_ar) info += ' - desc: ' + p.desc_ar.substring(0, 120);
-        if (p.desc_en) info += ' - desc_en: ' + p.desc_en.substring(0, 120);
-        if (p.stock !== undefined) info += ' - stock: ' + p.stock;
-        if (p.category_ar) info += ' - category: ' + p.category_ar;
-        return info;
+      storeContext += 'Products (' + allProducts.length + '): ';
+      var topProducts = allProducts.slice(0, 5).map(function(p) {
+        return (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + ' ' + p.price + 'DZD';
       });
-      storeContext += 'Products: ' + topProducts.join(' || ');
+      storeContext += topProducts.join(', ') + '. ';
     }
-    var historyStr = JSON.stringify(chatHistory.slice(-10));
+    var historyStr = JSON.stringify(chatHistory.slice(-6));
 
-    apiCall('ai_chat', { message: storeContext + '\n\nCustomer message: ' + text, history: historyStr }, function(d) {
+    apiCall('ai_chat', { message: storeContext + '\nCustomer: ' + text, history: historyStr }, function(d) {
       hideTyping();
       if (d && d.reply) {
         addBotMsg(d.reply.replace(/\n/g, '<br>'));
