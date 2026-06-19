@@ -1535,21 +1535,7 @@ function startAutoRefresh() {
     if (!document.getElementById('sec-orders').classList.contains('hidden')) {
       apiGet('admin_orders', {}, function(data) {
         if (data && data.orders) {
-          var serverMap = {};
-          data.orders.forEach(function(o) { serverMap[o._row] = o; });
-          allOrders.forEach(function(local) {
-            var server = serverMap[local._row];
-            if (server) {
-              local.wilaya_ar = server.wilaya_ar;
-              local.name = server.name;
-              local.phone = server.phone;
-              local.items_json = server.items_json;
-              local.subtotal = server.subtotal;
-              local.delivery_type = server.delivery_type;
-              local.created_at = server.created_at;
-              local.order_id = server.order_id;
-            }
-          });
+          allOrders = data.orders;
           renderOrders();
           if (lastOrderCount > 0 && data.orders.length > lastOrderCount) {
             playNotification();
