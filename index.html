@@ -291,6 +291,51 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
 body.rtl .carousel-arrow.prev{left:auto;right:8px}
 body.rtl .carousel-arrow.next{right:auto;left:8px}
 
+/* Promo Banner Slider */
+.promo-banner{position:relative;overflow:hidden;border-radius:var(--radius);margin-bottom:24px;aspect-ratio:3/1;background:#f7f7f7}
+.promo-banner .slide{position:absolute;inset:0;opacity:0;transition:opacity .6s ease}
+.promo-banner .slide.active{opacity:1}
+.promo-banner .slide img{width:100%;height:100%;object-fit:cover}
+.promo-banner .slide-text{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.7));color:#fff;padding:24px 28px 20px}
+.promo-banner .slide-text h3{font-size:1.2rem;font-weight:800;margin-bottom:4px}
+.promo-banner .slide-text p{font-size:.82rem;opacity:.9}
+.promo-banner .dots{position:absolute;bottom:10px;right:50%;transform:translateX(50%);display:flex;gap:6px;z-index:2}
+.promo-banner .dots button{width:8px;height:8px;border-radius:50%;border:none;background:rgba(255,255,255,.5);cursor:pointer;transition:background .2s}
+.promo-banner .dots button.active{background:#fff}
+.promo-banner .nav-arrow{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;border-radius:50%;background:rgba(255,255,255,.8);cursor:pointer;font-size:1rem;z-index:2;transition:background .2s;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.promo-banner .nav-arrow:hover{background:#fff}
+.promo-banner .nav-arrow.prev{left:10px}
+.promo-banner .nav-arrow.next{right:10px}
+@media(max-width:768px){.promo-banner{aspect-ratio:2/1}.promo-banner .slide-text{padding:16px 18px 14px}.promo-banner .slide-text h3{font-size:.95rem}}
+
+/* Wishlist */
+.wishlist-btn{position:absolute;top:10px;left:10px;width:34px;height:34px;border:none;border-radius:50%;background:rgba(255,255,255,.9);cursor:pointer;font-size:1rem;z-index:3;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.wishlist-btn:hover{transform:scale(1.1)}
+.wishlist-btn.active{color:var(--sale)}
+body.rtl .wishlist-btn{left:auto;right:10px}
+
+/* Recently Viewed */
+.recently-viewed{border-top:1px solid var(--border);padding:32px 0}
+.recently-viewed h2{font-size:1rem;font-weight:700;margin-bottom:16px}
+
+/* Reviews */
+.reviews-section{border-top:1px solid var(--border);padding:28px 0}
+.reviews-section h3{font-size:.95rem;font-weight:700;margin-bottom:16px}
+.review-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px}
+.review-stars{color:#f59e0b;font-size:.8rem;margin-bottom:4px}
+.review-text{font-size:.82rem;color:var(--text);line-height:1.6;margin-bottom:6px}
+.review-author{font-size:.72rem;color:var(--text2);font-weight:600}
+.review-form{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:16px}
+.review-form h4{font-size:.85rem;font-weight:700;margin-bottom:12px}
+.review-rating{display:flex;gap:4px;margin-bottom:10px}
+.review-rating button{width:28px;height:28px;border:none;border-radius:4px;background:var(--border);cursor:pointer;font-size:.85rem;transition:all .15s}
+.review-rating button.active{background:#f59e0b;color:#fff}
+.review-form textarea{width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.82rem;resize:vertical;min-height:60px;outline:none;margin-bottom:10px}
+.review-form textarea:focus{border-color:var(--text)}
+.review-form .form-row{display:flex;gap:8px}
+.review-form input{flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.82rem;outline:none}
+.review-form input:focus{border-color:var(--text)}
+
 /* Back to top */
 .back-to-top{position:fixed;bottom:24px;left:24px;width:44px;height:44px;border:none;border-radius:50%;background:var(--text);color:#fff;font-size:1.2rem;cursor:pointer;opacity:0;visibility:hidden;transition:all .3s;z-index:90;box-shadow:0 4px 12px rgba(0,0,0,.2)}
 .back-to-top.visible{opacity:1;visibility:visible}
@@ -366,6 +411,15 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
   </div>
 </div>
 </header>
+
+<!-- Promo Banner -->
+<div class="container" style="margin-top:16px">
+  <div class="promo-banner" id="promoBanner" style="display:none">
+    <div class="nav-arrow prev" onclick="promoNav(-1)">‹</div>
+    <div class="nav-arrow next" onclick="promoNav(1)">›</div>
+    <div class="dots" id="promoDots"></div>
+  </div>
+</div>
 
 <section id="products">
 <div class="container">
@@ -455,6 +509,27 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
       <div id="pdSuccess" class="hidden pd-success"></div>
     </div>
   </div>
+  <!-- Reviews -->
+  <div class="reviews-section" id="reviewsSection" style="margin-top:24px">
+    <h3 data-i18n="reviews_title">التقييمات</h3>
+    <div id="reviewsList"></div>
+    <div class="review-form">
+      <h4 data-i18n="write_review">اكتب تقييمك</h4>
+      <div class="review-rating" id="reviewRating">
+        <button onclick="setReviewRating(1)">★</button>
+        <button onclick="setReviewRating(2)">★</button>
+        <button onclick="setReviewRating(3)">★</button>
+        <button onclick="setReviewRating(4)">★</button>
+        <button onclick="setReviewRating(5)">★</button>
+      </div>
+      <textarea id="reviewText" placeholder="اكتب رأيك في المنتج..." data-i18n-placeholder="review_ph"></textarea>
+      <div class="form-row">
+        <input type="text" id="reviewName" placeholder="اسمك" data-i18n-placeholder="review_name">
+        <input type="text" id="reviewLocation" placeholder="المدينة" data-i18n-placeholder="review_location">
+      </div>
+      <button class="btn btn-primary" style="margin-top:10px" onclick="submitReview()" data-i18n="submit_review">إرسال التقييم</button>
+    </div>
+  </div>
 </div>
 </section>
 
@@ -462,6 +537,13 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
 <div class="container">
   <h2 style="font-size:1rem;font-weight:700;margin-bottom:16px" data-i18n="suggested_title">منتجات مقترحة</h2>
   <div id="suggestedGrid" class="products-grid" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px"></div>
+</div>
+</section>
+
+<section id="recentlyViewedSection" class="recently-viewed" style="display:none">
+<div class="container">
+  <h2 data-i18n="recently_viewed">شوهد مؤخراً</h2>
+  <div id="recentlyViewedGrid" class="products-grid" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px"></div>
 </div>
 </section>
 
@@ -728,9 +810,9 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
 </div>
 
 <script>
-var _V='2.1.0';var _SV=localStorage.getItem('_v');
+var _V='3.0.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
-var API_URL = 'https://script.google.com/macros/s/AKfycbwjYUNjvWErv7Eqib2js-lxswxifw_7fLv7yVIbE_TcxCvGUQLvU_9TQ619l1PQfwrjdw/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzp2Af3r1GwlI__LIdegIfKtu7di0kU8VgWeDXqvbZJupSZro8JXIsuz68SRmcOvt-ceQ/exec';
 var LANG_KEY = 'sk_lang';
 var CART_KEY = 'sk_cart';
 var currentLang = localStorage.getItem(LANG_KEY) || 'ar';
@@ -803,6 +885,13 @@ var I18N = {
     trust_return:"استرجاع سهل",trust_return_sub:" خلال 7 أيام",
     testimonials_title:"ماذا يقول عملاؤنا",
     suggested_title:"منتجات مقترحة",
+    recently_viewed:"شوهد مؤخراً",
+    reviews_title:"التقييمات",
+    write_review:"اكتب تقييمك",
+    review_ph:"اكتب رأيك في المنتج...",
+    review_name:"اسمك",
+    review_location:"المدينة",
+    submit_review:"إرسال التقييم",
     nav_about:"من نحن",nav_return:"سياسة الاسترجاع",
     about_title:"من نحن",
     about_p1:"Smart Shopping هو متجر إلكتروني جزائري يهدف لتوفير أفضل المنتجات بأسعار مناسبة للجميع.",
@@ -890,6 +979,13 @@ var I18N = {
     trust_return:"Easy Returns",trust_return_sub:"Within 7 days",
     testimonials_title:"What Our Customers Say",
     suggested_title:"Suggested Products",
+    recently_viewed:"Recently Viewed",
+    reviews_title:"Reviews",
+    write_review:"Write a Review",
+    review_ph:"Write your opinion about the product...",
+    review_name:"Your name",
+    review_location:"City",
+    submit_review:"Submit Review",
     nav_about:"About Us",nav_return:"Return Policy",
     about_title:"About Us",
     about_p1:"Smart Shopping is an Algerian online store aiming to provide the best products at affordable prices.",
@@ -1032,12 +1128,13 @@ function init(){
     var n=currentLang==='ar'?d.store_name_ar:d.store_name_en;
     if(n){document.querySelector('.logo').textContent='🛒'}
     if(d.phone){document.querySelectorAll('a[href*="wa.me"]').forEach(function(a){a.href='https://wa.me/'+d.phone})}
+    loadPromoBanners(d);
     checkCookieConsent();
   });
   apiCall('catalog',{},function(d){
     try{
       if(!d||d.error||!d.products){document.getElementById('productsGrid').innerHTML='<p style="text-align:center;padding:40px;color:var(--text2);grid-column:1/-1">'+t('no_results')+'</p>';return}
-      allProducts=d.products;buildCategories();renderProducts();
+      allProducts=d.products;buildCategories();renderProducts();renderRecentlyViewed();
     }catch(e){console.error('catalog err',e)}
   });
   apiCall('testimonials',{},function(d){
@@ -1146,6 +1243,7 @@ function renderProducts(){
         '<img class="product-image" src="'+img+'" alt="'+(p.title_ar||'')+'" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;300&quot; height=&quot;300&quot; fill=&quot;%23f5f5f5&quot;><rect width=&quot;300&quot; height=&quot;300&quot;/></svg>\'">'+
         (disc?'<span class="product-badge">-'+Math.round((p.old_price-p.price)/p.old_price*100)+'%</span>':'')+
         (out&&!disc?'<span class="product-badge" style="background:#6b7280">'+t('out_of_stock')+'</span>':'')+
+        '<button class="wishlist-btn'+(getWishlist().indexOf(p.id)>-1?' active':'')+'" data-pid="'+p.id+'" onclick="toggleWishlist(\''+p.id+'\',event)">'+(getWishlist().indexOf(p.id)>-1?'♥':'♡')+'</button>'+
       '</div>'+
       '<div class="product-body">'+
         '<div class="product-title"><a href="#" onclick="showProductDetail(\''+p.id+'\');return false">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</a></div>'+
@@ -1410,6 +1508,8 @@ function showProductDetail(id){
     renderSuggested(id);
     genCaptcha('pdCaptchaQ','pdCaptchaE');
     try{trackViewContent({id:p.id,name:p.title_ar,price:Number(p.price)})}catch(e){}
+    trackRecentlyViewed(id);
+    loadReviews(id);
     window.scrollTo({top:0,behavior:'smooth'});
   }catch(e){console.error('showProductDetail err',e)}
 }
@@ -1566,6 +1666,192 @@ function getCartSubtotal() {
     var x = allProducts.find(function(p) { return p.id === c.id });
     return s + (x ? x.price * c.qty : 0);
   }, 0);
+}
+
+// === Phase 2.1: Promo Banners ===
+var promoSlides = [];
+var promoIdx = 0;
+var promoTimer = null;
+
+function loadPromoBanners(settings) {
+  try {
+    promoSlides = [];
+    for (var i = 1; i <= 5; i++) {
+      var img = settings['banner' + i + '_img'];
+      if (img) {
+        promoSlides.push({
+          img: img,
+          title: settings['banner' + i + '_title'] || '',
+          subtitle: settings['banner' + i + '_subtitle'] || '',
+          link: settings['banner' + i + '_link'] || ''
+        });
+      }
+    }
+    if (!promoSlides.length) return;
+    var banner = document.getElementById('promoBanner');
+    if (!banner) return;
+    banner.style.display = 'block';
+    renderPromoSlide(0);
+    renderPromoDots();
+    clearInterval(promoTimer);
+    promoTimer = setInterval(function() { promoNav(1); }, 4000);
+  } catch(e) { console.error('promo banners', e); }
+}
+
+function renderPromoSlide(idx) {
+  promoIdx = idx;
+  var banner = document.getElementById('promoBanner');
+  if (!banner) return;
+  var existing = banner.querySelectorAll('.slide');
+  existing.forEach(function(s) { s.remove(); });
+  var slide = promoSlides[idx];
+  if (!slide) return;
+  var el = document.createElement('div');
+  el.className = 'slide active';
+  var html = '<img src="' + slide.img + '" alt="" onerror="this.parentElement.style.display=\'none\'">';
+  if (slide.title) {
+    html += '<div class="slide-text"><h3>' + slide.title + '</h3>';
+    if (slide.subtitle) html += '<p>' + slide.subtitle + '</p>';
+    html += '</div>';
+  }
+  if (slide.link) el.style.cursor = 'pointer';
+  el.innerHTML = html;
+  if (slide.link) el.onclick = function() { window.open(slide.link, '_blank'); };
+  banner.insertBefore(el, banner.querySelector('.dots'));
+  var dots = banner.querySelectorAll('.dots button');
+  dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+}
+
+function renderPromoDots() {
+  var banner = document.getElementById('promoBanner');
+  var dotsEl = document.getElementById('promoDots');
+  if (!banner || !dotsEl) return;
+  dotsEl.innerHTML = promoSlides.map(function(_, i) {
+    return '<button' + (i === 0 ? ' class="active"' : '') + ' onclick="promoGo(' + i + ')"></button>';
+  }).join('');
+}
+
+function promoNav(dir) {
+  if (!promoSlides.length) return;
+  promoIdx = (promoIdx + dir + promoSlides.length) % promoSlides.length;
+  renderPromoSlide(promoIdx);
+}
+
+function promoGo(idx) {
+  promoIdx = idx;
+  renderPromoSlide(idx);
+}
+
+// === Phase 2.2: Recently Viewed ===
+var RV_KEY = 'sk_recently_viewed';
+function trackRecentlyViewed(productId) {
+  try {
+    var rv = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
+    rv = rv.filter(function(id) { return id !== productId; });
+    rv.unshift(productId);
+    if (rv.length > 8) rv = rv.slice(0, 8);
+    localStorage.setItem(RV_KEY, JSON.stringify(rv));
+  } catch(e) {}
+}
+
+function renderRecentlyViewed() {
+  try {
+    var section = document.getElementById('recentlyViewedSection');
+    var grid = document.getElementById('recentlyViewedGrid');
+    if (!section || !grid) return;
+    var rv = JSON.parse(localStorage.getItem(RV_KEY) || '[]');
+    if (!rv.length) { section.style.display = 'none'; return; }
+    var products = rv.map(function(id) { return allProducts.find(function(p) { return p.id === id; }); }).filter(Boolean);
+    if (!products.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    grid.innerHTML = products.map(function(p) {
+      var img = p.image1 || '';
+      return '<div class="product-card" style="cursor:pointer" onclick="showProductDetail(\'' + p.id + '\')"><div class="product-image-wrap"><img class="product-image" src="' + img + '" loading="lazy" alt=""></div><div class="product-body"><div class="product-title">' + (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + '</div><div class="product-price"><span class="price-current">' + Number(p.price).toLocaleString() + ' ' + t('currency') + '</span></div></div></div>';
+    }).join('');
+  } catch(e) {}
+}
+
+// === Phase 2.4: Wishlist ===
+var WL_KEY = 'sk_wishlist';
+function getWishlist() { return JSON.parse(localStorage.getItem(WL_KEY) || '[]'); }
+
+function toggleWishlist(productId, e) {
+  try {
+    if (e) e.stopPropagation();
+    var wl = getWishlist();
+    var idx = wl.indexOf(productId);
+    if (idx > -1) wl.splice(idx, 1); else wl.push(productId);
+    localStorage.setItem(WL_KEY, JSON.stringify(wl));
+    updateWishlistButtons();
+  } catch(e) {}
+}
+
+function updateWishlistButtons() {
+  var wl = getWishlist();
+  document.querySelectorAll('.wishlist-btn').forEach(function(btn) {
+    var id = btn.getAttribute('data-pid');
+    btn.classList.toggle('active', wl.indexOf(id) > -1);
+    btn.textContent = wl.indexOf(id) > -1 ? '♥' : '♡';
+  });
+}
+
+// === Phase 2.3: Reviews ===
+var REVIEWS_CACHE = {};
+var reviewRatingVal = 5;
+
+function loadReviews(productId) {
+  try {
+    if (REVIEWS_CACHE[productId]) { renderReviews(productId, REVIEWS_CACHE[productId]); return; }
+    apiCall('get_reviews', { product_id: productId }, function(data) {
+      if (data && data.reviews) {
+        REVIEWS_CACHE[productId] = data.reviews;
+        renderReviews(productId, data.reviews);
+      }
+    });
+  } catch(e) {}
+}
+
+function renderReviews(productId, reviews) {
+  var list = document.getElementById('reviewsList');
+  if (!list) return;
+  if (!reviews.length) { list.innerHTML = '<p style="color:var(--text2);font-size:.82rem;padding:8px 0">لا توجد تقييمات بعد</p>'; return; }
+  list.innerHTML = reviews.map(function(r) {
+    var stars = ''; for (var i = 0; i < (r.rating || 5); i++) stars += '★';
+    return '<div class="review-card"><div class="review-stars">' + stars + '</div><div class="review-text">' + (r.text || '') + '</div><div class="review-author">' + (r.name || '匿名') + (r.location ? ' — ' + r.location : '') + '</div></div>';
+  }).join('');
+}
+
+function setReviewRating(val) {
+  reviewRatingVal = val;
+  document.querySelectorAll('#reviewRating button').forEach(function(btn, i) {
+    btn.classList.toggle('active', i < val);
+  });
+}
+
+function submitReview() {
+  var text = document.getElementById('reviewText').value.trim();
+  var name = document.getElementById('reviewName').value.trim();
+  var loc = document.getElementById('reviewLocation').value.trim();
+  if (!text || !name) { alert('اكتب اسمك وتقييمك'); return; }
+  var pid = document.getElementById('pdProductId').value;
+  apiCall('add_review', {
+    product_id: pid,
+    name: name,
+    location: loc,
+    text: text,
+    rating: reviewRatingVal
+  }, function(data) {
+    if (data && data.ok) {
+      document.getElementById('reviewText').value = '';
+      document.getElementById('reviewName').value = '';
+      document.getElementById('reviewLocation').value = '';
+      setReviewRating(5);
+      delete REVIEWS_CACHE[pid];
+      loadReviews(pid);
+    } else {
+      alert('حدث خطأ، حاول مرة أخرى');
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded',function(){init()});
