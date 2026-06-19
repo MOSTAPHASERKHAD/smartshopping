@@ -1392,8 +1392,16 @@ function showAdminPanel() {
   document.getElementById('adminPanel').classList.remove('hidden');
 }
 
-// Check on load
-if (checkAuth()) { showAdminPanel(); } else { doLogout(); }
+// Check on load — if no password set in backend, skip login
+apiGet('verify_admin', { password: '' }, function(data) {
+  if (data && data.ok && data.warning === 'No password set') {
+    showAdminPanel();
+  } else if (checkAuth()) {
+    showAdminPanel();
+  } else {
+    doLogout();
+  }
+});
 </script>
 </div>
 </body>
