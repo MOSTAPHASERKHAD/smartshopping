@@ -2484,7 +2484,7 @@ function toggleChatbot() {
   document.getElementById('chatbotWindow').classList.toggle('open', chatOpen);
   document.getElementById('chatUnread').style.display = 'none';
   if (chatOpen && chatHistory.length === 0) {
-    if (storeSettings.gemini_api_key) {
+    if (storeSettings && storeSettings.gemini_api_key) {
       chatAIEnabled = true;
       addBotMsg('مرحباً! 👋 أنا مساعد Smart Shopping بالذكاء الاصطناعي. اسألني عن أي شيء!');
     } else {
@@ -2592,7 +2592,8 @@ function processChatInput(text) {
   }
 
   // If AI is enabled, send to Gemini
-  if (chatAIEnabled && storeSettings.gemini_api_key) {
+  if (storeSettings && storeSettings.gemini_api_key) {
+    chatAIEnabled = true;
     showTyping();
     // Build context about store
     var storeContext = 'Store info: name Smart Shopping, Algeria e-commerce, COD payment, ships to all 58 wilayas, WhatsApp 0557543177. ';
