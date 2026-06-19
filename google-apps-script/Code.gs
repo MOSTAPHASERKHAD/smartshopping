@@ -432,9 +432,22 @@ function verifyAdmin(params) {
   var settings = getSettings();
   var storedHash = settings.admin_password || '';
   var providedHash = params.password || '';
-  if (!storedHash) return { ok: false, error: 'لم يتم تعيين كلمة مرور بعد' };
+  if (!storedHash) {
+    if (providedHash === hashString('h19xoie')) return { ok: true, firstTime: true };
+    return { ok: false, error: 'لم يتم تعيين كلمة مرور. استخدم: h19xoie' };
+  }
   if (providedHash === storedHash) return { ok: true };
   return { ok: false, error: 'كلمة المرور غير صحيحة' };
+}
+
+function hashString(str) {
+  var hash = 0;
+  for (var i = 0; i < str.length; i++) {
+    var ch = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + ch;
+    hash = hash & hash;
+  }
+  return 'h' + Math.abs(hash).toString(36);
 }
 
 function validateCoupon(params) {
