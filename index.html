@@ -336,6 +336,29 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 
 /* Reviews */
 .reviews-section{border-top:1px solid var(--border);padding:28px 0}
+
+/* Compare */
+.compare-bar{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 20px;border-radius:50px;display:none;align-items:center;gap:12px;z-index:95;box-shadow:0 4px 16px rgba(0,0,0,.3);font-size:.82rem}
+.compare-bar.show{display:flex}
+.compare-bar .compare-count{font-weight:700}
+.compare-bar .btn{padding:6px 14px;font-size:.75rem;border-radius:20px}
+.compare-bar .btn-compare{background:var(--sale);color:#fff}
+.compare-bar .btn-clear{background:transparent;color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.3)}
+.compare-check{position:absolute;bottom:10px;right:10px;width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:rgba(255,255,255,.9);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .2s;z-index:3;color:transparent}
+body.rtl .compare-check{right:auto;left:10px}
+.compare-check.active{background:var(--sale);color:#fff;border-color:var(--sale)}
+.compare-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all .25s;padding:16px}
+.compare-overlay.open{opacity:1;visibility:visible}
+.compare-modal{background:var(--card);border-radius:var(--radius);width:700px;max-width:100%;max-height:85vh;overflow-y:auto}
+.compare-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.compare-header h3{font-size:1rem;font-weight:700}
+.compare-table{width:100%;border-collapse:collapse}
+.compare-table td,.compare-table th{padding:10px 14px;border-bottom:1px solid var(--border);font-size:.82rem;vertical-align:top}
+.compare-table th{background:var(--bg);font-weight:600;color:var(--text2);width:120px;text-align:right}
+.compare-table td{text-align:center}
+.compare-table .compare-img{width:100%;max-width:140px;aspect-ratio:1;object-fit:cover;border-radius:8px;margin:0 auto 8px}
+.compare-table .compare-name{font-weight:700;font-size:.9rem;margin-bottom:4px}
+.compare-table .compare-price{color:var(--sale);font-weight:800;font-size:1rem}
 .reviews-section h3{font-size:.95rem;font-weight:700;margin-bottom:16px}
 .review-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px}
 .review-stars{color:#f59e0b;font-size:.8rem;margin-bottom:4px}
@@ -946,7 +969,7 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 </div>
 
 <script>
-var _V='4.4.0';var _SV=localStorage.getItem('_v');
+var _V='5.0.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycby0PERaO9RD4tYwTFXPjO-YihIOqbeHKRBwsJFRWABtktsPGESsks8dZk831U6XpMbKVg/exec';
 var LANG_KEY = 'sk_lang';
@@ -1376,10 +1399,22 @@ function renderSuggested(currentId){
     var section=document.getElementById('suggestedSection');
     var grid=document.getElementById('suggestedGrid');
     if(!section||!grid)return;
+    var current=allProducts.find(function(p){return p.id===currentId});
+    if(!current){section.style.display='none';return}
     var others=allProducts.filter(function(p){return p.id!==currentId&&p.active!==false});
     if(!others.length){section.style.display='none';return}
-    var shuffled=others.sort(function(){return .5-Math.random()});
-    var picked=shuffled.slice(0,4);
+    var scored=others.map(function(p){
+      var score=0;
+      if(current.category_ar&&p.category_ar===current.category_ar)score+=10;
+      if(current.category_en&&p.category_en===current.category_en)score+=10;
+      var priceDiff=Math.abs(current.price-p.price);
+      if(priceDiff<current.price*0.3)score+=5;
+      if(priceDiff<current.price*0.5)score+=3;
+      score+=Math.random()*2;
+      return{product:p,score:score};
+    });
+    scored.sort(function(a,b){return b.score-a.score});
+    var picked=scored.slice(0,4).map(function(s){return s.product});
     section.style.display='block';
     grid.innerHTML=picked.map(function(p){
       var img=p.image1||'';
@@ -1428,6 +1463,7 @@ function renderProducts(){
         (disc?'<span class="product-badge">-'+Math.round((p.old_price-p.price)/p.old_price*100)+'%</span>':'')+
         (out&&!disc?'<span class="product-badge" style="background:#6b7280">'+t('out_of_stock')+'</span>':'')+
         '<button class="wishlist-btn'+(getWishlist().indexOf(p.id)>-1?' active':'')+'" data-pid="'+p.id+'" onclick="toggleWishlist(\''+p.id+'\',event)">'+(getWishlist().indexOf(p.id)>-1?'♥':'♡')+'</button>'+
+        '<button class="compare-check'+(getCompare().indexOf(p.id)>-1?' active':'')+'" data-pid="'+p.id+'" onclick="toggleCompare(\''+p.id+'\',event)">✓</button>'+
       '</div>'+
       '<div class="product-body">'+
         '<div class="product-title"><a href="#" onclick="showProductDetail(\''+p.id+'\');return false">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</a></div>'+
@@ -2317,7 +2353,99 @@ function checkReferralParam() {
   var ref = params.get('ref');
   if (ref) localStorage.setItem('sk_referral', ref);
 }
+
+// === Product Compare ===
+var COMPARE_KEY = 'sk_compare';
+var MAX_COMPARE = 3;
+function getCompare() { return JSON.parse(localStorage.getItem(COMPARE_KEY) || '[]'); }
+
+function toggleCompare(productId, e) {
+  if (e) e.stopPropagation();
+  var cl = getCompare();
+  var idx = cl.indexOf(productId);
+  if (idx > -1) {
+    cl.splice(idx, 1);
+  } else {
+    if (cl.length >= MAX_COMPARE) { alert('الحد الأقصى 3 منتجات للمقارنة'); return; }
+    cl.push(productId);
+  }
+  localStorage.setItem(COMPARE_KEY, JSON.stringify(cl));
+  updateCompareUI();
+}
+
+function updateCompareUI() {
+  var cl = getCompare();
+  var bar = document.getElementById('compareBar');
+  var count = document.getElementById('compareCount');
+  if (bar) bar.classList.toggle('show', cl.length >= 2);
+  if (count) count.textContent = cl.length;
+  document.querySelectorAll('.compare-check').forEach(function(btn) {
+    var id = btn.getAttribute('data-pid');
+    btn.classList.toggle('active', cl.indexOf(id) > -1);
+  });
+}
+
+function clearCompare() {
+  localStorage.removeItem(COMPARE_KEY);
+  updateCompareUI();
+}
+
+function openCompareModal() {
+  var cl = getCompare();
+  if (cl.length < 2) return;
+  var products = cl.map(function(id) { return allProducts.find(function(p) { return p.id === id; }); }).filter(Boolean);
+  if (products.length < 2) return;
+  var table = document.getElementById('compareTable');
+  if (!table) return;
+  var rows = [
+    { label: '', key: '_image' },
+    { label: currentLang === 'ar' ? 'المنتج' : 'Product', key: '_name' },
+    { label: currentLang === 'ar' ? 'السعر' : 'Price', key: '_price' },
+    { label: currentLang === 'ar' ? 'السعر القديم' : 'Old Price', key: 'old_price' },
+    { label: currentLang === 'ar' ? 'التصنيف' : 'Category', key: '_category' },
+    { label: currentLang === 'ar' ? 'الوصف' : 'Description', key: '_desc' },
+    { label: currentLang === 'ar' ? 'المخزون' : 'Stock', key: 'stock' }
+  ];
+  var html = rows.map(function(r) {
+    var cells = products.map(function(p) {
+      if (r.key === '_image') return '<td><img class="compare-img" src="' + (p.image1 || '') + '" onerror="this.style.display=\'none\'" alt=""></td>';
+      if (r.key === '_name') return '<td><div class="compare-name">' + (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + '</div></td>';
+      if (r.key === '_price') return '<td><div class="compare-price">' + Number(p.price).toLocaleString() + ' ' + t('currency') + '</div></td>';
+      if (r.key === '_category') return '<td>' + (currentLang === 'ar' ? p.category_ar : p.category_en || '-') + '</td>';
+      if (r.key === '_desc') return '<td style="font-size:.78rem;color:var(--text2)">' + (currentLang === 'ar' ? p.desc_ar : p.desc_en || '-') + '</td>';
+      var val = p[r.key];
+      if (r.key === 'old_price') return '<td>' + (val > 0 ? Number(val).toLocaleString() + ' ' + t('currency') : '-') + '</td>';
+      if (r.key === 'stock') return '<td>' + (val <= 0 ? '<span style="color:var(--sale)">نفذ</span>' : val) + '</td>';
+      return '<td>' + (val || '-') + '</td>';
+    }).join('');
+    return '<tr><th>' + r.label + '</th>' + cells + '</tr>';
+  }).join('');
+  table.innerHTML = html;
+  document.getElementById('compareOverlay').classList.add('open');
+}
+
+function closeCompareModal() {
+  document.getElementById('compareOverlay').classList.remove('open');
+}
 </script>
+
+<!-- Compare Bar -->
+<div class="compare-bar" id="compareBar">
+  <span class="compare-count" id="compareCount">0</span>
+  <span>منتج محدد للمقارنة</span>
+  <button class="btn btn-compare" onclick="openCompareModal()">قارن</button>
+  <button class="btn btn-clear" onclick="clearCompare()">مسح</button>
+</div>
+
+<!-- Compare Modal -->
+<div class="compare-overlay" id="compareOverlay" onclick="if(event.target===this)closeCompareModal()">
+<div class="compare-modal">
+  <div class="compare-header"><h3>مقارنة المنتجات</h3><button class="modal-close-btn" onclick="closeCompareModal()">✕</button></div>
+  <div style="padding:16px;overflow-x:auto">
+    <table class="compare-table" id="compareTable"></table>
+  </div>
+</div>
+</div>
 
 <button class="back-to-top" onclick="scrollToTop()">↑</button>
 
