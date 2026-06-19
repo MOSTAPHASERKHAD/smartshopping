@@ -804,14 +804,13 @@ function aiChat(params) {
     }
   };
 
-  var models = [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
-    'gemini-1.5-flash-8b'
-  ];
+  // Fetch available models from Gemini API
+  var models = getAvailableModels(apiKey);
+  if (models.length === 0) {
+    return { reply: 'No AI models available. Contact us on WhatsApp: +213557543177' };
+  }
 
+  // Try each model until one works
   for (var i = 0; i < models.length; i++) {
     try {
       var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + apiKey;
@@ -828,20 +827,46 @@ function aiChat(params) {
         var reply = json.candidates[0].content.parts[0].text;
         return { reply: reply };
       }
-
-      if (json.error && json.error.status === 'RESOURCE_EXHAUSTED') {
-        continue;
-      }
-
-      if (json.error) {
-        continue;
-      }
-
+      // Quota or error - skip to next model
       continue;
     } catch(e) {
       continue;
     }
   }
 
-  return { reply: 'All AI models are currently unavailable. Please contact us on WhatsApp: +213557543177' };
+  return { reply: 'All AI models unavailable. Contact us on WhatsApp: +213557543177' };
+}
+
+function getAvailableModels(apiKey) {
+  try {
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + apiKey;
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    var json = JSON.parse(response.getContentText());
+
+    if (json.models) {
+      var models = [];
+      for (var i = 0; i < json.models.length; i++) {
+        var m = json.models[i];
+        // Only include models that support generateContent
+        if (m.supportedGenerationMethods) {
+          var methods = m.supportedGenerationMethods;
+          if (methods.indexOf('generateContent') > -1 && methods.indexOf('embedContent') === -1) {
+            var name = m.name.replace('models/', '');
+            // Prefer flash models first (faster, lighter)
+            models.push(name);
+          }
+        }
+      }
+      // Sort: flash models first, then pro
+      models.sort(function(a, b) {
+        if (a.indexOf('flash') > -1 && b.indexOf('flash') === -1) return -1;
+        if (a.indexOf('flash') === -1 && b.indexOf('flash') > -1) return 1;
+        return 0;
+      });
+      return models;
+    }
+    return [];
+  } catch(e) {
+    return [];
+  }
 }
