@@ -775,18 +775,32 @@ function adminListSubscribers() {
 // === AI Chat with Gemini ===
 function aiChat(params) {
   var message = params.message || '';
-  var history = params.history || '';
   if (!message) return { reply: 'Please send a message.' };
 
   var settings = getSettings();
   var apiKey = settings.gemini_api_key || '';
   if (!apiKey) return { reply: 'AI not configured. Please set Gemini API key in settings.' };
 
-  var systemPrompt = settings.ai_prompt || 'You are Smart Shopping Algeria AI assistant. Have natural conversations like a friendly salesperson. Remember what the customer said before. Be conversational, warm, and helpful. Ask follow-up questions. Don\'t repeat yourself. Keep responses concise (2-4 sentences max). Reply in the same language the customer uses (Arabic, French, or English). If they greet you, greet back warmly. If they ask about products, mention a few. If they seem ready to buy, guide them. If they have concerns, address them honestly. Always be helpful and never robotic.';
+  var products = getCatalog().products || [];
+  var productList = products.map(function(p) {
+    var name = p.title_ar || p.title_en || '';
+    var price = p.price || 0;
+    var oldPrice = p.old_price || 0;
+    var stock = p.stock || 0;
+    var category = p.category_ar || p.category_en || '';
+    var status = stock > 0 ? 'in stock' : 'OUT OF STOCK';
+    var discount = oldPrice > 0 ? Math.round((oldPrice - price) / oldPrice * 100) + '% off' : '';
+    var id = p.id || '';
+    return id + ' | ' + name + ' | ' + price + ' DZD' + (discount ? ' (' + discount + ')' : '') + ' | stock: ' + stock + ' ' + status + ' | cat: ' + category;
+  }).join('\n');
+
+  var systemPrompt = settings.ai_prompt || 'You are the Smart Shopping Algeria store manager AI. You know EVERYTHING about the store inventory. You have access to the full product database below. When a customer asks about products, tell them EXACTLY what is available with real names, real prices, and real stock status. If a product is out of stock, say so honestly. If they ask about a product you have, give them the price and stock. If they ask about a product you don\'t have, say you don\'t carry it. Be honest about stock - never say a product is available if stock is 0. Give product IDs when mentioning products so the customer can find them. Reply in the same language the customer uses. Be warm, professional, and helpful like a real store manager.';
+
+  var fullContext = systemPrompt + '\n\n=== PRODUCT DATABASE (' + products.length + ' products) ===\n' + productList + '\n=== END DATABASE ===\n\nStore: Smart Shopping Algeria. Payment: COD. Shipping: 58 wilayas. WhatsApp: 0557543177.';
 
   var chatHistory = [];
-  if (history) {
-    try { chatHistory = JSON.parse(history); } catch(e) {}
+  if (params.history) {
+    try { chatHistory = JSON.parse(params.history); } catch(e) {}
   }
 
   var contents = [];
@@ -796,7 +810,7 @@ function aiChat(params) {
   contents.push({ role: 'user', parts: [{ text: message }] });
 
   var payload = {
-    system_instruction: { parts: [{ text: systemPrompt }] },
+    system_instruction: { parts: [{ text: fullContext }] },
     contents: contents,
     generationConfig: {
       temperature: 0.7,
@@ -804,13 +818,8 @@ function aiChat(params) {
     }
   };
 
-  // Fetch available models from Gemini API
   var models = getAvailableModels(apiKey);
-  if (models.length === 0) {
-    return { reply: 'No AI models available. Contact us on WhatsApp: +213557543177' };
-  }
 
-  // Try each model until one works
   for (var i = 0; i < models.length; i++) {
     try {
       var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + apiKey;
@@ -827,7 +836,6 @@ function aiChat(params) {
         var reply = json.candidates[0].content.parts[0].text;
         return { reply: reply };
       }
-      // Quota or error - skip to next model
       continue;
     } catch(e) {
       continue;
@@ -847,17 +855,14 @@ function getAvailableModels(apiKey) {
       var models = [];
       for (var i = 0; i < json.models.length; i++) {
         var m = json.models[i];
-        // Only include models that support generateContent
         if (m.supportedGenerationMethods) {
           var methods = m.supportedGenerationMethods;
           if (methods.indexOf('generateContent') > -1 && methods.indexOf('embedContent') === -1) {
             var name = m.name.replace('models/', '');
-            // Prefer flash models first (faster, lighter)
             models.push(name);
           }
         }
       }
-      // Sort: flash models first, then pro
       models.sort(function(a, b) {
         if (a.indexOf('flash') > -1 && b.indexOf('flash') === -1) return -1;
         if (a.indexOf('flash') === -1 && b.indexOf('flash') > -1) return 1;

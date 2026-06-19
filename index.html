@@ -2599,20 +2599,11 @@ function processChatInput(text) {
   if (storeSettings && storeSettings.gemini_api_key) {
     chatAIEnabled = true;
     showTyping();
-    var storeContext = 'Smart Shopping Algeria store. COD payment. Ships to 58 wilayas. WhatsApp: 0557543177. ';
-    if (allProducts.length) {
-      storeContext += 'Products (' + allProducts.length + '): ';
-      var topProducts = allProducts.slice(0, 5).map(function(p) {
-        return (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + ' ' + p.price + 'DZD';
-      });
-      storeContext += topProducts.join(', ') + '. ';
-    }
     var historyForAI = chatHistory.slice(-8).map(function(h) {
       return (h.role === 'user' ? 'Customer' : 'Assistant') + ': ' + h.text;
     }).join('\n');
-    var fullMessage = storeContext + '\n\nConversation:\n' + historyForAI + '\nCustomer: ' + text + '\nAssistant:';
 
-    apiCall('ai_chat', { message: fullMessage, history: '' }, function(d) {
+    apiCall('ai_chat', { message: text, history: JSON.stringify(chatHistory.slice(-8)) }, function(d) {
       hideTyping();
       if (d && d.reply) {
         addBotMsg(d.reply.replace(/\n/g, '<br>'));
