@@ -184,35 +184,10 @@ function createOrder(params) {
     params.delivery_type || '', params.items_json || '[]',
     params.subtotal || '0', 'سعر التوصيل يُحدد بعد التأكيد', 'pending', params.note || ''
   ]);
-  decrementStock(params.items_json);
   return { ok: true, order_id: orderId };
 }
 
-function decrementStock(itemsJson) {
-  try {
-    var items = JSON.parse(itemsJson || '[]');
-    if (!items.length) return;
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var catalog = ss.getSheetByName('Catalog');
-    if (!catalog) return;
-    var data = catalog.getDataRange().getValues();
-    var headers = data[0];
-    var idCol = headers.indexOf('id');
-    var stockCol = headers.indexOf('stock');
-    if (idCol < 0 || stockCol < 0) return;
-    for (var i = 1; i < data.length; i++) {
-      var productId = data[i][idCol];
-      for (var j = 0; j < items.length; j++) {
-        if (items[j].id === productId) {
-          var currentStock = parseInt(data[i][stockCol]) || 0;
-          var newStock = Math.max(0, currentStock - (items[j].qty || 1));
-          catalog.getRange(i + 1, stockCol + 1).setValue(newStock);
-        }
-      }
-    }
-    SpreadsheetApp.flush();
-  } catch(ex) {}
-}
+
 
 function generateOrderId() {
   var now = new Date();
@@ -314,14 +289,28 @@ function adminUpdateOrder(params) {
     var lastRow = sheet.getLastRow();
     if (row > lastRow) return { error: 'Row ' + row + ' exceeds sheet rows (' + lastRow + ')' };
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var statusCol = -1;
+    for (var i = 0; i < headers.length; i++) {
+      var h = headers[i].toString().toLowerCase().trim();
+      if (h === 'status' || h === 'shipping_note') { statusCol = i + 1; break; }
+    }
+    var oldStatus = statusCol > 0 ? String(sheet.getRange(row, statusCol).getValue()).toLowerCase().trim() : '';
     if (params.status) {
-      var statusCol = -1;
-      for (var i = 0; i < headers.length; i++) {
-        var h = headers[i].toString().toLowerCase().trim();
-        if (h === 'status' || h === 'shipping_note') { statusCol = i + 1; break; }
-      }
       if (statusCol === -1) return { error: 'Status column not found. Headers: ' + headers.join(', ') };
       sheet.getRange(row, statusCol).setValue(params.status);
+      var itemsCol = -1;
+      for (var i = 0; i < headers.length; i++) {
+        var h = headers[i].toString().toLowerCase().trim();
+        if (h === 'items_json' || h === 'items') { itemsCol = i + 1; break; }
+      }
+      var itemsJson = itemsCol > 0 ? String(sheet.getRange(row, itemsCol).getValue()) : '[]';
+      var newStatus = params.status.toLowerCase().trim();
+      if (newStatus === 'delivered' && oldStatus !== 'delivered') {
+        adjustStock(itemsJson, -1);
+      }
+      if (newStatus === 'cancelled' && oldStatus === 'delivered') {
+        adjustStock(itemsJson, 1);
+      }
     }
     if (params.notes !== undefined) {
       var notesCol = -1;
@@ -332,10 +321,36 @@ function adminUpdateOrder(params) {
       if (notesCol > 0) sheet.getRange(row, notesCol).setValue(params.notes);
     }
     SpreadsheetApp.flush();
-    return { ok: true, row: row, status: params.status, statusCol: statusCol };
+    return { ok: true, row: row, status: params.status, oldStatus: oldStatus };
   } catch(ex) {
     return { error: ex.toString() };
   }
+}
+
+function adjustStock(itemsJson, direction) {
+  try {
+    var items = JSON.parse(itemsJson || '[]');
+    if (!items.length) return;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var catalog = ss.getSheetByName('Catalog');
+    if (!catalog) return;
+    var data = catalog.getDataRange().getValues();
+    var headers = data[0];
+    var idCol = headers.indexOf('id');
+    var stockCol = headers.indexOf('stock');
+    if (idCol < 0 || stockCol < 0) return;
+    for (var i = 1; i < data.length; i++) {
+      var productId = data[i][idCol];
+      for (var j = 0; j < items.length; j++) {
+        if (items[j].id === productId) {
+          var currentStock = parseInt(data[i][stockCol]) || 0;
+          var change = (items[j].qty || 1) * direction;
+          var newStock = Math.max(0, currentStock + change);
+          catalog.getRange(i + 1, stockCol + 1).setValue(newStock);
+        }
+      }
+    }
+  } catch(ex) {}
 }
 
 function adminDeleteOrder(params) {
