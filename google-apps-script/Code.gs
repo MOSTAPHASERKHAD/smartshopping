@@ -1,6 +1,11 @@
 // SmartKiosk - Google Apps Script Backend
 // Deploy as Web App → Execute as: Me → Who has access: Anyone
 
+function testAuth() {
+  UrlFetchApp.fetch('https://httpbin.org/get');
+  Logger.log('Authorization successful!');
+}
+
 function doGet(e) {
   var params = e.parameter;
   var action = params.action || '';
