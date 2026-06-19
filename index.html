@@ -61,12 +61,18 @@ body.rtl{direction:rtl;text-align:right}
 
 /* Header */
 header{background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
-.header-inner{display:flex;align-items:center;justify-content:space-between;height:60px;gap:12px}
+.header-inner{display:flex;align-items:center;justify-content:space-between;height:60px;gap:10px}
 .logo{font-size:1.3rem;font-weight:800;text-decoration:none;color:var(--text);display:flex;align-items:center;gap:0;letter-spacing:-.3px}
 .logo span{color:var(--sale)}
-.search-bar{flex:1;max-width:360px;position:relative}
+.search-bar{flex:1;max-width:280px;position:relative}
 .search-bar input{width:100%;padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:.82rem;outline:none;transition:border .15s;background:var(--bg)}
 .search-bar input:focus{border-color:var(--text)}
+.header-cat-bar{display:flex;gap:4px;align-items:center;flex-wrap:nowrap;overflow-x:auto;max-width:420px}
+.header-cat-bar::-webkit-scrollbar{display:none}
+.header-cat-bar .cat-btn{padding:4px 12px;border:1px solid var(--border);border-radius:50px;background:transparent;cursor:pointer;font-family:var(--font);font-size:.72rem;font-weight:600;transition:all .2s;color:var(--text2);white-space:nowrap;flex-shrink:0}
+.header-cat-bar .cat-btn:hover{border-color:var(--text);color:var(--text)}
+.header-cat-bar .cat-btn.active{background:var(--text);color:#fff;border-color:var(--text)}
+.header-cat-bar .sort-select{padding:4px 8px;border:1px solid var(--border);border-radius:50px;font-family:var(--font);font-size:.72rem;outline:none;background:transparent;color:var(--text2);cursor:pointer;flex-shrink:0}
 .header-actions{display:flex;align-items:center;gap:2px}
 .icon-btn{width:38px;height:38px;border:none;border-radius:8px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;color:var(--text)}
 .icon-btn:hover{background:var(--bg)}
@@ -373,17 +379,15 @@ body.rtl .wishlist-btn{left:10px;right:auto}
   .product-body{padding:10px 10px 12px}
   .product-title{font-size:.8rem}
   .search-bar{display:none}
-  .header-inner{height:52px}
+  .header-inner{height:52px;gap:6px}
+  .header-cat-bar{max-width:200px}
   .cart-drawer{width:100%}
   .modal-body{padding:16px}
   .form-row{grid-template-columns:1fr}
   .footer-inner{grid-template-columns:1fr;gap:20px}
   section{padding:28px 0}
-  .cat-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;justify-content:flex-start}
-  .cat-btn{white-space:nowrap;font-size:.72rem;padding:4px 10px}
-  .sort-select{font-size:.72rem;padding:4px 8px}
-  body{padding-bottom:64px}
   .products-header{margin-bottom:12px;padding-bottom:8px}
+  body{padding-bottom:64px}
 }
 @media(max-width:480px){
   .products-grid{grid-template-columns:1fr 1fr;gap:8px}
@@ -403,6 +407,7 @@ body.rtl .wishlist-btn{left:10px;right:auto}
   <div class="search-bar">
     <input type="text" id="searchInput" data-i18n-placeholder="search" placeholder="ابحث عن منتج..." oninput="filterProducts()">
   </div>
+  <div id="headerCatBar" class="header-cat-bar"></div>
   <div class="header-actions">
     <button class="icon-btn lang-btn" id="langToggle" onclick="toggleLang()">EN</button>
     <button class="icon-btn" onclick="openCart()" style="position:relative">
@@ -427,15 +432,6 @@ body.rtl .wishlist-btn{left:10px;right:auto}
   <div class="products-header">
     <h2 data-i18n="products_title">المنتجات</h2>
     <a href="#track-section" style="font-size:.8rem;color:var(--text2);text-decoration:none" data-i18n="track_link">تتبع طلبك ←</a>
-  </div>
-  <div class="cat-bar" id="categoryBar">
-    <button class="cat-btn active" data-cat="" onclick="filterByCategory(this)"><span data-i18n="cat_all">الكل</span></button>
-    <select class="sort-select" id="sortSelect" onchange="filterProducts()">
-      <option value="default" data-i18n="sort_default">الأحدث</option>
-      <option value="price-asc" data-i18n="sort_price_asc">السعر: من الأقل</option>
-      <option value="price-desc" data-i18n="sort_price_desc">السعر: من الأعلى</option>
-      <option value="name" data-i18n="sort_name">الاسم</option>
-    </select>
   </div>
   <div id="productsGrid" class="products-grid">
     <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
@@ -1288,23 +1284,19 @@ function buildCategories(){
       cats[key]=true;
     });
     var keys=Object.keys(cats).sort(function(a,b){return a.localeCompare(b)});
-    var bar=document.getElementById('categoryBar');
+    var bar=document.getElementById('headerCatBar');
     if(!bar)return;
-    var html='<button class="cat-btn active" data-cat="" onclick="filterByCategory(this)"><span data-i18n="cat_all">'+t('cat_all')+'</span></button>';
+    var html='<button class="cat-btn active" data-cat="" onclick="filterByCategory(this)">'+t('cat_all')+'</button>';
     keys.forEach(function(k){
       html+='<button class="cat-btn" data-cat="'+k.replace(/'/g,"\\'")+'" onclick="filterByCategory(this)">'+k+'</button>';
     });
-    bar.innerHTML=html;
-    var sortHtml='<select class="sort-select" id="sortSelect" onchange="filterProducts()">'+
+    html+='<select class="sort-select" id="sortSelect" onchange="filterProducts()">'+
       '<option value="default">'+t('sort_default')+'</option>'+
       '<option value="price-asc">'+t('sort_price_asc')+'</option>'+
       '<option value="price-desc">'+t('sort_price_desc')+'</option>'+
       '<option value="name">'+t('sort_name')+'</option>'+
     '</select>';
-    var sortWrap=document.createElement('div');
-    sortWrap.style.marginRight='auto';
-    sortWrap.innerHTML=sortHtml;
-    bar.appendChild(sortWrap);
+    bar.innerHTML=html;
   }catch(e){console.error('buildCategories err',e)}
 }
 
