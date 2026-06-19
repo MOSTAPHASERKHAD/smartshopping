@@ -2183,46 +2183,49 @@ function submitReview() {
   var pid = document.getElementById('pdProductId').value;
 
   if (reviewPhotos.length > 0) {
-    var uploaded = 0;
-    var photoUrls = [];
     var total = Math.min(reviewPhotos.length, 3);
     reviewPhotos = reviewPhotos.slice(0, 3);
+    var photoUrls = [];
+    var uploaded = 0;
 
-    reviewPhotos.forEach(function(file, idx) {
-      var canvas = document.createElement('canvas');
-      var ctx = canvas.getContext('2d');
-      var img = new Image();
+    function uploadNext() {
+      if (uploaded >= total) {
+        doSubmitReview(pid, text, name, loc, JSON.stringify(photoUrls));
+        return;
+      }
+      var file = reviewPhotos[uploaded];
       var reader = new FileReader();
       reader.onload = function(e) {
+        var img = new Image();
         img.onload = function() {
-          var size = 200;
-          var ratio = Math.min(size / img.width, size / img.height);
-          canvas.width = img.width * ratio;
-          canvas.height = img.height * ratio;
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          var compressed = canvas.toDataURL('image/jpeg', 0.4);
-          var base64 = compressed.split(',')[1];
-
-          var cbName = 'cb_rev_' + idx + '_' + Date.now();
-          window[cbName] = function(data) {
-            delete window[cbName];
-            if (data && data.url) photoUrls.push(data.url);
+          var canvas = document.createElement('canvas');
+          var w = img.width, h = img.height;
+          if (w > 300) { h = h * 300 / w; w = 300; }
+          if (h > 300) { w = w * 300 / h; h = 300; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          var base64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+          var cb = 'rev_img_' + Date.now() + '_' + uploaded;
+          window[cb] = function(r) {
+            delete window[cb];
+            if (r && r.url) photoUrls.push(r.url);
             uploaded++;
-            if (uploaded >= total) doSubmitReview(pid, text, name, loc, JSON.stringify(photoUrls));
+            uploadNext();
           };
           var s = document.createElement('script');
-          s.src = API_URL + '?action=upload_image&base64=' + encodeURIComponent(base64) + '&fileName=review_' + Date.now() + '_' + idx + '.jpg&callback=' + cbName;
+          s.src = API_URL + '?action=upload_image&base64=' + encodeURIComponent(base64) + '&fileName=review_' + Date.now() + '.jpg&callback=' + cb;
           s.onerror = function() {
-            delete window[cbName];
+            delete window[cb];
             uploaded++;
-            if (uploaded >= total) doSubmitReview(pid, text, name, loc, JSON.stringify(photoUrls));
+            uploadNext();
           };
           document.head.appendChild(s);
         };
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
-    });
+    }
+    uploadNext();
   } else {
     doSubmitReview(pid, text, name, loc, '');
   }
