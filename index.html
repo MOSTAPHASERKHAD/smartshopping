@@ -752,6 +752,14 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 </div>
 </div>
 
+<!-- Landing Page -->
+<div class="modal-overlay" id="landingPage" onclick="if(event.target===this)closeLanding()">
+<div class="modal" style="max-width:800px">
+  <div class="modal-header"><h2 id="landingTitle"></h2><button class="modal-close-btn" onclick="closeLanding()">✕</button></div>
+  <div class="modal-body" id="landingBody"></div>
+</div>
+</div>
+
 <!-- Cart -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
 <div class="cart-drawer" id="cartDrawer">
@@ -902,7 +910,7 @@ body.rtl .wishlist-btn{left:10px;right:auto}
 </div>
 
 <script>
-var _V='4.0.0';var _SV=localStorage.getItem('_v');
+var _V='4.1.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycbzT4O-GjIiN555hb1Yb5mLEC9kJObnTs6gjNXe1svniZmnyC0xDyioho35DRdguFMM_gQ/exec';
 var LANG_KEY = 'sk_lang';
@@ -1259,6 +1267,7 @@ function init(){
     if(d.phone){document.querySelectorAll('a[href*="wa.me"]').forEach(function(a){a.href='https://wa.me/'+d.phone})}
     loadPromoBanners(d);
     checkCookieConsent();
+    setTimeout(checkLandingPage,500);
   });
   apiCall('catalog',{},function(d){
     try{
@@ -2185,6 +2194,37 @@ function scrollToSection(id){
   var links=document.querySelectorAll('.mobile-nav a[href="#'+id+'"]');
   if(links.length)links[0].classList.add('active');
 }
+
+// === Landing Page ===
+function checkLandingPage(){
+  var params=new URLSearchParams(window.location.search);
+  var page=params.get('page');
+  if(!page)return;
+  apiCall('get_pages',{},function(d){
+    if(!d)return;
+    var title=d['landing_title_ar']||d['landing_title']||'';
+    var body=d['landing_body_ar']||d['landing_body']||'';
+    var products=d['landing_products']||'';
+    if(!title&&!body)return;
+    var el=document.getElementById('landingTitle');if(el)el.textContent=title;
+    var bodyEl=document.getElementById('landingBody');if(!bodyEl)return;
+    var html=body?body.split('\n').map(function(l){return'<p>'+l+'</p>'}).join(''):'';
+    if(products){
+      var ids=products.split(',').map(function(s){return s.trim()}).filter(Boolean);
+      var selected=ids.map(function(id){return allProducts.find(function(p){return p.id===id})}).filter(Boolean);
+      if(selected.length){
+        html+='<div class="products-grid" style="margin-top:20px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">';
+        selected.forEach(function(p){
+          html+='<div class="product-card" style="cursor:pointer" onclick="closeLanding();showProductDetail(\''+p.id+'\')"><div class="product-image-wrap"><img class="product-image" src="'+(p.image1||'')+'" loading="lazy" alt=""></div><div class="product-body"><div class="product-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div><div class="product-price"><span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span></div></div></div>';
+        });
+        html+='</div>';
+      }
+    }
+    bodyEl.innerHTML=html;
+    document.getElementById('landingPage').classList.add('open');
+  });
+}
+function closeLanding(){document.getElementById('landingPage').classList.remove('open')}
 </script>
 
 <button class="back-to-top" onclick="scrollToTop()">↑</button>
