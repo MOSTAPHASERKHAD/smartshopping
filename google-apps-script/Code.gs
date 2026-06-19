@@ -153,12 +153,18 @@ function trackOrder(orderId) {
   if (!sheet) return { error: 'Orders sheet not found' };
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
+  var statusCol = -1;
+  for (var k = 0; k < headers.length; k++) {
+    var h = headers[k].toString().toLowerCase().trim();
+    if (h === 'status' || h === 'shipping_note') { statusCol = k; break; }
+  }
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     var idIndex = headers.indexOf('order_id');
     if (row[idIndex] === orderId) {
       var order = {};
       for (var j = 0; j < headers.length; j++) { order[headers[j]] = row[j]; }
+      if (statusCol >= 0) { order.status = row[statusCol]; }
       return { found: true, order: order };
     }
   }
