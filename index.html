@@ -1905,16 +1905,20 @@ function setLang(lang){
 }
 function toggleLang(){try{setLang(currentLang==='ar'?'en':'ar')}catch(e){console.error('toggleLang',e)}}
 
-function apiCall(action,params,callback){
-  var url=API_URL+'?action='+action;
-  if(params){for(var k in params){url+='&'+encodeURIComponent(k)+'='+encodeURIComponent(params[k])}}
-  var cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*9999);
-  var full=url+'&callback='+cb;var called=false;
-  window[cb]=function(d){if(called)return;called=true;delete window[cb];document.head.removeChild(s);callback(d)};
-  var s=document.createElement('script');s.src=full;
-  s.onerror=function(){if(called)return;called=true;delete window[cb];callback({error:'Network error'})};
-  document.head.appendChild(s);
-  setTimeout(function(){if(!called){called=true;delete window[cb];document.head.removeChild(s);callback({error:'Timeout'})}},15000);
+function apiCall(action,params,callback,retries){
+  var maxRetries=retries||2;var attempt=0;
+  function tryCall(){
+    var url=API_URL+'?action='+action;
+    if(params){for(var k in params){url+='&'+encodeURIComponent(k)+'='+encodeURIComponent(params[k])}}
+    var cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*9999)+'_'+attempt;
+    var full=url+'&callback='+cb;var called=false;
+    window[cb]=function(d){if(called)return;called=true;delete window[cb];document.head.removeChild(s);callback(d)};
+    var s=document.createElement('script');s.src=full;
+    s.onerror=function(){if(called)return;called=true;delete window[cb];if(attempt<maxRetries){attempt++;setTimeout(tryCall,1000*attempt)}else{callback({error:'Network error'})}};
+    document.head.appendChild(s);
+    setTimeout(function(){if(!called){called=true;delete window[cb];document.head.removeChild(s);if(attempt<maxRetries){attempt++;setTimeout(tryCall,1000*attempt)}else{callback({error:'Timeout'})}}},15000);
+  }
+  tryCall();
 }
 
 function loadTrackingPixels(s){

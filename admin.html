@@ -566,28 +566,41 @@ function apiPost(action, params, callback) {
   });
 }
 
-function apiGet(action, params, callback) {
-  var url = API_URL + '?action=' + action;
-  if (params) { for (var k in params) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); } }
-  var cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-  url += '&callback=' + cbName;
-  var called = false;
-  window[cbName] = function(data) {
-    if (called) return;
-    called = true;
-    delete window[cbName];
-    document.head.removeChild(script);
-    callback(data);
-  };
-  var script = document.createElement('script');
-  script.src = url;
-  script.onerror = function() {
-    if (called) return;
-    called = true;
-    delete window[cbName];
-    callback({ error: 'Network error' });
-  };
-  document.head.appendChild(script);
+function apiGet(action, params, callback, retries) {
+  var maxRetries = retries || 2;
+  var attempt = 0;
+  function tryCall() {
+    var url = API_URL + '?action=' + action;
+    if (params) { for (var k in params) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); } }
+    var cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000) + '_' + attempt;
+    url += '&callback=' + cbName;
+    var called = false;
+    window[cbName] = function(data) {
+      if (called) return;
+      called = true;
+      delete window[cbName];
+      try { document.head.removeChild(script); } catch(e) {}
+      callback(data);
+    };
+    var script = document.createElement('script');
+    script.src = url;
+    script.onerror = function() {
+      if (called) return;
+      called = true;
+      delete window[cbName];
+      if (attempt < maxRetries) { attempt++; setTimeout(tryCall, 1000 * attempt); } else { callback({ error: 'Network error' }); }
+    };
+    document.head.appendChild(script);
+    setTimeout(function() {
+      if (!called) {
+        called = true;
+        delete window[cbName];
+        try { document.head.removeChild(script); } catch(e) {}
+        if (attempt < maxRetries) { attempt++; setTimeout(tryCall, 1000 * attempt); } else { callback({ error: 'Timeout' }); }
+      }
+    }, 15000);
+  }
+  tryCall();
 }
 
 // ===== NAV =====
