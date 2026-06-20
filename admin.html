@@ -7,18 +7,18 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --side:#0b0f19;--side-hover:rgba(255,255,255,.05);--accent:#4f46e5;
-  --bg:#f8fafc;--card:#ffffff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;
-  --border:#e2e8f0;--border2:#cbd5e1;
-  --success:#10b981;--warning:#f59e0b;--danger:#ef4444;--info:#3b82f6;
-  --radius:12px;--radius-sm:8px;
+  --side:#0f0f1a;--side-hover:rgba(255,255,255,.06);--accent:#e94560;
+  --bg:#f6f7f9;--card:#fff;--text:#111;--text2:#6b6b6b;--text3:#999;
+  --border:#eaeaea;--border2:#ddd;
+  --success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--info:#3b82f6;
+  --radius:10px;--radius-sm:6px;
   --shadow:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.06);
   --shadow-lg:0 4px 24px rgba(0,0,0,.08);
-  --font-ar:'Cairo','IBM Plex Sans Arabic',sans-serif;--font-en:'Inter','Cairo',sans-serif
+  --font-ar:'Cairo',sans-serif;--font-en:'Inter','Cairo',sans-serif
 }
 body{font-family:var(--font-en);background:var(--bg);color:var(--text);min-height:100vh;font-size:.85rem;-webkit-font-smoothing:antialiased}
 body.rtl{font-family:var(--font-ar)}
@@ -553,15 +553,8 @@ var allOrders = [];
 var settings = {};
 
 // ===== API =====
-function getAuthHash() {
-  try {
-    var auth = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
-    return auth ? auth.hash || '' : '';
-  } catch(e) { return ''; }
-}
-
 function apiPost(action, params, callback) {
-  var data = Object.assign({ action: action, pass: getAuthHash() }, params);
+  var data = Object.assign({ action: action }, params);
   fetch(API_URL, {
     method: 'POST',
     mode: 'no-cors',
@@ -575,8 +568,6 @@ function apiPost(action, params, callback) {
 
 function apiGet(action, params, callback) {
   var url = API_URL + '?action=' + action;
-  var pass = getAuthHash();
-  if (pass) { url += '&pass=' + encodeURIComponent(pass); }
   if (params) { for (var k in params) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); } }
   var cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
   url += '&callback=' + cbName;
@@ -693,15 +684,22 @@ function saveCoupon(e) {
   };
   if (row) data._row = row;
   var action = row ? 'admin_edit_coupon' : 'admin_add_coupon';
-  apiGet(action, data, function() {
-    closeCouponModal(); loadCoupons(); toast(row ? 'تم تعديل الكوبون' : 'تم إضافة الكوبون');
-  });
+  var url = API_URL + '?action=' + action;
+  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
+  var cb = 'cb_' + Date.now(); window[cb] = function() { delete window[cb]; };
+  url += '&callback=' + cb;
+  var s = document.createElement('script'); s.src = url;
+  s.onload = function() { closeCouponModal(); loadCoupons(); toast(row ? 'تم تعديل الكوبون' : 'تم إضافة الكوبون'); };
+  document.head.appendChild(s);
 }
 function deleteCoupon(row) {
   if (!confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
-  apiGet('admin_delete_coupon', { _row: row }, function() {
-    loadCoupons(); toast('تم حذف الكوبون');
-  });
+  var url = API_URL + '?action=admin_delete_coupon&_row=' + row;
+  var cb = 'cb_' + Date.now(); window[cb] = function() { delete window[cb]; };
+  url += '&callback=' + cb;
+  var s = document.createElement('script'); s.src = url;
+  s.onload = function() { loadCoupons(); toast('تم حذف الكوبون'); };
+  document.head.appendChild(s);
 }
 
 // ===== DASHBOARD =====
@@ -829,12 +827,18 @@ function toggleSelectAll(cb) {
 function deleteOrder(row, name) {
   if (!confirm('هل تريد حذف طلب "' + name + '"؟')) return;
   toast('جاري الحذف...');
-  apiGet('admin_delete_order', { _row: row }, function(res) {
+  var cbName = 'cb_del_' + Date.now();
+  window[cbName] = function(res) {
+    delete window[cbName];
     console.log('Delete response:', res);
     if (res && res.error) { toast('خطأ: ' + res.error); return; }
     toast('تم الحذف بنجاح');
     setTimeout(loadOrders, 1500);
-  });
+  };
+  var s = document.createElement('script');
+  s.src = API_URL + '?action=admin_delete_order&_row=' + encodeURIComponent(row) + '&callback=' + cbName;
+  s.onerror = function() { delete window[cbName]; toast('خطأ في الشبكة - تأكد من تحديث Apps Script'); };
+  document.head.appendChild(s);
 }
 
 function deleteSelectedOrders() {
@@ -845,13 +849,19 @@ function deleteSelectedOrders() {
   checked.forEach(function(c) { rows.push(c.value); });
   var done = 0, failed = 0;
   rows.forEach(function(row) {
-    apiGet('admin_delete_order', { _row: row }, function(res) {
+    var cbName = 'cb_del_' + Date.now() + '_' + row;
+    window[cbName] = function(res) {
+      delete window[cbName];
       if (res && res.ok) done++; else failed++;
       if (done + failed === rows.length) {
         toast('تم حذف ' + done + ' طلب' + (failed ? ' — فشل ' + failed : ''));
         setTimeout(loadOrders, 2000);
       }
-    });
+    };
+    var s = document.createElement('script');
+    s.src = API_URL + '?action=admin_delete_order&_row=' + encodeURIComponent(row) + '&callback=' + cbName;
+    s.onerror = function() { delete window[cbName]; failed++; if (done + failed === rows.length) { toast('خطأ في الشبكة'); setTimeout(loadOrders, 2000); } };
+    document.head.appendChild(s);
   });
 }
 
@@ -980,13 +990,22 @@ function saveProduct(e) {
     if (row) data._row = row;
     else data.id = 'PROD-' + Date.now();
 
-    apiGet(endpoint, data, function() {
+    var cbName = 'save_' + Date.now();
+    var url = API_URL + '?action=' + endpoint + '&callback=' + cbName;
+    for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent('' + data[k]); }
+
+    window[cbName] = function() {
+      delete window[cbName];
       closeProductModal();
       toast(row ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح');
       submitBtn.disabled = false;
       submitBtn.textContent = 'حفظ';
       setTimeout(loadProducts, 2000);
-    });
+    };
+    var s = document.createElement('script');
+    s.src = url;
+    s.onerror = function() { delete window[cbName]; closeProductModal(); toast('تم الحفظ'); submitBtn.disabled = false; submitBtn.textContent = 'حفظ'; setTimeout(loadProducts, 2000); };
+    document.head.appendChild(s);
   }
 
   var filesToUpload = [];
@@ -1027,11 +1046,17 @@ function saveProduct(e) {
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         var base64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
-        apiGet('upload_image', { num: f.num, fileName: f.file.name, base64: base64 }, function(r) {
+        var cb = 'upl_' + Date.now();
+        window[cb] = function(r) {
+          delete window[cb];
           if (r && r.url) { urls[f.num] = r.url; toast('تم رفع الصورة ' + f.num); }
           else { toast('خطأ في الصورة ' + f.num + (r && r.error ? ': ' + r.error : '')); }
           processNext();
-        });
+        };
+        var s = document.createElement('script');
+        s.src = API_URL + '?action=upload_image&num=' + f.num + '&fileName=' + encodeURIComponent(f.file.name) + '&base64=' + encodeURIComponent(base64) + '&callback=' + cb;
+        s.onerror = function() { delete window[cb]; toast('خطأ في رفع الصورة ' + f.num); processNext(); };
+        document.head.appendChild(s);
       };
       img.src = ev.target.result;
     };
@@ -1042,10 +1067,13 @@ function saveProduct(e) {
 
 function deleteProduct(row, name) {
   if (!confirm('هل تريد حذف "' + name + '"؟')) return;
-  apiGet('admin_delete_product', { _row: row }, function() {
-    toast('تم الحذف');
-    setTimeout(loadProducts, 2000);
-  });
+  var url = API_URL + '?action=admin_delete_product&_row=' + row + '&callback=cb_del_' + Date.now();
+  var cbName = url.split('callback=')[1];
+  window[cbName] = function() { delete window[cbName]; };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onload = function() { toast('تم الحذف'); setTimeout(loadProducts, 2000); };
+  document.head.appendChild(script);
 }
 
 // ===== ORDERS =====
@@ -1106,8 +1134,14 @@ function renderOrders() {
 }
 
 function updateOrderStatus(row, status) {
-  toast('جاري تحديث الحالة...');
-  apiGet('admin_update_order', { _row: row, status: status }, function(data) {
+  var cbName = 'cb_ord_' + Date.now();
+  var url = API_URL + '?action=admin_update_order&_row=' + encodeURIComponent(row) + '&status=' + encodeURIComponent(status) + '&callback=' + cbName;
+  var done = false;
+  window[cbName] = function(data) {
+    if (done) return;
+    done = true;
+    document.head.removeChild(script);
+    delete window[cbName];
     if (data && data.ok) {
       var o = allOrders.find(function(x) { return x._row === row; });
       if (o) { o.status = status; o._statusLocal = true; }
@@ -1122,12 +1156,30 @@ function updateOrderStatus(row, status) {
           window.open('https://wa.me/' + o.phone + '?text=' + encodeURIComponent(msg), '_blank');
         }
       }
-      renderOrders();
     } else {
       toast('خطأ في تحديث الحالة: ' + ((data && data.error) || 'خطأ غير معروف'));
       loadOrders();
     }
-  });
+  };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() {
+    if (done) return;
+    done = true;
+    delete window[cbName];
+    toast('خطأ في الشبكة');
+    loadOrders();
+  };
+  document.head.appendChild(script);
+  setTimeout(function() {
+    if (!done) {
+      done = true;
+      delete window[cbName];
+      try { document.head.removeChild(script); } catch(e) {}
+      toast('انتهت المهلة - جاري إعادة التحميل');
+      loadOrders();
+    }
+  }, 15000);
 }
 
 function viewOrder(row) {
@@ -1215,14 +1267,15 @@ function saveSettings() {
   if (passHash) {
     data.admin_password = hashPassword(passHash);
   }
-  apiGet('admin_update_settings', data, function(res) {
-    toast('تم حفظ الإعدادات');
-    if (passHash) {
-      var auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
-      auth.hash = data.admin_password;
-      localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
-    }
-  });
+  var url = API_URL + '?action=admin_update_settings';
+  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
+  var cbName = 'settings_' + Date.now();
+  url += '&callback=' + cbName;
+  window[cbName] = function() { delete window[cbName]; };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onload = function() { toast('تم حفظ الإعدادات'); };
+  document.head.appendChild(script);
 }
 
 // ===== TESTIMONIALS =====
@@ -1295,16 +1348,24 @@ function saveTestimonial(e) {
   };
   var endpoint = row ? 'admin_edit_testimonial' : 'admin_add_testimonial';
   if (row) data._row = row;
-  apiGet(endpoint, data, function() {
-    closeTestimonialModal(); toast(row ? 'تم التعديل' : 'تمت الإضافة'); setTimeout(loadTestimonials, 2000);
-  });
+  var cbName = 'test_save_' + Date.now();
+  var url = API_URL + '?action=' + endpoint + '&callback=' + cbName;
+  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent('' + data[k]); }
+  window[cbName] = function() { delete window[cbName]; closeTestimonialModal(); toast(row ? 'تم التعديل' : 'تمت الإضافة'); setTimeout(loadTestimonials, 2000); };
+  var s = document.createElement('script');
+  s.src = url;
+  s.onerror = function() { delete window[cbName]; toast('خطأ'); };
+  document.head.appendChild(s);
 }
 
 function deleteTestimonial(row, name) {
   if (!confirm('هل تريد حذف شهادة "' + name + '"؟')) return;
-  apiGet('admin_delete_testimonial', { _row: row }, function() {
-    toast('تم الحذف'); setTimeout(loadTestimonials, 2000);
-  });
+  var cbName = 'cb_delt_' + Date.now();
+  window[cbName] = function(res) { delete window[cbName]; toast('تم الحذف'); setTimeout(loadTestimonials, 2000); };
+  var s = document.createElement('script');
+  s.src = API_URL + '?action=admin_delete_testimonial&_row=' + encodeURIComponent(row) + '&callback=' + cbName;
+  s.onerror = function() { delete window[cbName]; toast('خطأ'); };
+  document.head.appendChild(s);
 }
 
 // ===== REVIEWS =====
@@ -1341,9 +1402,12 @@ function loadReviews() {
 
 function deleteReview(row) {
   if (!confirm('حذف هذا التقييم؟')) return;
-  apiGet('admin_delete_review', { _row: row }, function() {
-    loadReviews(); toast('تم الحذف');
-  });
+  var cbName = 'cb_' + Date.now();
+  var s = document.createElement('script');
+  s.src = API_URL + '?action=admin_delete_review&_row=' + encodeURIComponent(row) + '&callback=' + cbName;
+  window[cbName] = function() { delete window[cbName]; loadReviews(); toast('تم الحذف'); };
+  s.onerror = function() { delete window[cbName]; toast('خطأ'); };
+  document.head.appendChild(s);
 }
 
 // ===== BANNERS =====
@@ -1389,9 +1453,14 @@ function saveBanners() {
     data['banner' + i + '_subtitle'] = (document.getElementById('banner' + i + '_subtitle') || {}).value || '';
     data['banner' + i + '_link'] = (document.getElementById('banner' + i + '_link') || {}).value || '';
   }
-  apiGet('admin_update_settings', data, function() {
-    toast('تم حفظ البانرات');
-  });
+  var url = API_URL + '?action=admin_update_settings&callback=bn_' + Date.now();
+  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
+  var cbName = url.split('callback=')[1];
+  window[cbName] = function() { delete window[cbName]; toast('تم حفظ البانرات'); };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() { toast('خطأ'); };
+  document.head.appendChild(script);
 }
 
 // ===== NEWSLETTER =====
@@ -1441,9 +1510,14 @@ function savePages() {
     landing_body_ar: (document.getElementById('pg_landing_body_ar')||{}).value || '',
     landing_products: (document.getElementById('pg_landing_products')||{}).value || ''
   };
-  apiGet('admin_update_settings', data, function() {
-    toast('تم حفظ الصفحات');
-  });
+  var url = API_URL + '?action=admin_update_settings&callback=pg_' + Date.now();
+  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
+  var cbName = url.split('callback=')[1];
+  window[cbName] = function() { delete window[cbName]; toast('تم حفظ الصفحات'); };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() { toast('خطأ'); };
+  document.head.appendChild(script);
 }
 
 // ===== INIT =====
