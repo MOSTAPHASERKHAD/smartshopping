@@ -199,6 +199,12 @@ body.dark .pd-group label{color:rgba(255,255,255,.6)}
 body.dark .fomo-popup{background:#14141f;border-color:rgba(255,255,255,.1);color:#f1f5f9}
 body.dark .glass-card{background:rgba(20,20,31,.85);border-color:rgba(255,255,255,.06)}
 body.dark .glass{background:rgba(20,20,31,.75);border-color:rgba(255,255,255,.06)}
+body.dark .promo-banner{background:#14141f}
+body.dark .promo-banner .slide-text{background:linear-gradient(transparent,rgba(10,10,18,.8))}
+body.dark .promo-banner .nav-arrow{background:rgba(255,255,255,.1);color:#f1f5f9}
+body.dark .promo-banner .nav-arrow:hover{background:rgba(255,255,255,.2)}
+body.dark .promo-banner .dots button{background:rgba(255,255,255,.25)}
+body.dark .promo-banner .dots button.active{background:#c9a84c}
 html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#c9a84c transparent}
 html::-webkit-scrollbar{width:6px}
 html::-webkit-scrollbar-track{background:transparent}
@@ -2879,8 +2885,10 @@ var promoTimer = null;
 function loadPromoBanners(settings) {
   try {
     promoSlides = [];
+    console.log('loadPromoBanners: settings keys =', Object.keys(settings));
     for (var i = 1; i <= 5; i++) {
       var img = settings['banner' + i + '_img'];
+      console.log('banner' + i + '_img =', img);
       if (img) {
         promoSlides.push({
           img: img,
@@ -2890,6 +2898,7 @@ function loadPromoBanners(settings) {
         });
       }
     }
+    console.log('loadPromoBanners: slides count =', promoSlides.length);
     if (!promoSlides.length) return;
     var banner = document.getElementById('promoBanner');
     if (!banner) return;
