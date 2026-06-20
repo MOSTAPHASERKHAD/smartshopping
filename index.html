@@ -225,11 +225,10 @@ body.rtl{direction:rtl;text-align:right}
 .aurora-3{width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,.45),transparent 70%);top:30%;left:35%;animation:auroraMove3 28s ease-in-out infinite}
 
 /* Grid Lines */
-.grid-lines{position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(0,0,0,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.02) 1px,transparent 1px);background-size:60px 60px}
+.grid-lines{position:fixed;inset:0;pointer-events:none;z-index:-1;background-image:linear-gradient(rgba(0,0,0,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.02) 1px,transparent 1px);background-size:60px 60px}
 
 /* Noise Texture */
-.noise-overlay{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.025}
-.noise-overlay::before{content:'';position:absolute;inset:-50%;width:200%;height:200%;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px 128px}
+.noise-overlay{position:fixed;inset:0;pointer-events:none;z-index:-1}
 
 /* Gradient Text */
 .gradient-text{background:linear-gradient(135deg,#c9a84c,#f0d060,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
@@ -596,7 +595,7 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
 .compare-check.active{background:var(--sale);color:#fff;border-color:var(--sale)}
 
 /* AI Chatbot */
-.chatbot-btn{position:fixed !important;bottom:24px;right:24px;width:56px;height:56px;border:none;border-radius:50%;background:#f97316;color:#fff;font-size:1.5rem;cursor:pointer;z-index:99999;box-shadow:0 4px 20px rgba(249,115,22,.6);display:flex !important;align-items:center;justify-content:center}
+.chatbot-btn{position:fixed !important;bottom:24px;right:24px;width:56px;height:56px;border:none;border-radius:50%;background:#f97316;color:#fff;font-size:1.5rem;cursor:pointer;z-index:99999;box-shadow:0 4px 20px rgba(249,115,22,.6);display:flex !important;align-items:center;justify-content:center;isolation:isolate}
 body.rtl .chatbot-btn{right:auto !important;left:24px !important}
 .chatbot-btn:hover{transform:scale(1.1)}
 .chatbot-btn .unread-dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;background:#22c55e;border-radius:50%;border:2px solid #fff;display:none}
@@ -1603,7 +1602,7 @@ body.ltr .fomo-content {
 </style>
 
 <script>
-var _V='5.3.0';var _SV=localStorage.getItem('_v');
+var _V='5.4.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycbwnAzwFKo4Dkg7DSygjs8Ywit11PPAoVBGxb2fQr5VF2tb245xhBDN0pD8jDrsd_RS7JQ/exec';
 var LANG_KEY = 'sk_lang';

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smartkiosk-v7';
+const CACHE_NAME = 'smartkiosk-v8';
 const ASSETS = [
   '/smartkiosk/',
   '/smartkiosk/index.html',
