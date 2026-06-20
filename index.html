@@ -2920,7 +2920,7 @@ function renderPromoSlide(idx) {
   if (!slide) return;
   var el = document.createElement('div');
   el.className = 'slide active';
-  var html = '<img src="' + slide.img + '" alt="" onerror="this.parentElement.style.display=\'none\'">';
+  var html = '<img src="' + slide.img + '" alt="" onerror="clearInterval(promoTimer);document.getElementById(\'promoBanner\').style.display=\'none\'">';
   if (slide.title) {
     html += '<div class="slide-text"><h3>' + slide.title + '</h3>';
     if (slide.subtitle) html += '<p>' + slide.subtitle + '</p>';
