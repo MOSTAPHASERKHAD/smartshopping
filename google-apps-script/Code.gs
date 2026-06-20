@@ -10,6 +10,21 @@ function doGet(e) {
   var params = e.parameter;
   var action = params.action || '';
   var callback = params.callback || '';
+
+  // Security Check
+  var isAdminAction = (action.indexOf('admin_') === 0 || action === 'upload_image') && action !== 'verify_admin';
+  if (isAdminAction) {
+    var auth = checkAdminAuth(params);
+    if (!auth.ok) {
+      var errJson = JSON.stringify({ error: auth.error });
+      if (callback) {
+        return ContentService.createTextOutput(callback + '(' + errJson + ');')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(errJson).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   var result;
 
   switch (action) {
@@ -68,6 +83,27 @@ function doPost(e) {
   try { params = JSON.parse(e.postData.contents); } catch(ex) { params = e.parameter || {}; }
   var action = params.action || '';
   var callback = params.callback || '';
+
+  // Security Check
+  var isAdminAction = (action.indexOf('admin_') === 0 || action === 'admin_upload_image') && action !== 'verify_admin';
+  if (isAdminAction) {
+    var auth = checkAdminAuth(params);
+    if (!auth.ok) {
+      var errJson = JSON.stringify({ error: auth.error });
+      if (action === 'admin_upload_image') {
+        var safeJson = errJson.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\x3c');
+        return ContentService.createTextOutput(
+          '<script>try{window.top.postMessage(' + safeJson + ',"*");}catch(e){document.title="ERROR";}</script>'
+        ).setMimeType(ContentService.MimeType.HTML);
+      }
+      if (callback) {
+        return ContentService.createTextOutput(callback + '(' + errJson + ');')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(errJson).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   var result;
 
   switch (action) {
@@ -178,11 +214,17 @@ function createOrder(params) {
   var orderId = generateOrderId();
   var now = new Date();
   var createdAt = Utilities.formatDate(now, 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
+  var shippingCost = params.shipping_cost;
+  if (shippingCost === undefined || shippingCost === null || shippingCost === '') {
+    shippingCost = 'سعر التوصيل يُحدد بعد التأكيد';
+  } else {
+    shippingCost = Number(shippingCost) + ' DZD';
+  }
   sheet.appendRow([
     orderId, createdAt, params.name || '', params.phone || '',
     params.wilaya_code || '', params.wilaya_ar || '', params.wilaya_en || '',
     params.delivery_type || '', params.items_json || '[]',
-    params.subtotal || '0', 'سعر التوصيل يُحدد بعد التأكيد', 'pending', params.note || ''
+    params.subtotal || '0', shippingCost, 'pending', params.note || ''
   ]);
   return { ok: true, order_id: orderId };
 }
@@ -515,6 +557,19 @@ function verifyAdmin(params) {
   }
   if (providedHash === storedHash) return { ok: true };
   return { ok: false, error: 'كلمة المرور غير صحيحة' };
+}
+
+function checkAdminAuth(params) {
+  var settings = getSettings();
+  var storedHash = settings.admin_password || '';
+  var providedHash = params.pass || params.password || '';
+  if (!storedHash) {
+    var defaultHash = hashString('h19xoie');
+    if (providedHash === defaultHash) return { ok: true };
+    return { ok: false, error: 'لم يتم تعيين كلمة مرور. يرجى استخدام كلمة المرور الافتراضية.' };
+  }
+  if (providedHash === storedHash) return { ok: true };
+  return { ok: false, error: 'غير مصرح: كلمة المرور غير صحيحة أو مفقودة' };
 }
 
 function hashString(str) {

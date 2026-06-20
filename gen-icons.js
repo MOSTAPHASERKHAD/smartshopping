@@ -22,5 +22,6 @@ function makeIcon(size, file) {
   console.log('Created: ' + file);
 }
 
-makeIcon(192, 'D:\\pro\\ccc\\smartkiosk\\icon-192.png');
-makeIcon(512, 'D:\\pro\\ccc\\smartkiosk\\icon-512.png');
+const path = require('path');
+makeIcon(192, path.join(__dirname, 'icon-192.png'));
+makeIcon(512, path.join(__dirname, 'icon-512.png'));
