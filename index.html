@@ -22,6 +22,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a1a2e">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Smart Shopping">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -2887,10 +2888,8 @@ var promoTimer = null;
 function loadPromoBanners(settings) {
   try {
     promoSlides = [];
-    console.log('loadPromoBanners: settings keys =', Object.keys(settings));
     for (var i = 1; i <= 5; i++) {
       var img = settings['banner' + i + '_img'];
-      console.log('banner' + i + '_img =', img);
       if (img) {
         promoSlides.push({
           img: img,
@@ -2900,7 +2899,6 @@ function loadPromoBanners(settings) {
         });
       }
     }
-    console.log('loadPromoBanners: slides count =', promoSlides.length);
     if (!promoSlides.length) return;
     var banner = document.getElementById('promoBanner');
     if (!banner) return;
