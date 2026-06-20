@@ -740,7 +740,7 @@ body.rtl .back-to-top{left:auto;right:24px}
 @media(max-width:768px){.testimonials-grid{grid-template-columns:1fr}}
 
 @media(max-width:768px){
-  .products-grid{grid-template-columns:repeat(2,1fr);gap:12px}
+  .products-grid{grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:12px}
   .product-body{padding:10px 12px 12px}
   .product-title{font-size:.82rem}
   .price-current{font-size:.88rem}
@@ -766,7 +766,7 @@ body.rtl .back-to-top{left:auto;right:24px}
   .btn-add{padding:8px 0;font-size:.75rem;border-radius:8px}
 }
 @media(max-width:480px){
-  .products-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .products-grid{grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:8px}
 }
 
 /* Toast System */
@@ -2093,7 +2093,7 @@ function renderSuggested(currentId){
     section.style.display='block';
     grid.innerHTML=picked.map(function(p){
       var img=p.image1||'';
-      return '<div class="product-card" style="cursor:pointer" onclick="showProductDetail(\''+p.id+'\')"><div class="product-image-wrap"><img class="product-image" src="'+img+'" loading="lazy" alt=""></div><div class="product-body"><div class="product-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div><div class="product-price"><span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span></div></div></div>';
+      return '<div class="product-card" style="cursor:pointer" onclick="showProductDetail(\''+p.id+'\')"><div class="product-image-wrap"><img class="product-image" src="'+img+'" loading="lazy" alt="" onerror="this.style.display=\'none\'"></div><div class="product-body"><div class="product-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div><div class="product-price"><span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span></div></div></div>';
     }).join('');
   }catch(e){}
 }
@@ -2383,9 +2383,9 @@ function renderCart(){
     c.innerHTML=cart.map(function(item){
       var p=allProducts.find(function(x){return x.id===item.id});if(!p)return'';
       var t=p.price*item.qty;sub+=t;
-      var img=p.image1||'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="%23f0f0f0"><rect width="64" height="64"/></svg>';
+      var img=p.image1||'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="%23f0f0f0"><rect width="64" height="64"/></svg>';
       return '<div class="cart-item">'+
-        '<img class="cart-item-img" src="'+img+'" alt="">'+
+        '<img class="cart-item-img" src="'+img+'" alt="" onerror="this.style.display=\'none\'">'+
         '<div class="cart-item-info">'+
           '<div class="cart-item-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div>'+
           '<div class="cart-item-price">'+Number(p.price).toLocaleString()+' '+t('currency')+'</div>'+
@@ -2889,7 +2889,6 @@ function loadPromoBanners(settings) {
     promoSlides = [];
     for (var i = 1; i <= 5; i++) {
       var img = settings['banner' + i + '_img'];
-      if (img && img.indexOf('ibb.co') > -1) { img = 'banner1.png'; }
       if (img) {
         promoSlides.push({
           img: img,
@@ -2920,7 +2919,7 @@ function renderPromoSlide(idx) {
   if (!slide) return;
   var el = document.createElement('div');
   el.className = 'slide active';
-  var html = '<img src="' + slide.img + '" alt="" onerror="this.parentElement.style.display=\'none\'">';
+  var html = '<img src="' + slide.img + '" alt="" onerror="this.src=\'banner1.png\'">';
   if (slide.title) {
     html += '<div class="slide-text"><h3>' + slide.title + '</h3>';
     if (slide.subtitle) html += '<p>' + slide.subtitle + '</p>';
