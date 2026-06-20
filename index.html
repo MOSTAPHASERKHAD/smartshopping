@@ -193,7 +193,6 @@ body.dark .pd-price .price-current{color:#f43f5e}
 body.dark .pd-price .price-old{color:#64748b}
 body.dark .pd-desc{color:rgba(255,255,255,.5)}
 body.dark .pd-group label{color:rgba(255,255,255,.6)}
-body.dark .fomo-popup{background:#14141f;border-color:rgba(255,255,255,.1);color:#f1f5f9}
 body.dark .glass-card{background:rgba(20,20,31,.85);border-color:rgba(255,255,255,.06)}
 body.dark .glass{background:rgba(20,20,31,.75);border-color:rgba(255,255,255,.06)}
 body.dark .promo-banner{background:#14141f}
@@ -1344,17 +1343,6 @@ body.ltr .toast-container{right:auto;left:24px}
   </div>
 </div>
 
-<!-- Recent Purchase Notification Toast (FOMO) -->
-<div id="fomoToast" class="fomo-toast">
-  <div class="fomo-icon">🛒</div>
-  <div class="fomo-content">
-    <div class="fomo-title" id="fomoName"></div>
-    <div class="fomo-text" id="fomoText"></div>
-    <div class="fomo-time" id="fomoTime"></div>
-  </div>
-  <button class="fomo-close" onclick="hideFomoToast()">✕</button>
-</div>
-
 <style>
 /* Sticky Buy Bar on Mobile */
 .sticky-buy-bar {
@@ -1416,105 +1404,7 @@ body.ltr .sticky-buy-info {
   to { transform: translateY(0); }
 }
 
-/* FOMO Toast */
-.fomo-toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: var(--shadow-lg);
-  z-index: 180;
-  width: 320px;
-  max-width: calc(100vw - 48px);
-  transform: translateY(120px);
-  opacity: 0;
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: auto;
-}
-body.rtl .fomo-toast {
-  right: auto;
-  left: 24px;
-}
-.fomo-toast.show {
-  transform: translateY(0);
-  opacity: 1;
-}
-.fomo-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(244, 63, 94, 0.1);
-  color: var(--sale);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  flex-shrink: 0;
-}
-.fomo-content {
-  flex: 1;
-  min-width: 0;
-  text-align: right;
-}
-body.ltr .fomo-content {
-  text-align: left;
-}
-.fomo-title {
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: var(--text);
-  margin-bottom: 2px;
-}
-.fomo-text {
-  font-size: 0.78rem;
-  color: var(--text2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-}
-.fomo-time {
-  font-size: 0.65rem;
-  color: var(--text3);
-  margin-top: 3px;
-  font-weight: 600;
-}
-.fomo-close {
-  background: transparent;
-  border: none;
-  color: var(--text3);
-  font-size: 0.8rem;
-  cursor: pointer;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: flex-start;
-  transition: color 0.15s;
-}
-.fomo-close:hover {
-  color: var(--text2);
-}
-
 @media(max-width: 768px) {
-  .fomo-toast {
-    bottom: 80px; /* avoid sticky bottom bar */
-    left: 16px;
-    right: 16px;
-    width: auto;
-    max-width: calc(100% - 32px);
-  }
-  body.rtl .fomo-toast {
-    right: 16px;
-    left: 16px;
-  }
-}
 /* Countdown Timer */
 .pd-countdown {
   background: #fff5f5;
@@ -1541,7 +1431,7 @@ body.ltr .fomo-content {
 </style>
 
 <script>
-var _V='5.5.0';var _SV=localStorage.getItem('_v');
+var _V='5.6.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycbwnAzwFKo4Dkg7DSygjs8Ywit11PPAoVBGxb2fQr5VF2tb245xhBDN0pD8jDrsd_RS7JQ/exec';
 var LANG_KEY = 'sk_lang';
