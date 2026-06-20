@@ -45,17 +45,18 @@ src="https://www.facebook.com/tr?id=1908987803278785&ev=PageView&noscript=1"
 <!-- Tracking Pixels (loaded dynamically from admin settings) -->
 <div id="trackingPixels" style="display:none"></div>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg:#fafafa;--card:#fff;--text:#111;--text2:#6b6b6b;--text3:#999;--border:#e8e8e8;--border2:#ddd;
   --accent:#1a1a2e;--sale:#e94560;--sale-hover:#d63050;--success:#22c55e;--danger:#ef4444;
   --shadow:0 2px 8px rgba(0,0,0,.06);--radius:12px;--max-w:1200px;
-  --font:'IBM Plex Sans Arabic','Inter',sans-serif
+  --font:'Almarai','Inter',sans-serif
 }
 html{scroll-behavior:smooth}
-body{font-family:var(--font);background:var(--card);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font);background:linear-gradient(135deg,#fafafa,#f0f4f8,#f5f0eb,#fafafa);background-size:300% 300%;animation:gradientShift 15s ease infinite;color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+@keyframes gradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 body.ltr{direction:ltr;text-align:left}
 body.rtl{direction:rtl;text-align:right}
 .container{max-width:var(--max-w);margin:0 auto;padding:0 20px}
@@ -1017,7 +1018,7 @@ body.rtl .back-to-top{left:auto;right:24px}
 </div>
 
 <script>
-var _V='5.1.0';var _SV=localStorage.getItem('_v');
+var _V='6.0.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycbxtnGWw22qtTHyC6xXXRWrjvydZBnMeanCRqOnytSYWC0VLF1zVG8Uq8FF2-mPHhpOZOQ/exec';
 var LANG_KEY = 'sk_lang';
