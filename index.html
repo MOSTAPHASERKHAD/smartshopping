@@ -1603,7 +1603,7 @@ body.ltr .fomo-content {
 </style>
 
 <script>
-var _V='5.2.0';var _SV=localStorage.getItem('_v');
+var _V='5.3.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycbwnAzwFKo4Dkg7DSygjs8Ywit11PPAoVBGxb2fQr5VF2tb245xhBDN0pD8jDrsd_RS7JQ/exec';
 var LANG_KEY = 'sk_lang';
@@ -3791,7 +3791,27 @@ function startCountdownTimer(el) {
   <button class="btn btn-clear" onclick="clearCompare()">مسح</button>
 </div>
 
-<!-- AI Chatbot -->
+<!-- Compare Modal -->
+<div class="compare-overlay" id="compareOverlay" onclick="if(event.target===this)closeCompareModal()">
+<div class="compare-modal">
+  <div class="compare-header"><h3>مقارنة المنتجات</h3><button class="modal-close-btn" onclick="closeCompareModal()">✕</button></div>
+  <div style="padding:16px;overflow-x:auto">
+    <table class="compare-table" id="compareTable"></table>
+  </div>
+</div>
+</div>
+
+<button class="back-to-top" onclick="scrollToTop()">↑</button>
+
+<nav class="mobile-nav">
+  <a href="#products" class="active" onclick="scrollToSection('products')"><span class="icon">🏠</span><span data-i18n="nav_products">المنتجات</span></a>
+  <a href="#" onclick="openCart();return false"><span class="icon">🛒</span><span data-i18n="cart_title">السلة</span></a>
+  <a href="#" onclick="openAuthModal();return false"><span class="icon">👤</span><span data-i18n="auth_login">حسابي</span></a>
+  <a href="#track-section" onclick="scrollToSection('track-section')"><span class="icon">📦</span><span data-i18n="nav_track">تتبع الطلب</span></a>
+  <a href="https://wa.me/213557543177" target="_blank"><span class="icon">💬</span><span>WhatsApp</span></a>
+</nav>
+
+<!-- AI Chatbot (last element in body for highest stacking priority) -->
 <button class="chatbot-btn" id="chatbotBtn" onclick="toggleChatbot()">
   💬
   <span class="unread-dot" id="chatUnread"></span>
@@ -3812,26 +3832,6 @@ function startCountdownTimer(el) {
     <button onclick="sendChatMsg()">➤</button>
   </div>
 </div>
-
-<!-- Compare Modal -->
-<div class="compare-overlay" id="compareOverlay" onclick="if(event.target===this)closeCompareModal()">
-<div class="compare-modal">
-  <div class="compare-header"><h3>مقارنة المنتجات</h3><button class="modal-close-btn" onclick="closeCompareModal()">✕</button></div>
-  <div style="padding:16px;overflow-x:auto">
-    <table class="compare-table" id="compareTable"></table>
-  </div>
-</div>
-</div>
-
-<button class="back-to-top" onclick="scrollToTop()">↑</button>
-
-<nav class="mobile-nav">
-  <a href="#products" class="active" onclick="scrollToSection('products')"><span class="icon">🏠</span><span data-i18n="nav_products">المنتجات</span></a>
-  <a href="#" onclick="openCart();return false"><span class="icon">🛒</span><span data-i18n="cart_title">السلة</span></a>
-  <a href="#" onclick="openAuthModal();return false"><span class="icon">👤</span><span data-i18n="auth_login">حسابي</span></a>
-  <a href="#track-section" onclick="scrollToSection('track-section')"><span class="icon">📦</span><span data-i18n="nav_track">تتبع الطلب</span></a>
-  <a href="https://wa.me/213557543177" target="_blank"><span class="icon">💬</span><span>WhatsApp</span></a>
-</nav>
 
 </body>
 </html>
