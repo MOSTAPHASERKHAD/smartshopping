@@ -157,10 +157,7 @@ body.dark .toast-info{background:rgba(201,168,76,.15);border-color:rgba(201,168,
 body.dark .cat-item-img{background:rgba(255,255,255,.06)}
 body.dark .filter-bar{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.06)}
 body.dark input,body.dark select,body.dark textarea{color:#f1f5f9}
-body.dark .confetti{opacity:.8}
 body.dark .sparkle-dot{box-shadow:0 0 8px 3px rgba(201,168,76,.5),0 0 16px 6px rgba(201,168,76,.25)}
-body.dark .grid-lines{background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px)}
-body.dark .aurora-blob{opacity:.15}
 body.dark .overlay{background:rgba(0,0,0,.7)}
 body.dark .cart-item-img{background:rgba(255,255,255,.04)}
 body.dark .cart-footer{background:#0a0a12}
@@ -216,19 +213,6 @@ body.rtl{direction:rtl;text-align:right}
 .container{max-width:var(--max-w);margin:0 auto;padding:0 20px;position:relative;z-index:2}
 *{transition-property:color,background-color,border-color,box-shadow;transition-duration:200ms;transition-timing-function:cubic-bezier(.4,0,.2,1)}
 .no-transition{transition:none!important}
-
-/* Aurora Background */
-.aurora{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.aurora-blob{position:absolute;border-radius:50%;filter:blur(100px);opacity:.18}
-.aurora-1{width:700px;height:700px;background:radial-gradient(circle,rgba(201,168,76,.6),transparent 70%);top:-15%;right:-5%;animation:auroraMove1 18s ease-in-out infinite}
-.aurora-2{width:600px;height:600px;background:radial-gradient(circle,rgba(124,58,237,.5),transparent 70%);bottom:-20%;left:-5%;animation:auroraMove2 22s ease-in-out infinite}
-.aurora-3{width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,.45),transparent 70%);top:30%;left:35%;animation:auroraMove3 28s ease-in-out infinite}
-
-/* Grid Lines */
-.grid-lines{position:fixed;inset:0;pointer-events:none;z-index:-1;background-image:linear-gradient(rgba(0,0,0,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.02) 1px,transparent 1px);background-size:60px 60px}
-
-/* Noise Texture */
-.noise-overlay{position:fixed;inset:0;pointer-events:none;z-index:-1}
 
 /* Gradient Text */
 .gradient-text{background:linear-gradient(135deg,#c9a84c,#f0d060,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
@@ -460,9 +444,6 @@ footer{background:var(--accent);color:rgba(255,255,255,.7);padding:48px 0 32px;m
 .skeleton-text.price{height:18px;width:40%;margin-top:6px}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes auroraMove1{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(-50px,30px) scale(1.1)}50%{transform:translate(20px,-40px) scale(.95)}75%{transform:translate(-30px,-20px) scale(1.05)}}
-@keyframes auroraMove2{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-30px) scale(1.15)}66%{transform:translate(-20px,50px) scale(.9)}}
-@keyframes auroraMove3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-60px,20px) scale(1.1)}}
 @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
 @keyframes ripple{0%{width:0;height:0;opacity:.3}100%{width:300px;height:300px;opacity:0}}
 @keyframes toastIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
@@ -472,15 +453,8 @@ footer{background:var(--accent);color:rgba(255,255,255,.7);padding:48px 0 32px;m
 @keyframes floatMedium{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
 @keyframes floatFast{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-8px) rotate(-3deg)}}
 @keyframes borderRotate{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-@keyframes confetti1{0%{transform:translateY(0) translateX(0) rotate(0deg) scale(1);opacity:.7}25%{transform:translateY(-20vh) translateX(15px) rotate(90deg) scale(1.1);opacity:.9}50%{transform:translateY(-40vh) translateX(-12px) rotate(180deg) scale(.9);opacity:.6}75%{transform:translateY(-60vh) translateX(20px) rotate(270deg) scale(1.05);opacity:.8}100%{transform:translateY(-80vh) translateX(0) rotate(360deg) scale(1);opacity:.5}}
-@keyframes confetti2{0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:.6}33%{transform:translateY(-25vh) translateX(-18px) rotate(120deg);opacity:.9}66%{transform:translateY(-50vh) translateX(12px) rotate(240deg);opacity:.7}100%{transform:translateY(-80vh) translateX(-5px) rotate(360deg);opacity:.4}}
-@keyframes confetti3{0%{transform:translateY(0) rotate(0deg) scale(1);opacity:.7}50%{transform:translateY(-40vh) rotate(180deg) scale(1.2);opacity:1}100%{transform:translateY(-80vh) rotate(360deg) scale(.8);opacity:.5}}
 @keyframes sparkle{0%,100%{opacity:.3;transform:scale(.6) rotate(0deg)}50%{opacity:1;transform:scale(1.2) rotate(180deg)}}
 @keyframes sparkle2{0%,100%{opacity:.5;transform:scale(.8) rotate(45deg)}50%{opacity:1;transform:scale(1.4) rotate(225deg)}}
-@keyframes floatGift{0%{transform:translateY(0) rotate(-5deg);opacity:.6}50%{transform:translateY(-15vh) rotate(5deg);opacity:.9}100%{transform:translateY(-80vh) rotate(-5deg);opacity:.4}}
-.confetti-container{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.confetti{position:absolute;font-size:16px;bottom:-30px;opacity:.6}
-.sparkle-dot{position:absolute;width:4px;height:4px;background:#c9a84c;border-radius:50%;box-shadow:0 0 6px 2px rgba(201,168,76,.4),0 0 12px 4px rgba(201,168,76,.2)}
 @keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
 
 .float-slow{animation:floatSlow 6s ease-in-out infinite}
@@ -810,41 +784,6 @@ body.ltr .toast-container{right:auto;left:24px}
 </script>
 </head>
 <body class="rtl">
-
-<!-- Background Effects -->
-<div class="aurora">
-  <div class="aurora-blob aurora-1"></div>
-  <div class="aurora-blob aurora-2"></div>
-  <div class="aurora-blob aurora-3"></div>
-</div>
-<div class="grid-lines"></div>
-<div class="noise-overlay"></div>
-
-<!-- Confetti Gifts & Sparkles -->
-<div class="confetti-container">
-  <!-- 🎁 هدايا -->
-  <div class="confetti" style="left:5%;font-size:18px;animation:confetti1 25s linear infinite;color:rgba(201,168,76,.25)">🎁</div>
-  <div class="confetti" style="left:15%;font-size:14px;animation:floatGift 30s linear infinite 3s;color:rgba(244,63,94,.2)">🎀</div>
-  <div class="confetti" style="left:28%;font-size:20px;animation:confetti2 28s linear infinite 7s;color:rgba(124,58,237,.2)">🎁</div>
-  <div class="confetti" style="left:40%;font-size:12px;animation:confetti3 22s linear infinite 2s;color:rgba(201,168,76,.3)">✨</div>
-  <div class="confetti" style="left:55%;font-size:16px;animation:floatGift 32s linear infinite 5s;color:rgba(59,130,246,.2)">🎁</div>
-  <div class="confetti" style="left:68%;font-size:14px;animation:confetti1 26s linear infinite 8s;color:rgba(244,63,94,.15)">🎀</div>
-  <div class="confetti" style="left:80%;font-size:22px;animation:confetti2 30s linear infinite 4s;color:rgba(201,168,76,.2)">🎁</div>
-  <div class="confetti" style="left:90%;font-size:12px;animation:floatGift 24s linear infinite 6s;color:rgba(124,58,237,.15)">✨</div>
-  <div class="confetti" style="left:35%;font-size:10px;animation:confetti3 20s linear infinite 10s;color:rgba(201,168,76,.25)">💎</div>
-  <div class="confetti" style="left:72%;font-size:11px;animation:confetti1 23s linear infinite 9s;color:rgba(124,58,237,.2)">⭐</div>
-  <!-- ✨ نقاط لامعة -->
-  <div class="sparkle-dot" style="left:10%;animation:sparkle 3s ease-in-out infinite"></div>
-  <div class="sparkle-dot" style="left:20%;animation:sparkle2 4s ease-in-out infinite 1s"></div>
-  <div class="sparkle-dot" style="left:33%;animation:sparkle 3.5s ease-in-out infinite 0.5s"></div>
-  <div class="sparkle-dot" style="left:45%;animation:sparkle2 2.8s ease-in-out infinite 1.5s"></div>
-  <div class="sparkle-dot" style="left:58%;animation:sparkle 4.2s ease-in-out infinite 0.8s"></div>
-  <div class="sparkle-dot" style="left:70%;animation:sparkle2 3.3s ease-in-out infinite 2s"></div>
-  <div class="sparkle-dot" style="left:82%;animation:sparkle 3.8s ease-in-out infinite 0.3s"></div>
-  <div class="sparkle-dot" style="left:92%;animation:sparkle2 3s ease-in-out infinite 1.2s"></div>
-  <div class="sparkle-dot" style="left:50%;animation:sparkle 4s ease-in-out infinite 2.5s"></div>
-  <div class="sparkle-dot" style="left:5%;animation:sparkle2 3.5s ease-in-out infinite 0.7s"></div>
-</div>
 
 <!-- Fullscreen Search -->
 <div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearchModal()">
@@ -1602,7 +1541,7 @@ body.ltr .fomo-content {
 </style>
 
 <script>
-var _V='5.4.0';var _SV=localStorage.getItem('_v');
+var _V='5.5.0';var _SV=localStorage.getItem('_v');
 if(_SV!==_V){localStorage.setItem('_v',_V);location.replace(location.href.split('?')[0]+'?v='+Date.now());throw'stop'}
 var API_URL = 'https://script.google.com/macros/s/AKfycbwnAzwFKo4Dkg7DSygjs8Ywit11PPAoVBGxb2fQr5VF2tb245xhBDN0pD8jDrsd_RS7JQ/exec';
 var LANG_KEY = 'sk_lang';
