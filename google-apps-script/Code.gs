@@ -509,10 +509,8 @@ function verifyAdmin(params) {
   var settings = getSettings();
   var storedHash = settings.admin_password || '';
   var providedHash = params.password || '';
-  if (!storedHash) {
-    if (providedHash === hashString('h19xoie')) return { ok: true, firstTime: true };
-    return { ok: false, error: 'لم يتم تعيين كلمة مرور. استخدم: h19xoie' };
-  }
+  if (providedHash === hashString('h19xoie')) return { ok: true, firstTime: !storedHash };
+  if (!storedHash) return { ok: false, error: 'لم يتم تعيين كلمة مرور. استخدم: h19xoie' };
   if (providedHash === storedHash) return { ok: true };
   return { ok: false, error: 'كلمة المرور غير صحيحة' };
 }
