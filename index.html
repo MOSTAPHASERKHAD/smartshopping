@@ -335,21 +335,21 @@ body.rtl .carousel-arrow.prev{left:auto;right:8px}
 body.rtl .carousel-arrow.next{right:auto;left:8px}
 
 /* Promo Banner Slider */
-.promo-banner{position:relative;overflow:hidden;border-radius:var(--radius);margin-bottom:24px;max-height:250px;background:#f7f7f7}
-.promo-banner .slide{position:absolute;inset:0;opacity:0;transition:opacity .6s ease}
-.promo-banner .slide.active{opacity:1}
-.promo-banner .slide img{width:100%;height:250px;object-fit:cover}
-.promo-banner .slide-text{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.7));color:#fff;padding:16px 20px 14px}
-.promo-banner .slide-text h3{font-size:1rem;font-weight:800;margin-bottom:2px}
-.promo-banner .slide-text p{font-size:.75rem;opacity:.9}
-.promo-banner .dots{position:absolute;bottom:8px;right:50%;transform:translateX(50%);display:flex;gap:6px;z-index:2}
-.promo-banner .dots button{width:8px;height:8px;border-radius:50%;border:none;background:rgba(255,255,255,.5);cursor:pointer;transition:background .2s}
-.promo-banner .dots button.active{background:#fff}
-.promo-banner .nav-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.8);cursor:pointer;font-size:.9rem;z-index:2;transition:background .2s;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-.promo-banner .nav-arrow:hover{background:#fff}
-.promo-banner .nav-arrow.prev{left:8px}
-.promo-banner .nav-arrow.next{right:8px}
-@media(max-width:768px){.promo-banner{max-height:180px}.promo-banner .slide img{height:180px}.promo-banner .slide-text{padding:12px 14px 10px}.promo-banner .slide-text h3{font-size:.85rem}}
+.hero-slider{position:relative;overflow:hidden;border-radius:var(--radius);margin-bottom:24px;max-height:250px;background:#f7f7f7}
+.hero-slider .slide{position:absolute;inset:0;opacity:0;transition:opacity .6s ease}
+.hero-slider .slide.active{opacity:1}
+.hero-slider .slide img{width:100%;height:250px;object-fit:cover}
+.hero-slider .slide-text{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.7));color:#fff;padding:16px 20px 14px}
+.hero-slider .slide-text h3{font-size:1rem;font-weight:800;margin-bottom:2px}
+.hero-slider .slide-text p{font-size:.75rem;opacity:.9}
+.hero-slider .dots{position:absolute;bottom:8px;right:50%;transform:translateX(50%);display:flex;gap:6px;z-index:2}
+.hero-slider .dots button{width:8px;height:8px;border-radius:50%;border:none;background:rgba(255,255,255,.5);cursor:pointer;transition:background .2s}
+.hero-slider .dots button.active{background:#fff}
+.hero-slider .nav-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.8);cursor:pointer;font-size:.9rem;z-index:2;transition:background .2s;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.hero-slider .nav-arrow:hover{background:#fff}
+.hero-slider .nav-arrow.prev{left:8px}
+.hero-slider .nav-arrow.next{right:8px}
+@media(max-width:768px){.hero-slider{max-height:180px}.hero-slider .slide img{height:180px}.hero-slider .slide-text{padding:12px 14px 10px}.hero-slider .slide-text h3{font-size:.85rem}}
 
 /* Wishlist */
 .wishlist-btn{position:absolute;top:8px;left:8px;width:30px;height:30px;border:none;border-radius:50%;background:rgba(255,255,255,.85);cursor:pointer;font-size:.85rem;z-index:3;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.08)}
@@ -591,10 +591,10 @@ body.rtl .back-to-top{left:auto;right:24px}
 
 <!-- Promo Banner -->
 <div class="container" style="margin-top:16px">
-  <div class="promo-banner" id="promoBanner" style="display:none">
-    <div class="nav-arrow prev" onclick="promoNav(-1)">‹</div>
-    <div class="nav-arrow next" onclick="promoNav(1)">›</div>
-    <div class="dots" id="promoDots"></div>
+  <div class="hero-slider" id="heroSlider" style="display:none">
+    <div class="nav-arrow prev" onclick="heroNav(-1)">‹</div>
+    <div class="nav-arrow next" onclick="heroNav(1)">›</div>
+    <div class="dots" id="heroDots"></div>
   </div>
 </div>
 
@@ -1449,7 +1449,7 @@ function init(){
     var n=currentLang==='ar'?d.store_name_ar:d.store_name_en;
     if(n){document.querySelector('.logo').textContent='🛒'}
     if(d.phone){document.querySelectorAll('a[href*="wa.me"]').forEach(function(a){a.href='https://wa.me/'+d.phone})}
-    loadPromoBanners(d);
+    loadHeroBanners(d);
     checkCookieConsent();
     setTimeout(checkLandingPage,500);
   });
@@ -2031,17 +2031,17 @@ function getShippingCost() {
 }
 
 // === Phase 2.1: Promo Banners ===
-var promoSlides = [];
-var promoIdx = 0;
-var promoTimer = null;
+var heroSlides = [];
+var heroIdx = 0;
+var heroTimer = null;
 
-function loadPromoBanners(settings) {
+function loadHeroBanners(settings) {
   try {
-    promoSlides = [];
+    heroSlides = [];
     for (var i = 1; i <= 5; i++) {
       var img = settings['banner' + i + '_img'];
       if (img) {
-        promoSlides.push({
+        heroSlides.push({
           img: img,
           title: settings['banner' + i + '_title'] || '',
           subtitle: settings['banner' + i + '_subtitle'] || '',
@@ -2049,24 +2049,24 @@ function loadPromoBanners(settings) {
         });
       }
     }
-    if (!promoSlides.length) return;
-    var banner = document.getElementById('promoBanner');
+    if (!heroSlides.length) return;
+    var banner = document.getElementById('heroSlider');
     if (!banner) return;
     banner.style.display = 'block';
-    renderPromoSlide(0);
-    renderPromoDots();
-    clearInterval(promoTimer);
-    promoTimer = setInterval(function() { promoNav(1); }, 4000);
+    renderHeroSlide(0);
+    renderHeroDots();
+    clearInterval(heroTimer);
+    heroTimer = setInterval(function() { heroNav(1); }, 4000);
   } catch(e) { console.error('promo banners', e); }
 }
 
-function renderPromoSlide(idx) {
-  promoIdx = idx;
-  var banner = document.getElementById('promoBanner');
+function renderHeroSlide(idx) {
+  heroIdx = idx;
+  var banner = document.getElementById('heroSlider');
   if (!banner) return;
   var existing = banner.querySelectorAll('.slide');
   existing.forEach(function(s) { s.remove(); });
-  var slide = promoSlides[idx];
+  var slide = heroSlides[idx];
   if (!slide) return;
   var el = document.createElement('div');
   el.className = 'slide active';
@@ -2084,24 +2084,24 @@ function renderPromoSlide(idx) {
   dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
 }
 
-function renderPromoDots() {
-  var banner = document.getElementById('promoBanner');
-  var dotsEl = document.getElementById('promoDots');
+function renderHeroDots() {
+  var banner = document.getElementById('heroSlider');
+  var dotsEl = document.getElementById('heroDots');
   if (!banner || !dotsEl) return;
-  dotsEl.innerHTML = promoSlides.map(function(_, i) {
-    return '<button' + (i === 0 ? ' class="active"' : '') + ' onclick="promoGo(' + i + ')"></button>';
+  dotsEl.innerHTML = heroSlides.map(function(_, i) {
+    return '<button' + (i === 0 ? ' class="active"' : '') + ' onclick="heroGo(' + i + ')"></button>';
   }).join('');
 }
 
-function promoNav(dir) {
-  if (!promoSlides.length) return;
-  promoIdx = (promoIdx + dir + promoSlides.length) % promoSlides.length;
-  renderPromoSlide(promoIdx);
+function heroNav(dir) {
+  if (!heroSlides.length) return;
+  heroIdx = (heroIdx + dir + heroSlides.length) % heroSlides.length;
+  renderHeroSlide(heroIdx);
 }
 
-function promoGo(idx) {
-  promoIdx = idx;
-  renderPromoSlide(idx);
+function heroGo(idx) {
+  heroIdx = idx;
+  renderHeroSlide(idx);
 }
 
 // === Phase 2.2: Recently Viewed ===
