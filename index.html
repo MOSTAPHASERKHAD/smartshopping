@@ -95,8 +95,8 @@ section{padding:40px 0}
 .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .product-card{background:var(--card);border:none;border-radius:var(--radius);overflow:hidden;transition:box-shadow .25s;box-shadow:0 1px 6px rgba(0,0,0,.06)}
 .product-card:hover{box-shadow:0 6px 20px rgba(0,0,0,.1)}
-.product-image-wrap{position:relative;aspect-ratio:4/5;background:#f5f5f5;overflow:hidden;border-radius:12px 12px 0 0}
-.product-image{width:100%;height:100%;object-fit:cover;transition:transform .4s ease;display:block}
+.product-image-wrap{position:relative;aspect-ratio:4/5;background:#f0f0f0;overflow:hidden;border-radius:12px 12px 0 0}
+.product-image{width:100%;height:100%;object-fit:cover;display:block;border:0;margin:0;padding:0}
 .product-image{width:100%;height:100%;object-fit:cover;transition:transform .4s ease}
 .product-card:hover .product-image{transform:scale(1.06)}
 .product-badge{position:absolute;top:8px;right:8px;background:var(--sale);color:#fff;font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:20px;z-index:2;letter-spacing:.3px}
@@ -1524,10 +1524,11 @@ function renderProducts(){
   grid.innerHTML=f.map(function(p,i){
     var inCart=cart.find(function(c){return c.id===p.id});
     var qty=inCart?inCart.qty:0;var out=p.stock<=0;var disc=p.old_price>0;
-    var img=p.image1||'<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="%23f5f5f5"><rect width="300" height="300"/></svg>';
+    var fallbackSvg='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23f0f0f0"/></svg>';
+    var img=p.image1||fallbackSvg;
     return '<div class="product-card fade-in" style="animation-delay:'+i*40+'ms">'+
       '<div class="product-image-wrap">'+
-        '<img class="product-image" src="'+img+'" alt="'+(p.title_ar||'')+'" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;300&quot; height=&quot;300&quot; fill=&quot;%23f5f5f5&quot;><rect width=&quot;300&quot; height=&quot;300&quot;/></svg>\'">'+
+        '<img class="product-image" src="'+img+'" alt="'+(p.title_ar||'')+'" loading="lazy" onerror="this.src=\''+fallbackSvg+'\'">'+
         (disc?'<span class="product-badge">-'+Math.round((p.old_price-p.price)/p.old_price*100)+'%</span>':'')+
         (out&&!disc?'<span class="product-badge" style="background:#6b7280">'+t('out_of_stock')+'</span>':'')+
         '<button class="wishlist-btn'+(getWishlist().indexOf(p.id)>-1?' active':'')+'" data-pid="'+p.id+'" onclick="toggleWishlist(\''+p.id+'\',event)">'+(getWishlist().indexOf(p.id)>-1?'♥':'♡')+'</button>'+
