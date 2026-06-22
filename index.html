@@ -2947,10 +2947,8 @@ var lpImgs=[];var lpIdx=0;var lpReviewData=[];
 function checkProductLanding(){
   var params=new URLSearchParams(window.location.search);
   var pid=params.get('product');
-  console.log('[LP] checkProductLanding called, pid=', pid, 'products count=', allProducts.length);
   if(!pid||!allProducts.length)return;
   var p=allProducts.find(function(x){return x.id===pid});
-  console.log('[LP] product found:', !!p, 'URL:', window.location.href);
   if(!p)return;
   showProductLanding(p);
 }
