@@ -1179,7 +1179,7 @@ function updateOrderStatus(row, status) {
         var msg = 'مرحبا ' + (o.name || '') + '\n' +
           'طلبك رقم ' + (o.order_id || '') + '\n' +
           'الحالة الجديدة: ' + (statusNames[status] || status) + '\n\n' +
-          'تتبع طلبك: https://MOSTAPHASERKHAD.github.io/smartkiosk/';
+          'تتبع طلبك: https://smartkiosk-yjt.pages.dev/';
         if (confirm('إرسال تحديث الحالة لعميل ' + o.name + ' عبر واتساب؟')) {
           window.open('https://wa.me/' + o.phone + '?text=' + encodeURIComponent(msg), '_blank');
         }
