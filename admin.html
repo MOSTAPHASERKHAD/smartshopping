@@ -256,7 +256,7 @@ body.rtl{font-family:var(--font-ar)}
     </div>
     <div class="panel">
       <div class="panel-body"><div class="table-wrap"><table><thead><tr>
-        <th>الصورة</th><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>المخزون</th><th>الحالة</th><th>إجراءات</th>
+        <th>الصورة</th><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>المخزون</th><th>الحالة</th><th>رابط الهبوط</th><th>إجراءات</th>
       </tr></thead><tbody id="products-list"></tbody></table></div></div>
     </div>
   </div>
@@ -885,12 +885,12 @@ function getStatusText(s) {
 
 // ===== PRODUCTS =====
 function loadProducts() {
-  document.getElementById('products-list').innerHTML = '<tr><td colspan="7" class="loading"><div class="spinner"></div></td></tr>';
+  document.getElementById('products-list').innerHTML = '<tr><td colspan="8" class="loading"><div class="spinner"></div></td></tr>';
   apiGet('admin_list', {}, function(data) {
     if (!data || !data.products) return;
     allProducts = data.products;
     if (!data.products.length) {
-      document.getElementById('products-list').innerHTML = '<tr><td colspan="7" class="empty">لا توجد منتجات</td></tr>';
+      document.getElementById('products-list').innerHTML = '<tr><td colspan="8" class="empty">لا توجد منتجات</td></tr>';
       return;
     }
     var html = data.products.map(function(p) {
@@ -902,6 +902,7 @@ function loadProducts() {
         '<td>' + (p.category_ar || '-') + '</td>' +
         '<td>' + (p.stock <= 0 ? '<span class="badge badge-cancelled">نفذ</span>' : p.stock <= 5 ? '<span class="badge badge-pending">متبقي ' + p.stock + '</span>' : p.stock) + '</td>' +
         '<td>' + (p.active ? '<span class="badge badge-confirmed">نشط</span>' : '<span class="badge badge-cancelled">غير نشط</span>') + '</td>' +
+        '<td><div style="display:flex;flex-direction:column;gap:4px"><input type="text" readonly value="' + window.location.origin + '/smartkiosk/?product=' + (p.id || '') + '" style="font-size:.65rem;padding:4px 6px;border:1px solid #eaeaea;border-radius:4px;width:180px;background:#f9f9f9;direction:ltr;text-align:left" id="lp-link-' + p.id + '"><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:#25d366;color:#fff;padding:3px 8px;font-size:.65rem" onclick="copyLandingLink(\'' + p.id + '\')">نسخ</button><a href="' + window.location.origin + '/smartkiosk/?product=' + (p.id || '') + '" target="_blank" class="btn btn-sm" style="background:#3b82f6;color:#fff;padding:3px 8px;font-size:.65rem;text-decoration:none">فتح</a></div></div></td>' +
         '<td><button class="btn btn-info btn-sm" onclick="editProduct(' + p._row + ')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p._row + ',\'' + (p.title_ar || '') + '\')">حذف</button></td>' +
       '</tr>';
     }).join('');
@@ -1076,6 +1077,20 @@ function saveProduct(e) {
     reader.readAsDataURL(f.file);
   }
   processNext();
+}
+
+function copyLandingLink(productId) {
+  var input = document.getElementById('lp-link-' + productId);
+  if (!input) return;
+  input.select();
+  input.setSelectionRange(0, 99999);
+  try {
+    navigator.clipboard.writeText(input.value);
+    var btn = input.nextElementSibling.querySelector('button');
+    if (btn) { btn.textContent = '✓ تم النسخ'; setTimeout(function() { btn.textContent = 'نسخ'; }, 1500); }
+  } catch(e) {
+    document.execCommand('copy');
+  }
 }
 
 function deleteProduct(row, name) {
