@@ -55,7 +55,8 @@ src="https://www.facebook.com/tr?id=1908987803278785&ev=PageView&noscript=1"
   --font:'Almarai','Inter',sans-serif
 }
 html{scroll-behavior:smooth}
-body{font-family:var(--font);background:linear-gradient(135deg,#fafafa,#f0f4f8,#f5f0eb,#fafafa);background-size:300% 300%;animation:gradientShift 15s ease infinite;color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+html{overflow-x:hidden}
+body{font-family:var(--font);background:linear-gradient(135deg,#fafafa,#f0f4f8,#f5f0eb,#fafafa);background-size:300% 300%;animation:gradientShift 15s ease infinite;color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 @keyframes gradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 body.ltr{direction:ltr;text-align:left}
 body.rtl{direction:rtl;text-align:right}
@@ -139,9 +140,10 @@ section{padding:40px 0}
 /* Cart Drawer */
 .cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;opacity:0;visibility:hidden;transition:all .3s}
 .cart-overlay.open{opacity:1;visibility:visible}
-.cart-drawer{position:fixed;top:0;left:0;width:400px;max-width:100vw;height:100%;background:var(--card);z-index:201;transform:translateX(-100%);transition:transform .3s;display:flex;flex-direction:column}
-body.ltr .cart-drawer{left:auto;right:0;transform:translateX(100%)}
+.cart-drawer{position:fixed;top:0;right:0;width:400px;max-width:100vw;height:100%;background:var(--card);z-index:201;transform:translateX(100%);transition:transform .3s;display:flex;flex-direction:column}
+body.ltr .cart-drawer{right:0;left:auto;transform:translateX(100%)}
 body.ltr .cart-drawer.open{transform:translateX(0)}
+body.rtl .cart-drawer{right:auto;left:0;transform:translateX(-100%)}
 body.rtl .cart-drawer.open{transform:translateX(0)}
 .cart-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
 .cart-header h3{font-size:.95rem;font-weight:700}
@@ -351,6 +353,14 @@ body.rtl .carousel-arrow.next{right:auto;left:8px}
 .hero-slider .nav-arrow.next{right:8px}
 @media(max-width:768px){.hero-slider{height:180px}.hero-slider .slide img{height:180px}.hero-slider .slide-text{padding:12px 14px 10px}.hero-slider .slide-text h3{font-size:.85rem}}
 
+
+.sticky-buy-bar{display:none}
+@media(max-width:768px){
+  .sticky-buy-bar{position:fixed;bottom:0;left:0;right:0;background:var(--card);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 -4px 12px rgba(0,0,0,.1);z-index:100;border-top:1px solid var(--border)}
+  .sticky-buy-bar.hidden{display:none !important}
+  .sbb-price{font-weight:700;font-size:1.1rem;color:var(--sale)}
+}
+
 /* Wishlist */
 .wishlist-btn{position:absolute;top:8px;left:8px;width:30px;height:30px;border:none;border-radius:50%;background:rgba(255,255,255,.85);cursor:pointer;font-size:.85rem;z-index:3;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .wishlist-btn:hover{transform:scale(1.1)}
@@ -525,6 +535,7 @@ body.rtl .back-to-top{left:auto;right:24px}
   .price-old{font-size:.55rem}
   .search-bar{max-width:100%;flex:1}
   .header-cat-bar{display:none}
+  .header-view-btns{display:none}
   .header-inner{height:48px;gap:6px}
   .cart-drawer{width:100%}
   .modal-body{padding:16px}
@@ -1477,6 +1488,7 @@ function init(){
 
 function showPage(name){
   var el=document.getElementById(name+'Page');if(el)el.classList.add('open');
+  document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.width='100%';
   if(name==='about'){
     var t1=document.getElementById('aboutTitle');var b1=document.getElementById('aboutBody');
     if(t1)t1.textContent=currentLang==='ar'?(storeSettings.about_title_ar||'من نحن'):(storeSettings.about_title_en||'About Us');
@@ -1507,7 +1519,7 @@ function showPage(name){
     }
   }
 }
-function closePage(name){var el=document.getElementById(name+'Page');if(el)el.classList.remove('open')}
+function closePage(name){var el=document.getElementById(name+'Page');if(el)el.classList.remove('open');document.body.style.overflow='';document.body.style.position='';document.body.style.width='';}
 
 function renderSuggested(currentId){
   try{
@@ -1696,8 +1708,8 @@ function renderCart(){
   }catch(e){}
 }
 
-function openCart(){try{document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartDrawer').classList.add('open');document.body.style.overflow='hidden'}catch(e){}}
-function closeCart(){try{document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartDrawer').classList.remove('open');document.body.style.overflow=''}catch(e){}}
+function openCart(){try{document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartDrawer').classList.add('open');document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.width='100%'}catch(e){}}
+function closeCart(){try{document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartDrawer').classList.remove('open');document.body.style.overflow='';document.body.style.position='';document.body.style.width=''}catch(e){}}
 
 function openCheckout(){
   if(!cart.length)return;
@@ -1710,8 +1722,9 @@ function openCheckout(){
   try{var total=getCartSubtotal();trackInitiateCheckout(total)}catch(e){}
   document.getElementById('orderWilaya').onchange=function(){renderOrderSummary()};
   document.getElementById('orderDelivery').onchange=function(){renderOrderSummary()};
+  document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.width='100%';
 }
-function closeCheckout(){document.getElementById('checkoutModal').classList.remove('open')}
+function closeCheckout(){document.getElementById('checkoutModal').classList.remove('open');document.body.style.overflow='';document.body.style.position='';document.body.style.width=''}
 
 function populateWilayas(){
   var s=document.getElementById('orderWilaya');if(s.options.length>1)return;
@@ -1850,6 +1863,9 @@ function showProductDetail(id){
   el=document.getElementById('pdSubmit');if(el)el.disabled=false;
   populatePdWilaya();
   el=document.getElementById('products');if(el)el.classList.add('hidden');
+  var sbb=document.getElementById('stickyBuyBar');if(sbb)sbb.classList.remove('hidden');
+  var sbbPrice=document.getElementById('sbbPrice');if(sbbPrice)sbbPrice.textContent=Number(p.price).toLocaleString()+' '+t('currency');
+  var mnav=document.querySelector('.mobile-nav');if(mnav)mnav.style.display='none';
   el=document.getElementById('productDetailSection');if(el)el.classList.remove('hidden');
   renderSuggested(id);
   genCaptcha('pdCaptchaQ','pdCaptchaE');
@@ -1880,6 +1896,8 @@ function carouselGo(idx){
 function hideProductDetail(){
   var el;
   el=document.getElementById('products');if(el)el.classList.remove('hidden');
+  var sbb=document.getElementById('stickyBuyBar');if(sbb)sbb.classList.add('hidden');
+  var mnav=document.querySelector('.mobile-nav');if(mnav)mnav.style.display='flex';
   el=document.getElementById('productDetailSection');if(el)el.classList.add('hidden');
 }
 function populatePdWilaya(){
@@ -2309,13 +2327,14 @@ function updateUserButton() {
 
 function openAuthModal() {
   document.getElementById('authModal').classList.add('open');
+  document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.width='100%';
   if (currentCustomer && currentCustomer.phone) {
     showAccountView();
   } else {
     showGuestView();
   }
 }
-function closeAuthModal() { document.getElementById('authModal').classList.remove('open'); }
+function closeAuthModal() { document.getElementById('authModal').classList.remove('open');document.body.style.overflow='';document.body.style.position='';document.body.style.width=''; }
 
 function showGuestView() {
   document.getElementById('authGuestView').style.display = 'block';
@@ -2602,10 +2621,12 @@ function openCompareModal() {
   }).join('');
   table.innerHTML = html;
   document.getElementById('compareOverlay').classList.add('open');
+  document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.width='100%';
 }
 
 function closeCompareModal() {
   document.getElementById('compareOverlay').classList.remove('open');
+  document.body.style.overflow='';document.body.style.position='';document.body.style.width='';
 }
 
 // === AI Chatbot ===
@@ -2871,7 +2892,15 @@ function showChatNotification() {
 
 <button class="back-to-top" onclick="scrollToTop()">↑</button>
 
+
+<!-- Sticky Buy Bar -->
+<div class="sticky-buy-bar hidden" id="stickyBuyBar">
+  <div class="sbb-price" id="sbbPrice"></div>
+  <button class="btn btn-primary" onclick="document.getElementById('pdForm').scrollIntoView({behavior:'smooth',block:'center'})" data-i18n="buy_now">اطلب الآن</button>
+</div>
+
 <nav class="mobile-nav">
+
   <a href="#products" class="active" onclick="scrollToSection('products')"><span class="icon">🏠</span><span data-i18n="nav_products">المنتجات</span></a>
   <a href="#" onclick="openCart();return false"><span class="icon">🛒</span><span data-i18n="cart_title">السلة</span></a>
   <a href="#" onclick="openAuthModal();return false"><span class="icon">👤</span><span data-i18n="auth_login">حسابي</span></a>
