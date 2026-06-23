@@ -25,23 +25,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Smart Shopping">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- Meta Pixel Code -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '1908987803278785');
-fbq('track', 'PageView');
-</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=1908987803278785&ev=PageView&noscript=1"
-/></noscript>
-<!-- End Meta Pixel Code -->
 <!-- Tracking Pixels (loaded dynamically from admin settings) -->
 <div id="trackingPixels" style="display:none"></div>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2159,7 +2142,13 @@ function loadHeroBanners(settings) {
         });
       }
     }
-    if (!heroSlides.length) return;
+    if (!heroSlides.length) {
+      heroSlides = [
+        { img: 'banner-hero.png', title: 'تسوّق بذكاء', subtitle: 'منتجات متنوعة بأفضل الأسعار', link: '' },
+        { img: 'banner-sale.png', title: 'عروض حصرية', subtitle: 'خصومات تصل إلى 50%', link: '' },
+        { img: 'banner-accessories.png', title: 'إكسسوارات', subtitle: 'أحدث الإكسسوارات التقنية', link: '' }
+      ];
+    }
     var banner = document.getElementById('heroSlider');
     if (!banner) return;
     banner.style.display = 'block';
