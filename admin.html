@@ -1273,8 +1273,8 @@ function loadSettings() {
   });
 }
 
-function saveSettings() {
-  var passHash = document.getElementById('set_admin_password').value.trim();
+async function saveSettings() {
+  var passValue = document.getElementById('set_admin_password').value.trim();
   var data = {
     store_name_ar: document.getElementById('set_store_name_ar').value,
     store_name_en: document.getElementById('set_store_name_en').value,
@@ -1292,8 +1292,8 @@ function saveSettings() {
     gemini_api_key: (document.getElementById('set_gemini_api_key')||{}).value || '',
     ai_prompt: (document.getElementById('set_ai_prompt')||{}).value || ''
   };
-  if (passHash) {
-    data.admin_password = hashPassword(passHash);
+  if (passValue) {
+    data.admin_password = await hashPasswordAsync(passValue);
   }
   var url = API_URL + '?action=admin_update_settings';
   for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
@@ -1584,13 +1584,18 @@ var AUTH_KEY = 'admin_auth';
 var AUTH_TTL = 24 * 60 * 60 * 1000;
 
 function hashPassword(str) {
-  var hash = 0;
-  for (var i = 0; i < str.length; i++) {
-    var ch = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + ch;
-    hash = hash & hash;
-  }
-  return 'h' + Math.abs(hash).toString(36);
+  // SHA-256 hashing (matches backend Google Apps Script)
+  var encoder = new TextEncoder();
+  var data = encoder.encode(str);
+  return crypto.subtle.digest('SHA-256', data).then(function(buf) {
+    return Array.from(new Uint8Array(buf)).map(function(b) {
+      return ('0' + b.toString(16)).slice(-2);
+    }).join('');
+  });
+}
+
+async function hashPasswordAsync(str) {
+  return await hashPassword(str);
 }
 
 function checkAuth() {
@@ -1602,22 +1607,19 @@ function checkAuth() {
   } catch(e) { return false; }
 }
 
-function doLogin() {
+async function doLogin() {
   var user = document.getElementById('loginUser').value.trim();
   var pass = document.getElementById('loginPass').value;
   if (!user || !pass) return;
   var btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = 'جاري التحقق...';
   document.getElementById('loginError').style.display = 'none';
-  var passHash = hashPassword(pass);
+  var passHash = await hashPasswordAsync(pass);
   apiGet('verify_admin', { password: passHash }, function(data) {
     btn.disabled = false; btn.textContent = 'تسجيل الدخول';
     if (data && data.ok) {
       localStorage.setItem(AUTH_KEY, JSON.stringify({ hash: passHash, time: Date.now(), user: user }));
       showAdminPanel();
-      if (data.firstTime) {
-        setTimeout(function() { alert('تم الدخول بكلمة المرور الافتراضية. يُنصح بتعيين كلمة مرور جديدة من الإعدادات.'); }, 500);
-      }
     } else {
       var errEl = document.getElementById('loginError');
       errEl.textContent = (data && data.error) ? data.error : 'كلمة المرور خاطئة';

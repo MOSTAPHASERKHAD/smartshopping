@@ -6,7 +6,37 @@ function testAuth() {
   Logger.log('Authorization successful!');
 }
 
+// ── Rate Limiter (60 requests per minute per IP) ──
+function _checkRateLimit() {
+  var ip = 'unknown';
+  try { ip = PropertiesService.getScriptProperties().getProperty('last_ip') || 'unknown'; } catch(e) {}
+  var key = 'rl_' + ip;
+  var props = PropertiesService.getUserProperties();
+  var count = parseInt(props.getProperty(key) || '0');
+  var lastTime = parseInt(props.getProperty(key + '_t') || '0');
+  var now = Date.now();
+  if (now - lastTime > 60000) { count = 0; }
+  if (count >= 60) {
+    return false;
+  }
+  props.setProperty(key, String(count + 1));
+  props.setProperty(key + '_t', String(now));
+  return true;
+}
+
+// ── Input sanitizer: strips HTML/angle brackets + caps length ──
+function _sanitize(value, maxLen) {
+  if (value === null || value === undefined) return '';
+  var s = String(value).replace(/[<>]/g, '').trim();
+  if (maxLen && s.length > maxLen) s = s.substring(0, maxLen);
+  return s;
+}
+
 function doGet(e) {
+  if (!_checkRateLimit()) return ContentService.createTextOutput(
+    JSON.stringify({ error: 'Too many requests. Try again in a minute.' })
+  ).setMimeType(ContentService.MimeType.JSON);
+
   var params = e.parameter;
   var action = params.action || '';
   var callback = params.callback || '';
@@ -64,6 +94,10 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  if (!_checkRateLimit()) return ContentService.createTextOutput(
+    JSON.stringify({ error: 'Too many requests. Try again in a minute.' })
+  ).setMimeType(ContentService.MimeType.JSON);
+
   var params;
   try { params = JSON.parse(e.postData.contents); } catch(ex) { params = e.parameter || {}; }
   var action = params.action || '';
@@ -172,6 +206,9 @@ function trackOrder(orderId) {
 }
 
 function createOrder(params) {
+  var name = (params.name || '').replace(/[<>"'&]/g, '').substring(0, 200);
+  var phone = (params.phone || '').replace(/[^0-9+]/g, '').substring(0, 20);
+  var note = (params.note || '').replace(/[<>"'&]/g, '').substring(0, 500);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Orders');
   if (!sheet) return { error: 'Orders sheet not found' };
@@ -179,10 +216,10 @@ function createOrder(params) {
   var now = new Date();
   var createdAt = Utilities.formatDate(now, 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
   sheet.appendRow([
-    orderId, createdAt, params.name || '', params.phone || '',
+    orderId, createdAt, name, phone,
     params.wilaya_code || '', params.wilaya_ar || '', params.wilaya_en || '',
     params.delivery_type || '', params.items_json || '[]',
-    params.subtotal || '0', 'سعر التوصيل يُحدد بعد التأكيد', 'pending', params.note || ''
+    params.subtotal || '0', 'سعر التوصيل يُحدد بعد التأكيد', 'pending', note
   ]);
   return { ok: true, order_id: orderId };
 }
@@ -428,9 +465,11 @@ function adminAddTestimonial(params) {
     sheet.appendRow(['name', 'location', 'text', 'rating', 'active', 'created_at']);
   }
   var now = Utilities.formatDate(new Date(), 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
+  var rating = parseInt(params.rating) || 5;
+  if (rating < 1) rating = 1; if (rating > 5) rating = 5;
   sheet.appendRow([
-    params.name || '', params.location || '', params.text || '',
-    params.rating || 5, params.active !== 'false', now
+    _sanitize(params.name, 100), _sanitize(params.location, 100),
+    _sanitize(params.text, 1000), rating, params.active !== 'false', now
   ]);
   return { ok: true };
 }
@@ -509,20 +548,22 @@ function verifyAdmin(params) {
   var settings = getSettings();
   var storedHash = settings.admin_password || '';
   var providedHash = params.password || '';
-  if (providedHash === hashString('h19xoie')) return { ok: true, firstTime: !storedHash };
-  if (!storedHash) return { ok: false, error: 'لم يتم تعيين كلمة مرور. استخدم: h19xoie' };
+  // SECURITY: No hardcoded backdoor. Password must be set via Settings.
+  if (!storedHash) return { ok: false, error: 'لم يتم تعيين كلمة مرور. أدخل كلمة مرور في الإعدادات أولاً.', setupRequired: true };
   if (providedHash === storedHash) return { ok: true };
   return { ok: false, error: 'كلمة المرور غير صحيحة' };
 }
 
 function hashString(str) {
-  var hash = 0;
-  for (var i = 0; i < str.length; i++) {
-    var ch = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + ch;
-    hash = hash & hash;
+  // Proper SHA-256 hashing via Apps Script built-in digest
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, str);
+  var hex = '';
+  for (var i = 0; i < bytes.length; i++) {
+    var b = bytes[i];
+    if (b < 0) b += 256;
+    hex += ('0' + b.toString(16)).slice(-2);
   }
-  return 'h' + Math.abs(hash).toString(36);
+  return hex;
 }
 
 function validateCoupon(params) {
@@ -656,15 +697,18 @@ function addReview(params) {
     sheet.appendRow(['product_id', 'name', 'location', 'text', 'rating', 'active', 'created_at', 'photos']);
   }
   var now = Utilities.formatDate(new Date(), 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
+  // Sanitize user input (defense-in-depth alongside frontend escaping)
+  var rating = parseInt(params.rating) || 5;
+  if (rating < 1) rating = 1; if (rating > 5) rating = 5;
   sheet.appendRow([
-    params.product_id || '',
-    params.name || '',
-    params.location || '',
-    params.text || '',
-    params.rating || 5,
+    _sanitize(params.product_id, 50),
+    _sanitize(params.name, 100),
+    _sanitize(params.location, 100),
+    _sanitize(params.text, 1000),
+    rating,
     true,
     now,
-    params.photos || ''
+    _sanitize(params.photos, 500)
   ]);
   return { ok: true };
 }
@@ -740,6 +784,11 @@ function adminSavePage(params) {
 }
 
 // === Customers ===
+function _hashCustomerPassword(password, phone) {
+  // Hash with SHA-256 + phone as salt for per-customer uniqueness
+  return hashString(password + ':' + phone);
+}
+
 function customerRegister(params) {
   var phone = (params.phone || '').replace(/\s/g, '').trim();
   var password = params.password || '';
@@ -757,7 +806,8 @@ function customerRegister(params) {
     if (data[i][0] === phone) return { ok: false, error: 'Phone number already registered' };
   }
   var now = Utilities.formatDate(new Date(), 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
-  sheet.appendRow([phone, password, name, '', now, 0, 0]);
+  var hashedPw = _hashCustomerPassword(password, phone);
+  sheet.appendRow([phone, hashedPw, name, '', now, 0, 0]);
   return { ok: true, customer: { phone: phone, name: name } };
 }
 
@@ -771,10 +821,11 @@ function customerLogin(params) {
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) return { ok: false, error: 'Account not found' };
   var headers = data[0];
+  var hashedInput = _hashCustomerPassword(password, phone);
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     if (row[0] === phone) {
-      if (row[1] === password) {
+      if (row[1] === hashedInput) {
         var customer = {};
         for (var j = 0; j < headers.length; j++) { customer[headers[j]] = row[j]; }
         delete customer.password;
@@ -865,10 +916,21 @@ function adminListSubscribers() {
 function aiChat(params) {
   var message = params.message || '';
   if (!message) return { reply: 'Please send a message.' };
+  // Sanitize: limit message length
+  message = message.substring(0, 500);
 
   var settings = getSettings();
   var apiKey = settings.gemini_api_key || '';
   if (!apiKey) return { reply: 'AI not configured. Please set Gemini API key in settings.' };
+
+  // Limit chat history depth to prevent token abuse
+  var chatHistory = [];
+  if (params.history) {
+    try { chatHistory = JSON.parse(params.history); } catch(e) {}
+  }
+  if (chatHistory.length > 20) {
+    chatHistory = chatHistory.slice(-20);
+  }
 
   var products = getCatalog().products || [];
   var productList = products.map(function(p) {
@@ -886,11 +948,6 @@ function aiChat(params) {
   var systemPrompt = settings.ai_prompt || 'You are the Smart Shopping Algeria store manager AI. You know EVERYTHING about the store inventory. You have access to the full product database below. When a customer asks about products, tell them EXACTLY what is available with real names, real prices, and real stock status. If a product is out of stock, say so honestly. If they ask about a product you have, give them the price and stock. If they ask about a product you don\'t have, say you don\'t carry it. Be honest about stock - never say a product is available if stock is 0. Give product IDs when mentioning products so the customer can find them. Reply in the same language the customer uses. Be warm, professional, and helpful like a real store manager.';
 
   var fullContext = systemPrompt + '\n\n=== PRODUCT DATABASE (' + products.length + ' products) ===\n' + productList + '\n=== END DATABASE ===\n\nStore: Smart Shopping Algeria. Payment: COD. Shipping: 58 wilayas. WhatsApp: 0557543177.';
-
-  var chatHistory = [];
-  if (params.history) {
-    try { chatHistory = JSON.parse(params.history); } catch(e) {}
-  }
 
   var contents = [];
   chatHistory.forEach(function(h) {

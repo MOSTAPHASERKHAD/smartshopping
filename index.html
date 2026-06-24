@@ -1432,6 +1432,21 @@ var I18N = {
 
 function t(key){return (I18N[currentLang]||I18N.ar)[key]||key}
 
+// ── XSS protection: escape user-provided content before injecting into HTML ──
+function escapeHtml(s){
+  if(s===null||s===undefined)return '';
+  return String(s).replace(/[&<>"']/g,function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+// Stricter escaping for attribute context (e.g. src="...", onclick="...")
+function escapeAttr(s){
+  if(s===null||s===undefined)return '';
+  return String(s).replace(/["'<>&]/g,function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+
 function setLang(lang){
   currentLang=lang;localStorage.setItem(LANG_KEY,lang);
   var isAr=lang==='ar';
@@ -1554,8 +1569,8 @@ function init(){
       section.style.display='block';
       grid.innerHTML=d.testimonials.map(function(ti){
         var stars='';for(var i=0;i<(ti.rating||5);i++)stars+='★';
-        var initial=(ti.name||'?')[0];
-        return '<div class="testimonial-card"><div class="testimonial-stars">'+stars+'</div><div class="testimonial-text">"'+(ti.text||'')+'"</div><div class="testimonial-author"><div class="testimonial-avatar">'+initial+'</div><div><div class="testimonial-name">'+(ti.name||'')+'</div><div class="testimonial-loc">'+(ti.location||'')+'</div></div></div></div>';
+        var initial=escapeHtml((ti.name||'?')[0]);
+        return '<div class="testimonial-card"><div class="testimonial-stars">'+stars+'</div><div class="testimonial-text">"'+escapeHtml(ti.text||'')+'"</div><div class="testimonial-author"><div class="testimonial-avatar">'+initial+'</div><div><div class="testimonial-name">'+escapeHtml(ti.name||'')+'</div><div class="testimonial-loc">'+escapeHtml(ti.location||'')+'</div></div></div></div>';
       }).join('');
     }catch(e){console.error('testimonials err',e)}
   });
@@ -2284,12 +2299,13 @@ function renderReviews(productId, reviews) {
         var photos = typeof r.photos === 'string' ? JSON.parse(r.photos) : r.photos;
         if (photos && photos.length) {
           photosHtml = '<div class="review-photos">' + photos.map(function(url) {
-            return '<img src="' + url + '" onclick="window.open(\'' + url + '\',\'_blank\')">';
+            var safeUrl = escapeAttr(url);
+            return '<img src="' + safeUrl + '" onclick="window.open(\'' + safeUrl + '\',\'_blank\')">';
           }).join('') + '</div>';
         }
       } catch(e) {}
     }
-    return '<div class="review-card"><div class="review-stars">' + stars + '</div><div class="review-text">' + (r.text || '') + photosHtml + '</div><div class="review-author">' + (r.name || 'Anonymous') + (r.location ? ' — ' + r.location : '') + '</div></div>';
+    return '<div class="review-card"><div class="review-stars">' + stars + '</div><div class="review-text">' + escapeHtml(r.text || '') + photosHtml + '</div><div class="review-author">' + escapeHtml(r.name || 'Anonymous') + (r.location ? ' — ' + escapeHtml(r.location) : '') + '</div></div>';
   }).join('');
 }
 
@@ -2743,7 +2759,9 @@ function addBotMsg(text, extra) {
   var el = document.getElementById('chatMessages');
   var msg = document.createElement('div');
   msg.className = 'chat-msg bot';
-  var formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+  // Escape FIRST, then apply markdown-like formatting (prevents XSS)
+  var safe = escapeHtml(text);
+  var formatted = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
   msg.innerHTML = '<div class="bot-name">🤖 Smart Assistant</div>' + formatted + (extra || '');
   el.appendChild(msg);
   el.scrollTop = el.scrollHeight;
