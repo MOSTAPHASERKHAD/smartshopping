@@ -82,6 +82,8 @@ function doGet(e) {
     case 'newsletter_subscribe': result = newsletterSubscribe(params); break;
     case 'admin_list_subscribers': result = adminListSubscribers(); break;
     case 'ai_chat': result = aiChat(params); break;
+    case 'verify_recovery': result = verifyRecovery(params); break;
+    case 'generate_recovery': result = generateRecoveryCode(); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -135,6 +137,8 @@ function doPost(e) {
     case 'newsletter_subscribe': result = newsletterSubscribe(params); break;
     case 'admin_list_subscribers': result = adminListSubscribers(); break;
     case 'ai_chat': result = aiChat(params); break;
+    case 'verify_recovery': result = verifyRecovery(params); break;
+    case 'generate_recovery': result = generateRecoveryCode(); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -405,6 +409,7 @@ function adminUpdateSettings(params) {
   var sheet = ss.getSheetByName('Settings');
   if (!sheet) return { error: 'Settings sheet not found' };
   var data = sheet.getDataRange().getValues();
+  var passwordChanged = false;
   for (var key in params) {
     if (key === 'action' || key === 'callback') continue;
     var found = false;
@@ -412,6 +417,11 @@ function adminUpdateSettings(params) {
       if (data[i][0] === key) { sheet.getRange(i + 1, 2).setValue(params[key]); found = true; break; }
     }
     if (!found) sheet.appendRow([key, params[key]]);
+    if (key === 'admin_password') passwordChanged = true;
+  }
+  if (passwordChanged) {
+    var recovery = generateRecoveryCode();
+    return { ok: true, recovery_code: recovery.recovery_code || '' };
   }
   return { ok: true };
 }
@@ -555,7 +565,6 @@ function verifyAdmin(params) {
 }
 
 function hashString(str) {
-  // Proper SHA-256 hashing via Apps Script built-in digest
   var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, str);
   var hex = '';
   for (var i = 0; i < bytes.length; i++) {
@@ -564,6 +573,46 @@ function hashString(str) {
     hex += ('0' + b.toString(16)).slice(-2);
   }
   return hex;
+}
+
+function generateRecoveryCode() {
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var code = '';
+  for (var i = 0; i < 16; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  var hashed = hashString(code);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Settings');
+  if (!sheet) return { error: 'Settings sheet not found' };
+  var data = sheet.getDataRange().getValues();
+  var found = false;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === 'admin_recovery') { sheet.getRange(i + 1, 2).setValue(hashed); found = true; break; }
+  }
+  if (!found) sheet.appendRow(['admin_recovery', hashed]);
+  return { ok: true, recovery_code: code };
+}
+
+function verifyRecovery(params) {
+  var settings = getSettings();
+  var storedHash = settings.admin_recovery || '';
+  var providedHash = params.code ? hashString(params.code) : '';
+  if (!storedHash) return { ok: false, error: 'لا يوجد رمز استرجاع. استخدم إعدادات Google Sheet.' };
+  if (!providedHash) return { ok: false, error: 'أدخل رمز الاسترجاع' };
+  if (providedHash === storedHash) {
+    // Invalidate recovery code after use (one-time use)
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('Settings');
+    if (sheet) {
+      var data = sheet.getDataRange().getValues();
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][0] === 'admin_recovery') { sheet.getRange(i + 1, 2).setValue(''); break; }
+      }
+    }
+    return { ok: true };
+  }
+  return { ok: false, error: 'رمز الاسترجاع غير صحيح' };
 }
 
 function validateCoupon(params) {

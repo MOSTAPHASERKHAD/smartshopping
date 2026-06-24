@@ -102,6 +102,12 @@ body.rtl{font-family:var(--font-ar)}
 .modal-close:hover{background:var(--border)}
 .modal-body{padding:20px 24px 24px}
 .modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.order-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:none;align-items:center;justify-content:center;padding:16px}
+.order-modal-content{background:var(--card);border-radius:var(--radius);width:100%;max-height:90vh;overflow-y:auto}
+.order-modal-header{padding:16px 24px;border-bottom:1px solid var(--border)}
+.order-modal-header h2{font-size:1rem;font-weight:700}
+.order-modal-body{padding:20px 24px}
+.order-modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
 
 /* Toast */
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:var(--radius-sm);font-weight:600;font-size:.8rem;z-index:3000;animation:slideUp .25s;box-shadow:0 4px 12px rgba(0,0,0,.15)}
@@ -183,6 +189,70 @@ body.rtl{font-family:var(--font-ar)}
       <input type="password" id="loginPass" placeholder="أدخل كلمة المرور" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()">تسجيل الدخول</button>
+    <div style="text-align:center;margin-top:12px">
+      <a href="#" onclick="showForgotScreen();return false" style="color:#90A4AE;font-size:13px;text-decoration:none">نسيت كلمة المرور؟</a>
+    </div>
+  </div>
+</div>
+
+<!-- Setup Screen (first time) -->
+<div class="login-screen" id="setupScreen" style="display:none">
+  <div class="login-card">
+    <div class="login-logo"><img src="logo.png" alt="Smart Shopping" style="height:50px;width:auto"></div>
+    <h2>🔑 إنشاء كلمة المرور</h2>
+    <p>هذه أول مرة تدخل فيها. أنشئ كلمة مرور جديدة</p>
+    <div class="login-error" id="setupError" style="display:none"></div>
+    <div class="form-group">
+      <label>كلمة المرور الجديدة</label>
+      <input type="password" id="setupPass" placeholder="أدخل كلمة المرور" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label>تأكيد كلمة المرور</label>
+      <input type="password" id="setupPassConfirm" placeholder="أعد كتابة كلمة المرور" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSetup()">
+    </div>
+    <button class="btn-login" id="setupBtn" onclick="doSetup()">🔐 حفظ كلمة المرور</button>
+  </div>
+</div>
+
+<!-- Forgot Password Screen -->
+<div class="login-screen" id="forgotScreen" style="display:none">
+  <div class="login-card">
+    <div class="login-logo"><img src="logo.png" alt="Smart Shopping" style="height:50px;width:auto"></div>
+    <h2>🔓 استرجاع الحساب</h2>
+    <p>أدخل رمز الاسترجاع الذي حصلت عليه عند إنشاء كلمة المرور</p>
+    <div class="login-error" id="forgotError" style="display:none"></div>
+    <div class="form-group">
+      <label>رمز الاسترجاع</label>
+      <input type="text" id="recoveryCode" placeholder="مثال: AB12XY34CD56WQ78" style="text-align:center;font-family:monospace;letter-spacing:2px;font-size:18px" onkeydown="if(event.key==='Enter')doVerifyRecovery()">
+    </div>
+    <button class="btn-login" id="forgotBtn" onclick="doVerifyRecovery()">🔍 تحقق</button>
+    <div style="text-align:center;margin-top:12px">
+      <a href="#" onclick="showLoginScreen();return false" style="color:#90A4AE;font-size:13px;text-decoration:none">← العودة لتسجيل الدخول</a>
+    </div>
+  </div>
+</div>
+
+<!-- Recovery Code Modal -->
+<div class="order-modal" id="recoveryModal">
+  <div class="order-modal-content" style="max-width:480px">
+    <div class="order-modal-header">
+      <h2>🔑 رمز الاسترجاع</h2>
+    </div>
+    <div class="order-modal-body">
+      <div style="background:#1a2a44;border:2px dashed #FFD700;border-radius:12px;padding:20px;text-align:center;margin:16px 0">
+        <div style="color:#90A4AE;font-size:13px;margin-bottom:8px">احفظ هذا الرمز في مكان آمن! لن يظهر مرة أخرى</div>
+        <div id="recoveryCodeDisplay" style="font-family:monospace;font-size:28px;letter-spacing:4px;color:#FFD700;font-weight:bold;direction:ltr;user-select:all"></div>
+      </div>
+      <div style="background:#1a2a44;border-radius:8px;padding:12px;font-size:13px;color:#B0BEC5;line-height:1.7">
+        <strong>⚠️ مهم:</strong><br>
+        • هذا الرمز يستخدم مرة واحدة فقط لاسترجاع الحساب إذا نسيت كلمة المرور<br>
+        • بعد استخدامه، سيتم توليد رمز جديد تلقائياً<br>
+        • إذا فقدت الرمز، يمكنك حذف صف <code>admin_password</code> من ورقة Settings في Google Sheet
+      </div>
+    </div>
+    <div class="order-modal-footer">
+      <button class="btn btn-accent" onclick="closeRecoveryModal()">✅ حفظت الرمز</button>
+    </div>
   </div>
 </div>
 
@@ -1292,6 +1362,7 @@ async function saveSettings() {
     gemini_api_key: (document.getElementById('set_gemini_api_key')||{}).value || '',
     ai_prompt: (document.getElementById('set_ai_prompt')||{}).value || ''
   };
+  var passChanged = !!passValue;
   if (passValue) {
     data.admin_password = await hashPasswordAsync(passValue);
   }
@@ -1299,7 +1370,13 @@ async function saveSettings() {
   for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
   var cbName = 'settings_' + Date.now();
   url += '&callback=' + cbName;
-  window[cbName] = function() { delete window[cbName]; };
+  window[cbName] = function(res) {
+    delete window[cbName];
+    if (passChanged && res && res.recovery_code) {
+      document.getElementById('recoveryCodeDisplay').textContent = res.recovery_code;
+      document.getElementById('recoveryModal').style.display = 'flex';
+    }
+  };
   var script = document.createElement('script');
   script.src = url;
   script.onload = function() { toast('تم حفظ الإعدادات'); };
@@ -1639,10 +1716,101 @@ function showAdminPanel() {
   document.getElementById('adminPanel').classList.remove('hidden');
 }
 
-// Check on load — if no password set in backend, skip login
+// Setup screen functions
+function doSetup() {
+  var pass = document.getElementById('setupPass').value;
+  var confirm = document.getElementById('setupPassConfirm').value;
+  if (!pass || pass.length < 6) {
+    document.getElementById('setupError').textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+    document.getElementById('setupError').style.display = 'block';
+    return;
+  }
+  if (pass !== confirm) {
+    document.getElementById('setupError').textContent = 'كلمة المرور غير متطابقة';
+    document.getElementById('setupError').style.display = 'block';
+    return;
+  }
+  var btn = document.getElementById('setupBtn');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ...';
+  document.getElementById('setupError').style.display = 'none';
+  hashPasswordAsync(pass).then(function(passHash) {
+    var url = API_URL + '?action=admin_update_settings&admin_password=' + encodeURIComponent(passHash) + '&callback=setup_cb';
+    window.setup_cb = function(res) {
+      delete window.setup_cb;
+      btn.disabled = false; btn.textContent = '🔐 حفظ كلمة المرور';
+      if (res && res.recovery_code) {
+        document.getElementById('recoveryCodeDisplay').textContent = res.recovery_code;
+        document.getElementById('recoveryModal').style.display = 'flex';
+      }
+      showLoginScreen();
+      document.getElementById('loginError').textContent = '✅ تم إنشاء كلمة المرور. سجل الدخول الآن.';
+      document.getElementById('loginError').style.display = 'block';
+    };
+    var s = document.createElement('script');
+    s.src = url;
+    document.head.appendChild(s);
+  });
+}
+
+function showLoginScreen() {
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('forgotScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginPass').value = '';
+}
+
+function showForgotScreen() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('forgotScreen').style.display = 'flex';
+  document.getElementById('recoveryCode').value = '';
+  document.getElementById('forgotError').style.display = 'none';
+}
+
+function showSetupScreen() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('forgotScreen').style.display = 'none';
+  document.getElementById('setupScreen').style.display = 'flex';
+  document.getElementById('setupPass').value = '';
+  document.getElementById('setupPassConfirm').value = '';
+  document.getElementById('setupError').style.display = 'none';
+}
+
+function closeRecoveryModal() {
+  document.getElementById('recoveryModal').style.display = 'none';
+}
+
+function doVerifyRecovery() {
+  var code = document.getElementById('recoveryCode').value.trim().toUpperCase();
+  if (!code) {
+    document.getElementById('forgotError').textContent = 'أدخل رمز الاسترجاع';
+    document.getElementById('forgotError').style.display = 'block';
+    return;
+  }
+  var btn = document.getElementById('forgotBtn');
+  btn.disabled = true; btn.textContent = 'جاري التحقق...';
+  document.getElementById('forgotError').style.display = 'none';
+  apiGet('verify_recovery', { code: code }, function(data) {
+    btn.disabled = false; btn.textContent = '🔍 تحقق';
+    if (data && data.ok) {
+      // Recovery verified — clear password so setup screen appears
+      apiGet('admin_update_settings', { admin_password: '' }, function() {
+        document.getElementById('forgotError').textContent = '✅ تم التحقق. أنشئ كلمة مرور جديدة.';
+        document.getElementById('forgotError').style.display = 'block';
+        document.getElementById('forgotError').style.color = '#4CAF50';
+        showSetupScreen();
+      });
+    } else {
+      document.getElementById('forgotError').textContent = (data && data.error) || 'رمز الاسترجاع غير صحيح';
+      document.getElementById('forgotError').style.display = 'block';
+      document.getElementById('forgotError').style.color = '#ff5252';
+    }
+  });
+}
+
+// Check on load
 apiGet('verify_admin', { password: '' }, function(data) {
-  if (data && data.ok && data.warning === 'No password set') {
-    showAdminPanel();
+  if (data && data.setupRequired) {
+    showSetupScreen();
   } else if (checkAuth()) {
     showAdminPanel();
   } else {
