@@ -1,8 +1,14 @@
-const CACHE_NAME = 'smartshopping-v12';
+const CACHE_NAME = 'smartshopping-v13';
 const ASSETS = [
   '/smartshopping/',
   '/smartshopping/index.html',
-  '/smartshopping/manifest.json'
+  '/smartshopping/admin.html',
+  '/smartshopping/manifest.json',
+  '/smartshopping/themes/theme-schema.js',
+  '/smartshopping/themes/theme-engine.js',
+  '/smartshopping/themes/default-themes.js',
+  '/smartshopping/themes/theme-importer.js',
+  '/smartshopping/themes/theme-editor.js'
 ];
 
 self.addEventListener('install', e => {

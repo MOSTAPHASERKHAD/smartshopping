@@ -16,16 +16,16 @@
     draft: null
   };
 
-  // ── API helpers (delegate to admin's apiGet/apiPost if present) ──
+  // ── API helpers (use JSONP directly — admin's apiPost with no-cors is unreliable) ──
   function apiGet(action, params, cb) {
     if (global.apiGet) { global.apiGet(action, params, cb); return; }
-    fallbackJSONP(action, params, cb);
+    jsonpCall(action, params, cb);
   }
   function apiPost(action, params, cb) {
-    if (global.apiPost) { global.apiPost(action, params, function () { cb({ ok: true }); }); return; }
-    fallbackJSONP(action, params, cb);
+    // bypass admin's no-cors POST; use JSONP (GET) directly
+    jsonpCall(action, params, cb);
   }
-  function fallbackJSONP(action, params, cb) {
+  function jsonpCall(action, params, cb) {
     var url = API_URL + '?action=' + action;
     if (params) for (var k in params) url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
     var cbName = 'cb_th_' + Date.now() + '_' + Math.floor(Math.random() * 9999);
