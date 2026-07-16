@@ -92,9 +92,28 @@
     }
   ];
 
+  // ── Image tokens: logo, banner, favicon per theme ──
+  var IMAGE_TOKENS = [
+    { key: 'logoText',    label: 'نص الشعار',      def: 'Smart Shopping' },
+    { key: 'logoIcon',    label: 'أيقونة الشعار',   desc: 'إيموجي أو حرف', def: '🛒' },
+    { key: 'favicon',     label: 'أيقونة التبويب',  desc: 'إيموجي', def: '🛒' },
+    { key: 'bannerGradient', label: 'تدرج البانر',  desc: 'CSS gradient للخلفية', def: '' },
+    { key: 'bannerAccent',   label: 'لون البانر',   desc: 'لون مميز للبانر', def: '' }
+  ];
+
+  // ── Generate SVG logo data URI ──
+  function makeLogoSvg(text, icon, fg, bg) {
+    fg = fg || '#1a1a2e'; bg = bg || 'transparent';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="48">' +
+      '<rect width="200" height="48" fill="' + bg + '" rx="8"/>' +
+      '<text x="10" y="33" font-family="Arial,sans-serif" font-size="28" font-weight="bold" fill="' + fg + '">' +
+      (icon || '') + ' ' + (text || '') + '</text></svg>';
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+  }
+
   // ── Build a default token object from schema defaults ──
   function defaultTokens() {
-    var t = { colors: {}, fonts: {}, spacing: {}, radius: {}, shadow: {}, components: {} };
+    var t = { colors: {}, fonts: {}, spacing: {}, radius: {}, shadow: {}, components: {}, images: {} };
     COLOR_TOKENS.forEach(function (c) { t.colors[c.key] = c.def; });
     FONT_TOKENS.forEach(function (f) { t.fonts[f.key] = f.def; });
     SPACING_TOKENS.forEach(function (s) { t.spacing[s.key] = s.def; });
@@ -104,6 +123,7 @@
       t.components[c.key] = {};
       c.props.forEach(function (p) { t.components[c.key][p.key] = p.def; });
     });
+    IMAGE_TOKENS.forEach(function (img) { t.images[img.key] = img.def; });
     return t;
   }
 
@@ -151,6 +171,11 @@
         if (input.components[c.key]) Object.assign(base.components[c.key], input.components[c.key]);
       });
     }
+    if (input.images) {
+      IMAGE_TOKENS.forEach(function (img) {
+        if (input.images[img.key] != null) base.images[img.key] = String(input.images[img.key]);
+      });
+    }
     return base;
   }
 
@@ -162,10 +187,12 @@
     RADIUS_TOKENS: RADIUS_TOKENS,
     SHADOW_TOKENS: SHADOW_TOKENS,
     COMPONENT_TOKENS: COMPONENT_TOKENS,
+    IMAGE_TOKENS: IMAGE_TOKENS,
     defaultTokens: defaultTokens,
     darkTokens: darkTokens,
     isColor: isColor,
     coerceColor: coerceColor,
-    normalizeTokens: normalizeTokens
+    normalizeTokens: normalizeTokens,
+    makeLogoSvg: makeLogoSvg
   };
 })(window);

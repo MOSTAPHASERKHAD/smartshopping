@@ -146,6 +146,17 @@
     var compWrap = document.getElementById('te-components');
     if (compWrap) compWrap.innerHTML = compHtml;
 
+    // images
+    if (!d.tokens.images) d.tokens.images = {};
+    var imgHtml = Schema.IMAGE_TOKENS.map(function (img) {
+      var val = d.tokens.images[img.key] || img.def;
+      return '<div class="te-field"><label>' + img.label + '</label>' +
+        '<input type="text" value="' + esc(val) + '" oninput="ThemeEditor.updateImage(\'' + img.key + '\',this.value)"' +
+        (img.desc ? ' title="' + esc(img.desc) + '"' : '') + '></div>';
+    }).join('');
+    var imgWrap = document.getElementById('te-images');
+    if (imgWrap) imgWrap.innerHTML = imgHtml;
+
     setVal('te_mode', Engine.mode);
   }
 
@@ -184,6 +195,11 @@
   }
   function updateComponent(comp, prop, val) {
     editorState.draft.tokens.components[comp][prop] = val;
+    livePreview();
+  }
+  function updateImage(key, val) {
+    if (!editorState.draft.tokens.images) editorState.draft.tokens.images = {};
+    editorState.draft.tokens.images[key] = val;
     livePreview();
   }
 
@@ -226,7 +242,8 @@
       theme_json: JSON.stringify({
         colors: d.tokens.colors, fonts: d.tokens.fonts,
         spacing: d.tokens.spacing, radius: d.tokens.radius,
-        shadow: d.tokens.shadow, components: d.tokens.components
+        shadow: d.tokens.shadow, components: d.tokens.components,
+        images: d.tokens.images || {}
       })
     };
     global.apiGet('admin_save_theme', payload, function (res) {
@@ -319,6 +336,7 @@
     updateFont: updateFont,
     updateRadius: updateRadius,
     updateComponent: updateComponent,
+    updateImage: updateImage,
     livePreview: livePreview
   };
 })(window);
