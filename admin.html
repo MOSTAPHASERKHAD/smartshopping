@@ -1293,7 +1293,7 @@ function updateOrderStatus(row, status) {
         var msg = 'مرحبا ' + (o.name || '') + '\n' +
           'طلبك رقم ' + (o.order_id || '') + '\n' +
           'الحالة الجديدة: ' + (statusNames[status] || status) + '\n\n' +
-          'تتبع طلبك: https://smartshopping-yjt.pages.dev/';
+          'تتبع طلبك: https://mostaphaserkhad.github.io/smartshopping/';
         if (confirm('إرسال تحديث الحالة لعميل ' + o.name + ' عبر واتساب؟')) {
           window.open('https://wa.me/' + o.phone + '?text=' + encodeURIComponent(msg), '_blank');
         }

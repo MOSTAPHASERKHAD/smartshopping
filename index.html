@@ -11,14 +11,14 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Smart Shopping - تسوّق بذكاء">
 <meta property="og:description" content="منتجات متنوعة بأفضل الأسعار — الدفع عند الاستلام — التوصيل لجميع ولايات الجزائر">
-<meta property="og:url" content="https://smartshopping-yjt.pages.dev/">
+<meta property="og:url" content="https://mostaphaserkhad.github.io/smartshopping/">
 <meta property="og:site_name" content="Smart Shopping">
 <meta property="og:locale" content="ar_DZ">
 <meta property="og:locale:alternate" content="en_DZ">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Smart Shopping - تسوّق بذكاء">
 <meta name="twitter:description" content="منتجات متنوعة بأفضل الأسعار — الدفع عند الاستلام">
-<link rel="canonical" href="https://smartshopping-yjt.pages.dev/">
+<link rel="canonical" href="https://mostaphaserkhad.github.io/smartshopping/">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a1a2e">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -650,7 +650,7 @@ body.rtl .back-to-top{left:auto;right:24px}
 }
 </style>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","name":"Smart Shopping","url":"https://smartshopping-yjt.pages.dev/","description":"متجر إلكتروني جزائري — منتجات متنوعة بأفضل الأسعار مع التوصيل لجميع الولايات","potentialAction":{"@type":"SearchAction","target":"https://smartshopping-yjt.pages.dev/?q={search_term_string}","query-input":"required name=search_term_string"}}
+{"@context":"https://schema.org","@type":"WebSite","name":"Smart Shopping","url":"https://mostaphaserkhad.github.io/smartshopping/","description":"متجر إلكتروني جزائري — منتجات متنوعة بأفضل الأسعار مع التوصيل لجميع الولايات","potentialAction":{"@type":"SearchAction","target":"https://mostaphaserkhad.github.io/smartshopping/?q={search_term_string}","query-input":"required name=search_term_string"}}
 </script>
 </head>
 <body class="rtl">
@@ -1990,7 +1990,7 @@ function submitOrder(e){
     document.getElementById('checkoutForm').classList.add('hidden');
     var sc=document.getElementById('orderSuccess');sc.classList.remove('hidden');
     var id=data.order_id;var wa=storeSettings.phone||'213557543177';
-    var trackUrl='https://smartshopping-yjt.pages.dev/';
+    var trackUrl='https://mostaphaserkhad.github.io/smartshopping/';
     var msg=encodeURIComponent(t('whatsapp_msg')+' '+id+'\n\nتتبع طلبك: '+trackUrl);
     sc.innerHTML='<div class="success-wrap fade-in">'+
       '<div class="success-icon">✓</div>'+
@@ -3223,7 +3223,7 @@ function submitLandingOrder(e,productId){
     }
     var orderId=data.order_id;
     var wa=storeSettings.phone||'213557543177';
-    var trackUrl='https://smartshopping-yjt.pages.dev/';
+    var trackUrl='https://mostaphaserkhad.github.io/smartshopping/';
     var waMsg=encodeURIComponent((currentLang==='ar'?'مرحباً، لدي طلب برقم ':'Hello, my order number is ')+orderId+'\n\n'+(currentLang==='ar'?'تتبع طلبك: ':'Track your order: ')+trackUrl);
     var container=document.getElementById('lpSuccessContainer');
     var lpGrid=document.querySelector('.lp-grid');
