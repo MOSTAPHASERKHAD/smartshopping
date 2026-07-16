@@ -8,6 +8,12 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- Theme Engine -->
+<script src="themes/theme-schema.js"></script>
+<script src="themes/theme-engine.js"></script>
+<script src="themes/default-themes.js"></script>
+<script src="themes/theme-importer.js"></script>
+<script src="themes/theme-editor.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -108,6 +114,16 @@ body.rtl{font-family:var(--font-ar)}
 .order-modal-header h2{font-size:1rem;font-weight:700}
 .order-modal-body{padding:20px 24px}
 .order-modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+/* Theme Editor Grid */
+.te-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:6px}
+.te-color-row{display:flex;flex-direction:column;gap:3px}
+.te-color-row label{font-size:.72rem;font-weight:600;color:var(--text2)}
+.te-color-controls{display:flex;align-items:center;gap:6px}
+.te-color-controls input[type=color]{width:34px;height:30px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;padding:2px}
+.te-hex{width:90px!important;font-family:monospace!important;direction:ltr!important;text-align:left!important}
+.te-field{display:flex;flex-direction:column;gap:3px}
+.te-field label{font-size:.72rem;font-weight:600;color:var(--text2)}
 
 /* Toast */
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:var(--radius-sm);font-weight:600;font-size:.8rem;z-index:3000;animation:slideUp .25s;box-shadow:0 4px 12px rgba(0,0,0,.15)}
@@ -272,6 +288,7 @@ body.rtl{font-family:var(--font-ar)}
     <a href="#" onclick="showSection('testimonials')" id="nav-testimonials"><span class="icon">⭐</span><span>الشهادات</span></a>
     <a href="#" onclick="showSection('reviews')" id="nav-reviews"><span class="icon">💬</span><span>التقييمات</span></a>
     <a href="#" onclick="showSection('banners')" id="nav-banners"><span class="icon">🖼️</span><span>البانرات</span></a>
+    <a href="#" onclick="showSection('themes')" id="nav-themes"><span class="icon">🎨</span><span>الثيمات</span></a>
     <a href="#" onclick="showSection('newsletter')" id="nav-newsletter"><span class="icon">📧</span><span>النشرة البريدية</span></a>
     <a href="#" onclick="showSection('pages')" id="nav-pages"><span class="icon">📄</span><span>الصفحات</span></a>
   </nav>
@@ -431,6 +448,27 @@ body.rtl{font-family:var(--font-ar)}
     <p style="color:var(--text2);font-size:.82rem;margin-bottom:16px">أضف صور البانرات التي تظهر في أعلى الصفحة الرئيسية. الحد الأقصى 5 بانرات.</p>
     <div id="bannersList"></div>
     <button class="btn btn-accent" onclick="saveBanners()" style="margin-top:12px">حفظ البانرات</button>
+  </div>
+
+  <!-- Themes -->
+  <div id="sec-themes" class="hidden">
+    <div class="top-bar">
+      <h1>🎨 إدارة الثيمات</h1>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <label class="btn btn-outline btn-sm" style="cursor:pointer">
+          📥 استيراد ثيم (Shrine / Shopify / أي صيغة)
+          <input type="file" accept=".json,application/json" style="display:none" onchange="ThemeEditor.importThemeFile(this)">
+        </label>
+        <button class="btn btn-accent btn-sm" onclick="ThemeEditor.editTheme()">➕ ثيم جديد</button>
+      </div>
+    </div>
+    <p style="color:var(--text2);font-size:.82rem;margin-bottom:16px">استورد أي ملف ثيم (بما فيه Shrine Theme و Shopify) وسيتعرف النظام على الألوان تلقائياً. الثيم الافتراضي يُطبَّق على المتجر.</p>
+    <div class="panel">
+      <div class="panel-header"><h3>الثيمات المحفوظة</h3></div>
+      <div class="panel-body"><div class="table-wrap"><table><thead><tr>
+        <th>الاسم</th><th>النمط</th><th>المعرّف</th><th>الحالة</th><th>إجراءات</th>
+      </tr></thead><tbody id="themes-list"></tbody></table></div></div>
+    </div>
   </div>
 
   <!-- Newsletter -->
@@ -675,7 +713,7 @@ function apiGet(action, params, callback, retries) {
 
 // ===== NAV =====
 function showSection(name) {
-  ['dashboard','products','orders','settings','coupons','testimonials','reviews','banners','newsletter','pages'].forEach(function(s) {
+  ['dashboard','products','orders','settings','coupons','testimonials','reviews','banners','themes','newsletter','pages'].forEach(function(s) {
     var sec = document.getElementById('sec-' + s);
     if (sec) sec.classList.toggle('hidden', s !== name);
     var nav = document.getElementById('nav-' + s);
@@ -689,8 +727,14 @@ function showSection(name) {
   if (name === 'testimonials') loadTestimonials();
   if (name === 'reviews') loadReviews();
   if (name === 'banners') loadBanners();
+  if (name === 'themes') loadThemesSection();
   if (name === 'newsletter') loadNewsletter();
   if (name === 'pages') loadPages();
+}
+
+function loadThemesSection() {
+  if (window.ThemeEngine) ThemeEngine.init();
+  if (window.ThemeEditor) ThemeEditor.load();
 }
 
 function toast(msg, isNew) {
@@ -1818,6 +1862,42 @@ apiGet('verify_admin', { password: '' }, function(data) {
   }
 });
 </script>
+
+<!-- Theme Editor Modal -->
+<div class="modal-overlay" id="themeEditorModal">
+  <div class="modal" style="width:760px">
+    <div class="modal-header">
+      <h3>🎨 محرر الثيم</h3>
+      <button class="modal-close" onclick="ThemeEditor.closeEditor()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>اسم الثيم</label><input id="te_name" type="text"></div>
+        <div class="form-group"><label>المعرّف (ID)</label><input id="te_id" type="text"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>المؤلف</label><input id="te_author" type="text"></div>
+        <div class="form-group"><label>الإصدار</label><input id="te_version" type="text"></div>
+      </div>
+      <div class="form-group"><label>النمط الأساسي</label>
+        <select id="te_base"><option value="light">فاتح</option><option value="dark">داكن</option></select>
+      </div>
+      <h4 style="margin:14px 0 8px">الألوان</h4>
+      <div id="te-colors" class="te-grid"></div>
+      <h4 style="margin:14px 0 8px">الخطوط</h4>
+      <div id="te-fonts" class="te-grid"></div>
+      <h4 style="margin:14px 0 8px">الزوايا (Radius)</h4>
+      <div id="te-radius" class="te-grid"></div>
+      <h4 style="margin:14px 0 8px">المكوّنات</h4>
+      <div id="te-components" class="te-grid"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="ThemeEditor.exportTheme()">تصدير JSON</button>
+      <button class="btn btn-accent" onclick="ThemeEditor.saveTheme()">💾 حفظ الثيم</button>
+    </div>
+  </div>
+</div>
+
 </div>
 </body>
 </html>

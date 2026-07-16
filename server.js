@@ -10,7 +10,9 @@ const ALLOWED = new Set([
   '/manifest.json', '/sitemap.xml', '/robots.txt',
   '/favicon.ico', '/icon-192.png', '/icon-512.png',
   '/logo.png', '/logo1.png',
-  '/banner-hero.png', '/banner1.png', '/banner-sale.png', '/banner-accessories.png'
+  '/banner-hero.png', '/banner1.png', '/banner-sale.png', '/banner-accessories.png',
+  '/themes/theme-schema.js', '/themes/theme-engine.js', '/themes/default-themes.js',
+  '/themes/theme-importer.js', '/themes/theme-editor.js'
 ]);
 
 http.createServer((req, res) => {

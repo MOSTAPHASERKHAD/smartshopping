@@ -84,6 +84,10 @@ function doGet(e) {
     case 'ai_chat': result = aiChat(params); break;
     case 'verify_recovery': result = verifyRecovery(params); break;
     case 'generate_recovery': result = generateRecoveryCode(); break;
+    case 'admin_list_themes': result = adminListThemes(); break;
+    case 'admin_save_theme': result = adminSaveTheme(params); break;
+    case 'admin_delete_theme': result = adminDeleteTheme(params); break;
+    case 'admin_set_default_theme': result = adminSetDefaultTheme(params); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -139,6 +143,10 @@ function doPost(e) {
     case 'ai_chat': result = aiChat(params); break;
     case 'verify_recovery': result = verifyRecovery(params); break;
     case 'generate_recovery': result = generateRecoveryCode(); break;
+    case 'admin_list_themes': result = adminListThemes(); break;
+    case 'admin_save_theme': result = adminSaveTheme(params); break;
+    case 'admin_delete_theme': result = adminDeleteTheme(params); break;
+    case 'admin_set_default_theme': result = adminSetDefaultTheme(params); break;
     default: result = { error: 'Unknown action' };
   }
 
@@ -959,6 +967,99 @@ function adminListSubscribers() {
   }
   subs.reverse();
   return { subscribers: subs };
+}
+
+// === Themes (advanced theming system) ===
+function getThemesSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Themes');
+  if (!sheet) {
+    sheet = ss.insertSheet('Themes');
+    sheet.appendRow(['id', 'name', 'author', 'version', 'base', 'is_default', 'theme_json', 'created_at']);
+  }
+  return sheet;
+}
+
+function adminListThemes() {
+  var sheet = getThemesSheet();
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { themes: [] };
+  var headers = data[0];
+  var themes = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var t = {};
+    for (var j = 0; j < headers.length; j++) { t[headers[j]] = row[j]; }
+    var tokens = {};
+    try { tokens = JSON.parse(t.theme_json || '{}'); } catch (e) { tokens = {}; }
+    themes.push({
+      id: t.id, name: t.name, author: t.author, version: t.version,
+      base: t.base, is_default: (t.is_default === true || t.is_default === 'TRUE' || t.is_default === 'true' || t.is_default === 1),
+      tokens: tokens
+    });
+  }
+  return { themes: themes };
+}
+
+function adminSaveTheme(params) {
+  var id = _sanitize(params.id, 100);
+  var name = _sanitize(params.name, 100);
+  var author = _sanitize(params.author, 100);
+  var version = _sanitize(params.version, 20);
+  var base = params.base === 'dark' ? 'dark' : 'light';
+  var themeJson = params.theme_json || '{}';
+  try { JSON.parse(themeJson); } catch (e) { return { error: 'Invalid theme JSON' }; }
+  var sheet = getThemesSheet();
+  var data = sheet.getDataRange().getValues();
+  var idCol = data[0].indexOf('id');
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][idCol] === id) {
+      sheet.getRange(i + 1, 2).setValue(name);
+      sheet.getRange(i + 1, 3).setValue(author);
+      sheet.getRange(i + 1, 4).setValue(version);
+      sheet.getRange(i + 1, 5).setValue(base);
+      sheet.getRange(i + 1, 7).setValue(themeJson);
+      return { ok: true, updated: true };
+    }
+  }
+  var now = Utilities.formatDate(new Date(), 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
+  sheet.appendRow([id, name, author, version, base, false, themeJson, now]);
+  return { ok: true, created: true };
+}
+
+function adminDeleteTheme(params) {
+  var id = params.theme_id || params.id || '';
+  if (!id) return { error: 'No theme id' };
+  var sheet = getThemesSheet();
+  var data = sheet.getDataRange().getValues();
+  var idCol = data[0].indexOf('id');
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][idCol] === id) {
+      sheet.deleteRow(i + 1);
+      return { ok: true };
+    }
+  }
+  return { error: 'Theme not found' };
+}
+
+function adminSetDefaultTheme(params) {
+  var id = params.theme_id || params.id || '';
+  if (!id) return { error: 'No theme id' };
+  var sheet = getThemesSheet();
+  var data = sheet.getDataRange().getValues();
+  var idCol = data[0].indexOf('id');
+  var defCol = data[0].indexOf('is_default');
+  var found = false;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][idCol] === id) {
+      sheet.getRange(i + 1, defCol + 1).setValue(true);
+      found = true;
+    } else {
+      sheet.getRange(i + 1, defCol + 1).setValue(false);
+    }
+  }
+  if (!found) return { error: 'Theme not found' };
+  return { ok: true };
 }
 
 // === AI Chat with Gemini ===
