@@ -985,11 +985,17 @@ function adminListThemes() {
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) return { themes: [] };
   var headers = data[0];
+  var idCol = headers.indexOf('id');
   var themes = [];
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     var t = {};
     for (var j = 0; j < headers.length; j++) { t[headers[j]] = row[j]; }
+    // auto-fix empty IDs
+    if (!t.id && idCol >= 0) {
+      t.id = 'theme-' + Utilities.formatDate(new Date(), 'GMT', 'yyyyMMddHHmmss');
+      sheet.getRange(i + 1, idCol + 1).setValue(t.id);
+    }
     var tokens = {};
     try { tokens = JSON.parse(t.theme_json || '{}'); } catch (e) { tokens = {}; }
     themes.push({
@@ -1003,6 +1009,7 @@ function adminListThemes() {
 
 function adminSaveTheme(params) {
   var id = _sanitize(params.id, 100);
+  if (!id) id = 'theme-' + Utilities.formatDate(new Date(), 'GMT', 'yyyyMMddHHmmss');
   var name = _sanitize(params.name, 100);
   var author = _sanitize(params.author, 100);
   var version = _sanitize(params.version, 20);
@@ -1029,7 +1036,7 @@ function adminSaveTheme(params) {
 
 function adminDeleteTheme(params) {
   var id = params.theme_id || params.id || '';
-  if (!id) return { error: 'No theme id' };
+  if (!id) return { error: 'Theme ID is empty - please re-save the theme first' };
   var sheet = getThemesSheet();
   var data = sheet.getDataRange().getValues();
   var idCol = data[0].indexOf('id');
