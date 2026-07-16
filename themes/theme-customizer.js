@@ -41,7 +41,6 @@
     state.base = theme.base;
     state.tokens = JSON.parse(JSON.stringify(theme.tokens));
     state.customizerOpen = true;
-    renderCustomizer();
     showCustomizerUI();
   }
 
@@ -77,6 +76,8 @@
     if (el) el.remove();
   }
 
+  function strAttr(s) { return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
   function getHTML() {
     var c = state.tokens.colors;
     var colorPickers = Schema.COLOR_TOKENS.map(function (tk) {
@@ -90,15 +91,14 @@
       '</div>';
     }).join('');
 
-    var fontOpts = Schema.FONT_OPTIONS.map(function (o) {
-      return '<option value="' + o.value.replace(/'/g,"&#39;") + '">' + o.label + '</option>';
-    }).join('');
     var fontPickers = Schema.FONT_TOKENS.map(function (tk) {
       var val = state.tokens.fonts[tk.key] || tk.def;
+      var opts = Schema.FONT_OPTIONS.map(function (o) {
+        var sel = o.value === val ? ' selected' : '';
+        return '<option value="' + strAttr(o.value) + '"' + sel + '>' + o.label + '</option>';
+      }).join('');
       return '<div class="sk-cp-row"><label>' + tk.label + '</label>' +
-        '<select data-fk="' + tk.key + '" onchange="ThemeCustomizer.fontChange(\'' + tk.key + '\',this.value)">' +
-          fontOpts.replace('value="' + val.replace(/'/g,"&#39;") + '"', 'value="' + val.replace(/'/g,"&#39;") + '" selected') +
-        '</select></div>';
+        '<select data-fk="' + tk.key + '" onchange="ThemeCustomizer.fontChange(\'' + tk.key + '\',this.value)">' + opts + '</select></div>';
     }).join('');
 
     var radiusPickers = Schema.RADIUS_TOKENS.map(function (tk) {
