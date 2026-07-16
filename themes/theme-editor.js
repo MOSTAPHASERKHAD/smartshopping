@@ -337,9 +337,8 @@
   }
 
   function toastAdmin(msg) {
-    if (global.toast) { global.toast(msg); return; }
     var el = document.createElement('div');
-    el.className = 'toast';
+    el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:8px;font-weight:700;font-size:.85rem;z-index:999999;background:#1a1a2e;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.3);';
     el.textContent = msg;
     document.body.appendChild(el);
     setTimeout(function () { el.remove(); }, 3000);
