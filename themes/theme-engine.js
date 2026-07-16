@@ -119,7 +119,11 @@
     lines.push('  --radius:' + Schema.RADIUS_TOKENS[2].def + ';');
     lines.push('  --shadow:0 2px 8px rgba(0,0,0,.06);');
     lines.push('  --max-w:1200px;');
-    return ':root{\n' + lines.join('\n') + '\n}';
+    var rootCss = ':root{\n' + lines.join('\n') + '\n}';
+    // Also generate body.dark-mode with same values to override the ORIGINAL hardcoded body.dark-mode block
+    // (original CSS has higher-specificity body.dark-mode vars that would otherwise override our :root)
+    var darkBlock = 'body.dark-mode{\n' + lines.join('\n') + '\n}';
+    return rootCss + '\n' + darkBlock;
   };
 
   ThemeEngine.prototype._darken = function (color, amt) {
