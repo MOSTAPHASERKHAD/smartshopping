@@ -179,6 +179,7 @@
 
   // ── Save from customizer ──
   function save() {
+    console.log('[Customizer] save() called');
     // apply locally first
     Engine.register({ id: state.themeId, name: state.themeName, base: state.base, tokens: state.tokens }, { silent: true });
     Engine.apply(state.themeId, Engine.mode);
@@ -190,9 +191,20 @@
         base: state.base,
         theme_json: JSON.stringify(state.tokens)
       };
-      apiCall('admin_save_theme', payload, function () {
+      console.log('[Customizer] Calling apiGet with action=admin_save_theme, id=' + state.themeId);
+      apiCall('admin_save_theme', payload, function (res) {
+        console.log('[Customizer] Callback received:', res);
+        if (res && res.error) {
+          toastCustom('❌ ' + res.error);
+          console.error('[Customizer] Save error:', res.error);
+          return;
+        }
         toastCustom('✅ تم حفظ التخصيص');
+        if (global.ThemeEditor && global.ThemeEditor.load) global.ThemeEditor.load();
       });
+    } else {
+      console.warn('[Customizer] ThemeEditor not available');
+      toastCustom('❌ ThemeEditor غير متاح');
     }
   }
 

@@ -703,6 +703,7 @@ function apiGet(action, params, callback, retries) {
   var attempt = 0;
   function tryCall() {
     var url = API_URL + '?action=' + action;
+    console.log('[apiGet] URL:', url.substring(0,200) + '...');
     if (params) { for (var k in params) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); } }
     var cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000) + '_' + attempt;
     url += '&callback=' + cbName;
