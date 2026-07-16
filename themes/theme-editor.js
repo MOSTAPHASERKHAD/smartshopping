@@ -47,23 +47,38 @@
     var listEl = document.getElementById('themes-list');
     if (!listEl) return;
     listEl.innerHTML = '<tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>';
+    // get local engine themes first
+    var localThemes = Engine.list() || [];
     apiGet('admin_list_themes', {}, function (data) {
-      if (!data || data.error) {
-        listEl.innerHTML = '<tr><td colspan="5" class="empty">لا توجد ثيمات (سيتم إنشاء الورقة تلقائياً)</td></tr>';
-        return;
-      }
-      var themes = data.themes || [];
-      if (!themes.length) {
-        listEl.innerHTML = '<tr><td colspan="5" class="empty">لا توجد ثيمات محفوظة بعد</td></tr>';
-        return;
-      }
-      // register into engine for preview
-      themes.forEach(function (t) {
+      // build map of server theme IDs
+      var serverMap = {};
+      var serverThemes = (data && !data.error && data.themes) ? data.themes : [];
+      serverThemes.forEach(function (t) { serverMap[t.id] = t; });
+      // register server themes into engine
+      serverThemes.forEach(function (t) {
         try { Engine.register({ id: t.id, name: t.name, author: t.author, version: t.version, base: t.base, tokens: t.tokens }, { silent: true }); }
         catch (e) {}
       });
-      listEl.innerHTML = themes.map(function (t) {
-        var badge = t.is_default ? '<span class="badge badge-confirmed">افتراضي</span>' : '';
+      // merge: server themes + local-only themes
+      var allMap = {};
+      var merged = [];
+      serverThemes.forEach(function (t) {
+        allMap[t.id] = true;
+        merged.push(t);
+      });
+      localThemes.forEach(function (t) {
+        if (!allMap[t.id]) {
+          allMap[t.id] = true;
+          merged.push({ id: t.id, name: t.name, author: t.author || 'Built-in', version: t.version || '1.0', base: t.base || 'light', tokens: t.tokens, is_default: true });
+        }
+      });
+      if (!merged.length) {
+        listEl.innerHTML = '<tr><td colspan="5" class="empty">لا توجد ثيمات</td></tr>';
+        return;
+      }
+      listEl.innerHTML = merged.map(function (t) {
+        var isLocal = !serverMap[t.id];
+        var badge = isLocal ? '<span class="badge badge-pending">مدمج</span>' : (t.is_default ? '<span class="badge badge-confirmed">افتراضي</span>' : '');
         return '<tr>' +
           '<td><strong>' + escapeHtmlAdmin(t.name) + '</strong><br><small style="color:#999">' + escapeHtmlAdmin(t.author || '') + '</small></td>' +
           '<td>' + (t.base === 'dark' ? 'داكن' : 'فاتح') + '</td>' +
@@ -73,8 +88,8 @@
             '<button class="btn btn-info btn-xs" onclick="ThemeEditor.editTheme(\'' + t.id + '\')">تحرير</button> ' +
             '<button class="btn btn-outline btn-xs" onclick="ThemeEditor.previewTheme(\'' + t.id + '\')">معاينة</button> ' +
             '<button class="btn btn-outline btn-xs" onclick="ThemeCustomizer.open(\'' + t.id + '\')" style="background:#6366f1;color:#fff;border-color:#6366f1">🎨 تخصيص</button> ' +
-            (t.is_default ? '' : '<button class="btn btn-success btn-xs" onclick="ThemeEditor.setDefault(\'' + t.id + '\')">تعيين افتراضي</button> ') +
-            '<button class="btn btn-danger btn-xs" onclick="ThemeEditor.deleteTheme(\'' + t.id + '\')">حذف</button>' +
+            (isLocal ? '' : (t.is_default ? '' : '<button class="btn btn-success btn-xs" onclick="ThemeEditor.setDefault(\'' + t.id + '\')">تعيين افتراضي</button> ')) +
+            (isLocal ? '' : '<button class="btn btn-danger btn-xs" onclick="ThemeEditor.deleteTheme(\'' + t.id + '\')">حذف</button>') +
           '</td>' +
         '</tr>';
       }).join('');
@@ -245,9 +260,9 @@
       id: d.id, name: d.name, author: d.author, version: d.version,
       base: d.base, theme_json: JSON.stringify({ colors: d.tokens.colors, fonts: d.tokens.fonts, spacing: d.tokens.spacing, radius: d.tokens.radius, shadow: d.tokens.shadow, components: d.tokens.components })
     };
-    apiPost('admin_save_theme', payload, function (res) {
+    apiGet('admin_save_theme', payload, function (res) {
       if (res && res.error) { toastAdmin('خطأ: ' + res.error); return; }
-      toastAdmin('✅ تم حفظ الثيم');
+      toastAdmin('✅ تم حفظ الثيم', true);
       closeEditorModal();
       loadThemesAdmin();
     });
@@ -289,9 +304,9 @@
   // ── Delete ──
   function deleteTheme(id) {
     if (!confirm('حذف الثيم "' + id + '"؟')) return;
-    apiPost('admin_delete_theme', { theme_id: id }, function (res) {
+    apiGet('admin_delete_theme', { id: id }, function (res) {
       if (res && res.error) { toastAdmin('خطأ: ' + res.error); return; }
-      toastAdmin('تم الحذف');
+      toastAdmin('✅ تم الحذف', true);
       loadThemesAdmin();
     });
   }
