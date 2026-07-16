@@ -119,6 +119,17 @@
     lines.push('  --radius:' + Schema.RADIUS_TOKENS[2].def + ';');
     lines.push('  --shadow:0 2px 8px rgba(0,0,0,.06);');
     lines.push('  --max-w:1200px;');
+    // image tokens
+    if (tokens.images) {
+      var imgs = tokens.images;
+      var logoUrl = Schema.makeLogoSvg(imgs.logoText || 'Smart Shopping', imgs.logoIcon || '🛒', c.primary, 'transparent');
+      lines.push('  --logo-url:url(' + logoUrl + ');');
+      lines.push('  --logo-icon:' + (imgs.logoIcon || '🛒') + ';');
+      lines.push('  --logo-text:' + (imgs.logoText || 'Smart Shopping') + ';');
+      lines.push('  --favicon:' + (imgs.favicon || '🛒') + ';');
+      if (imgs.bannerGradient) lines.push('  --banner-gradient:' + imgs.bannerGradient + ';');
+      if (imgs.bannerAccent) lines.push('  --banner-accent:' + imgs.bannerAccent + ';');
+    }
     var rootCss = ':root{\n' + lines.join('\n') + '\n}';
     // Also generate body.dark-mode with same values to override the ORIGINAL hardcoded body.dark-mode block
     // (original CSS has higher-specificity body.dark-mode vars that would otherwise override our :root)
@@ -162,6 +173,9 @@
     // update manifest theme-color
     this._updateManifest(theme, effectiveMode);
 
+    // update theme images (logo, favicon)
+    this._applyImages(theme);
+
     this._persist();
     if (this._onChange) this._onChange(theme, effectiveMode);
     return true;
@@ -183,6 +197,31 @@
         // best-effort: cannot rewrite manifest file, but ok
       }
     } catch (e) {}
+  };
+
+  // ── Apply theme images (logo, favicon) to DOM ──
+  ThemeEngine.prototype._applyImages = function (theme) {
+    var imgs = theme.tokens.images;
+    if (!imgs) return;
+    // update logo images
+    var logoUrl = Schema.makeLogoSvg(imgs.logoText || 'Smart Shopping', imgs.logoIcon || '🛒', theme.tokens.colors.primary, 'transparent');
+    var logoEls = document.querySelectorAll('.logo img');
+    for (var i = 0; i < logoEls.length; i++) {
+      logoEls[i].src = logoUrl;
+      logoEls[i].alt = imgs.logoText || 'Smart Shopping';
+    }
+    // update favicon
+    if (imgs.favicon) {
+      var link = document.querySelector('link[rel="icon"]');
+      if (link) {
+        link.href = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">' + encodeURIComponent(imgs.favicon) + '</text></svg>';
+      }
+    }
+    // update hero banner gradient
+    if (imgs.bannerGradient) {
+      var hero = document.getElementById('heroSlider');
+      if (hero) hero.style.background = imgs.bannerGradient;
+    }
   };
 
   // ── Mode handling ──
