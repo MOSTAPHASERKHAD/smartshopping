@@ -757,6 +757,10 @@ body.rtl .back-to-top{left:auto;right:24px}
           <input type="hidden" id="pdCaptchaE">
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="pdSubmit" data-i18n="submit_order">تأكيد الطلب</button>
+        <a href="#" onclick="orderViaWhatsApp(event)" class="btn btn-block btn-lg" style="margin-top:10px; background:#25d366; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.405 0 .022 5.372.022 11.99c0 2.115.553 4.183 1.605 6L.004 24l6.155-1.609a11.96 11.96 0 0 0 5.872 1.53h.005c6.626 0 12.008-5.372 12.008-11.99A11.986 11.986 0 0 0 12.031 0zM12.03 21.916a9.98 9.98 0 0 1-5.093-1.39l-.365-.216-3.785.991.996-3.69-.236-.375a9.965 9.965 0 0 1-1.523-5.344C1.986 6.47 6.472 1.986 12.03 1.986a9.97 9.97 0 0 1 7.076 2.929 9.986 9.986 0 0 1 2.924 7.075c-.001 5.523-4.486 10.006-10.046 10.006zm5.503-7.518c-.302-.15-1.786-.881-2.062-.982-.276-.1-.477-.15-.678.15-.201.3-.778.982-.954 1.182-.176.2-.352.226-.654.076-.302-.15-1.275-.47-2.428-1.5-.896-.803-1.503-1.794-1.68-2.096-.176-.301-.019-.464.132-.614.136-.135.302-.351.453-.526.15-.175.201-.3.301-.5.1-.2.05-.375-.025-.525-.075-.15-.678-1.635-.928-2.241-.242-.589-.488-.508-.678-.518-.176-.008-.377-.01-.578-.01-.2 0-.527.075-.803.375s-1.054 1.028-1.054 2.508 1.08 2.909 1.23 3.109c.15.2 2.118 3.232 5.132 4.536.717.31 1.277.495 1.713.633.72.23 1.376.197 1.895.12.58-.086 1.786-.73 2.038-1.434.25-.704.25-1.309.175-1.434-.075-.125-.276-.2-.578-.35z"/></svg>
+          <span style="font-weight:700">الطلب السريع عبر واتساب</span>
+        </a>
       </form>
       <div id="pdSuccess" class="hidden pd-success"></div>
     </div>
@@ -1061,6 +1065,10 @@ body.rtl .back-to-top{left:auto;right:24px}
       </div>
       <div class="summary-box" id="orderSummary"></div>
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="submitBtn" data-i18n="submit_order">تأكيد الطلب</button>
+      <a href="#" onclick="orderViaWhatsApp(event)" class="btn btn-block btn-lg" style="margin-top:10px; background:#25d366; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
+        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.405 0 .022 5.372.022 11.99c0 2.115.553 4.183 1.605 6L.004 24l6.155-1.609a11.96 11.96 0 0 0 5.872 1.53h.005c6.626 0 12.008-5.372 12.008-11.99A11.986 11.986 0 0 0 12.031 0zM12.03 21.916a9.98 9.98 0 0 1-5.093-1.39l-.365-.216-3.785.991.996-3.69-.236-.375a9.965 9.965 0 0 1-1.523-5.344C1.986 6.47 6.472 1.986 12.03 1.986a9.97 9.97 0 0 1 7.076 2.929 9.986 9.986 0 0 1 2.924 7.075c-.001 5.523-4.486 10.006-10.046 10.006zm5.503-7.518c-.302-.15-1.786-.881-2.062-.982-.276-.1-.477-.15-.678.15-.201.3-.778.982-.954 1.182-.176.2-.352.226-.654.076-.302-.15-1.275-.47-2.428-1.5-.896-.803-1.503-1.794-1.68-2.096-.176-.301-.019-.464.132-.614.136-.135.302-.351.453-.526.15-.175.201-.3.301-.5.1-.2.05-.375-.025-.525-.075-.15-.678-1.635-.928-2.241-.242-.589-.488-.508-.678-.518-.176-.008-.377-.01-.578-.01-.2 0-.527.075-.803.375s-1.054 1.028-1.054 2.508 1.08 2.909 1.23 3.109c.15.2 2.118 3.232 5.132 4.536.717.31 1.277.495 1.713.633.72.23 1.376.197 1.895.12.58-.086 1.786-.73 2.038-1.434.25-.704.25-1.309.175-1.434-.075-.125-.276-.2-.578-.35z"/></svg>
+        <span style="font-weight:700">الطلب السريع عبر واتساب</span>
+      </a>
     </form>
     <div id="orderSuccess" class="hidden"></div>
   </div>
@@ -3037,6 +3045,9 @@ function buildLandingPageHTML(p){
   html+='<div class="lp-field"><label>'+(lang==='ar'?'ملاحظة (اختياري)':'Note (optional)')+'</label><textarea id="lpNote" rows="2" placeholder="'+(lang==='ar'?'أي ملاحظات إضافية':'Any additional notes')+'"></textarea></div>';
   html+='<div class="lp-note"><span>⚠️</span><span>'+(lang==='ar'?'سعر التوصيل يتم تأكيده بعد التواصل معك.':'Delivery cost confirmed after contact.')+'</span></div>';
   html+='<button type="submit" class="lp-submit" id="lpSubmitBtn">🛒 '+(lang==='ar'?'تأكيد الطلب':'Place Order')+'</button>';
+  html+='<a href="#" onclick="orderViaWhatsApp(event)" class="lp-submit" style="margin-top:10px; background:#25d366; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">';
+  html+='<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.405 0 .022 5.372.022 11.99c0 2.115.553 4.183 1.605 6L.004 24l6.155-1.609a11.96 11.96 0 0 0 5.872 1.53h.005c6.626 0 12.008-5.372 12.008-11.99A11.986 11.986 0 0 0 12.031 0zM12.03 21.916a9.98 9.98 0 0 1-5.093-1.39l-.365-.216-3.785.991.996-3.69-.236-.375a9.965 9.965 0 0 1-1.523-5.344C1.986 6.47 6.472 1.986 12.03 1.986a9.97 9.97 0 0 1 7.076 2.929 9.986 9.986 0 0 1 2.924 7.075c-.001 5.523-4.486 10.006-10.046 10.006zm5.503-7.518c-.302-.15-1.786-.881-2.062-.982-.276-.1-.477-.15-.678.15-.201.3-.778.982-.954 1.182-.176.2-.352.226-.654.076-.302-.15-1.275-.47-2.428-1.5-.896-.803-1.503-1.794-1.68-2.096-.176-.301-.019-.464.132-.614.136-.135.302-.351.453-.526.15-.175.201-.3.301-.5.1-.2.05-.375-.025-.525-.075-.15-.678-1.635-.928-2.241-.242-.589-.488-.508-.678-.518-.176-.008-.377-.01-.578-.01-.2 0-.527.075-.803.375s-1.054 1.028-1.054 2.508 1.08 2.909 1.23 3.109c.15.2 2.118 3.232 5.132 4.536.717.31 1.277.495 1.713.633.72.23 1.376.197 1.895.12.58-.086 1.786-.73 2.038-1.434.25-.704.25-1.309.175-1.434-.075-.125-.276-.2-.578-.35z"/></svg>';
+  html+='<span style="font-weight:700">'+(lang==='ar'?'الطلب السريع عبر واتساب':'Quick Order via WhatsApp')+'</span></a>';
   html+='</form>';
   html+='<a href="https://wa.me/'+wa+'?text='+waMsg+'" target="_blank" class="lp-wa-btn">💬 '+(lang==='ar'?'تواصل واتساب':'WhatsApp Us')+'</a>';
   html+='<div class="lp-trust">';
@@ -3156,6 +3167,20 @@ function updateLandingSEO(p){
   schema.type='application/ld+json';
   schema.textContent=JSON.stringify({"@context":"https://schema.org","@type":"Product","name":title,"description":desc,"image":img,"offers":{"@type":"Offer","price":p.price,"priceCurrency":"DZD","availability":"https://schema.org/InStock","seller":{"@type":"Organization","name":"Smart Shopping"}}});
   document.head.appendChild(schema);
+}
+function orderViaWhatsApp(e){
+  e.preventDefault();
+  var pName = '';
+  if(typeof pdState !== 'undefined' && pdState.product && pdState.product.name){
+    pName = pdState.product.name;
+  } else if (typeof cart !== 'undefined' && cart.length > 0) {
+    pName = cart.map(function(item){return item.name+' (x'+item.qty+')'}).join(', ');
+  } else {
+    pName = document.title;
+  }
+  var text = "مرحباً، أريد الاستفسار أو طلب: " + pName + "\n\nالرابط: " + window.location.href;
+  var waUrl = "https://wa.me/213557543177?text=" + encodeURIComponent(text);
+  window.open(waUrl, '_blank');
 }
 </script>
 
