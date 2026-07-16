@@ -8,7 +8,8 @@ const ASSETS = [
   '/smartshopping/themes/theme-engine.js',
   '/smartshopping/themes/default-themes.js',
   '/smartshopping/themes/theme-importer.js',
-  '/smartshopping/themes/theme-editor.js'
+  '/smartshopping/themes/theme-editor.js',
+  '/smartshopping/themes/theme-customizer.js'
 ];
 
 self.addEventListener('install', e => {
