@@ -2655,6 +2655,27 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/smartshopping/sw.js').catch(function() {});
 }
 
+// === Live preview via postMessage (used by admin theme customizer) ===
+window.addEventListener('message', function(e){
+  if (!e.data || e.data.type !== 'theme-preview') return;
+  if (!window.ThemeEngine) return;
+  var d = e.data;
+  try {
+    if (d.themeId && d.tokens) {
+      ThemeEngine.register({ id: d.themeId, name: d.name || 'Preview', tokens: d.tokens }, { silent: true });
+      ThemeEngine.apply(d.themeId, d.mode || ThemeEngine.mode);
+    }
+    if (d.toggleElements) {
+      d.toggleElements.forEach(function(t){
+        var el = document.getElementById(t.id);
+        if (el) el.style.display = t.visible ? '' : 'none';
+      });
+    }
+  } catch(err) {
+    console.error('theme-preview error:', err);
+  }
+});
+
 window.addEventListener('scroll',function(){
   var btn=document.querySelector('.back-to-top');
   if(btn)btn.classList.toggle('visible',window.scrollY>400);

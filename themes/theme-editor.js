@@ -72,6 +72,7 @@
           '<td style="white-space:nowrap">' +
             '<button class="btn btn-info btn-xs" onclick="ThemeEditor.editTheme(\'' + t.id + '\')">تحرير</button> ' +
             '<button class="btn btn-outline btn-xs" onclick="ThemeEditor.previewTheme(\'' + t.id + '\')">معاينة</button> ' +
+            '<button class="btn btn-outline btn-xs" onclick="ThemeCustomizer.open(\'' + t.id + '\')" style="background:#6366f1;color:#fff;border-color:#6366f1">🎨 تخصيص</button> ' +
             (t.is_default ? '' : '<button class="btn btn-success btn-xs" onclick="ThemeEditor.setDefault(\'' + t.id + '\')">تعيين افتراضي</button> ') +
             '<button class="btn btn-danger btn-xs" onclick="ThemeEditor.deleteTheme(\'' + t.id + '\')">حذف</button>' +
           '</td>' +
