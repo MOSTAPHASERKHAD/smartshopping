@@ -2,44 +2,25 @@
  * theme-editor.js — Admin Theme Editor logic
  * Bound to admin.html. Handles: list, import, edit, preview, save, delete, set-default, export.
  * Depends on: theme-engine.js, theme-schema.js, theme-importer.js, default-themes.js
+ * Uses globals from admin.html: apiGet, apiPost, toast
  */
 (function (global) {
   'use strict';
 
   var Schema = global.ThemeSchema;
   var Engine = global.ThemeEngine;
-  var API_URL = global.API_URL; // set by admin.html
 
   var editorState = {
-    current: null,    // theme being edited
+    current: null,
     isNew: true,
     draft: null
   };
 
-  // ── API helpers (use JSONP directly — admin's apiPost with no-cors is unreliable) ──
-  function apiGet(action, params, cb) {
-    if (global.apiGet) { global.apiGet(action, params, cb); return; }
-    jsonpCall(action, params, cb);
-  }
-  function apiPost(action, params, cb) {
-    // bypass admin's no-cors POST; use JSONP (GET) directly
-    jsonpCall(action, params, cb);
-  }
-  function jsonpCall(action, params, cb) {
-    var url = API_URL + '?action=' + action;
-    if (params) for (var k in params) url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
-    var cbName = 'cb_th_' + Date.now() + '_' + Math.floor(Math.random() * 9999);
-    url += '&callback=' + cbName;
-    var called = false;
-    global[cbName] = function (d) {
-      if (called) return; called = true; delete global[cbName];
-      cb(d);
-    };
-    var s = document.createElement('script');
-    s.src = url;
-    s.onerror = function () { if (called) return; called = true; delete global[cbName]; cb({ error: 'Network error' }); };
-    document.head.appendChild(s);
-    setTimeout(function () { if (!called) { called = true; delete global[cbName]; cb({ error: 'Timeout' }); } }, 15000);
+  // ── Helper: escape HTML ──
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
   }
 
   // ── Load themes list into admin ──
@@ -47,19 +28,15 @@
     var listEl = document.getElementById('themes-list');
     if (!listEl) return;
     listEl.innerHTML = '<tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>';
-    // get local engine themes first
     var localThemes = Engine.list() || [];
-    apiGet('admin_list_themes', {}, function (data) {
-      // build map of server theme IDs
+    global.apiGet('admin_list_themes', {}, function (data) {
       var serverMap = {};
       var serverThemes = (data && !data.error && data.themes) ? data.themes : [];
       serverThemes.forEach(function (t) { serverMap[t.id] = t; });
-      // register server themes into engine
       serverThemes.forEach(function (t) {
         try { Engine.register({ id: t.id, name: t.name, author: t.author, version: t.version, base: t.base, tokens: t.tokens }, { silent: true }); }
         catch (e) {}
       });
-      // merge: server themes + local-only themes
       var allMap = {};
       var merged = [];
       serverThemes.forEach(function (t) {
@@ -80,7 +57,7 @@
         var isLocal = !serverMap[t.id];
         var badge = isLocal ? '<span class="badge badge-pending">مدمج</span>' : (t.is_default ? '<span class="badge badge-confirmed">افتراضي</span>' : '');
         return '<tr>' +
-          '<td><strong>' + escapeHtmlAdmin(t.name) + '</strong><br><small style="color:#999">' + escapeHtmlAdmin(t.author || '') + '</small></td>' +
+          '<td><strong>' + esc(t.name) + '</strong><br><small style="color:#999">' + esc(t.author || '') + '</small></td>' +
           '<td>' + (t.base === 'dark' ? 'داكن' : 'فاتح') + '</td>' +
           '<td>' + (t.id || '') + '</td>' +
           '<td>' + badge + '</td>' +
@@ -93,12 +70,6 @@
           '</td>' +
         '</tr>';
       }).join('');
-    });
-  }
-
-  function escapeHtmlAdmin(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
 
@@ -127,21 +98,19 @@
 
   function renderEditor() {
     var d = editorState.draft;
-    // header fields
     setVal('te_name', d.name);
     setVal('te_author', d.author);
     setVal('te_version', d.version);
     setVal('te_id', d.id);
     setVal('te_base', d.base);
 
-    // color pickers
     var colorHtml = Schema.COLOR_TOKENS.map(function (c) {
       var val = (d.tokens.colors[c.key] || c.def);
       return '<div class="te-color-row">' +
         '<label>' + c.label + '</label>' +
         '<div class="te-color-controls">' +
           '<input type="color" value="' + toHex(val) + '" oninput="ThemeEditor.updateColor(\'' + c.key + '\',this.value)" onchange="ThemeEditor.updateColor(\'' + c.key + '\',this.value)">' +
-          '<input type="text" class="te-hex" value="' + escapeHtmlAdmin(val) + '" oninput="ThemeEditor.updateColorText(\'' + c.key + '\',this.value)" id="te-hex-' + c.key + '">' +
+          '<input type="text" class="te-hex" value="' + esc(val) + '" oninput="ThemeEditor.updateColorText(\'' + c.key + '\',this.value)" id="te-hex-' + c.key + '">' +
           '<small style="color:#999">' + c.desc + '</small>' +
         '</div>' +
       '</div>';
@@ -149,17 +118,15 @@
     var colorWrap = document.getElementById('te-colors');
     if (colorWrap) colorWrap.innerHTML = colorHtml;
 
-    // fonts
     var fontHtml = Schema.FONT_TOKENS.map(function (f) {
       var opts = Schema.FONT_OPTIONS.map(function (o) {
-        return '<option value="' + escapeHtmlAdmin(o.value) + '"' + (o.value === d.tokens.fonts[f.key] ? ' selected' : '') + '>' + o.label + '</option>';
+        return '<option value="' + esc(o.value) + '"' + (o.value === d.tokens.fonts[f.key] ? ' selected' : '') + '>' + o.label + '</option>';
       }).join('');
       return '<div class="te-field"><label>' + f.label + '</label><select onchange="ThemeEditor.updateFont(\'' + f.key + '\',this.value)">' + opts + '</select></div>';
     }).join('');
     var fontWrap = document.getElementById('te-fonts');
     if (fontWrap) fontWrap.innerHTML = fontHtml;
 
-    // radius sliders
     var radiusHtml = Schema.RADIUS_TOKENS.map(function (r) {
       var v = parseInt((d.tokens.radius[r.key] || r.def)) || 0;
       return '<div class="te-field"><label>زوايا ' + r.key + '</label>' +
@@ -169,18 +136,16 @@
     var radiusWrap = document.getElementById('te-radius');
     if (radiusWrap) radiusWrap.innerHTML = radiusHtml;
 
-    // components
     var compHtml = Schema.COMPONENT_TOKENS.map(function (comp) {
       var rows = comp.props.map(function (p) {
         return '<div class="te-field"><label>' + comp.label + ' — ' + p.label + '</label>' +
-          '<input type="text" value="' + escapeHtmlAdmin(d.tokens.components[comp.key][p.key] || p.def) + '" oninput="ThemeEditor.updateComponent(\'' + comp.key + '\',\'' + p.key + '\',this.value)"></div>';
+          '<input type="text" value="' + esc(d.tokens.components[comp.key][p.key] || p.def) + '" oninput="ThemeEditor.updateComponent(\'' + comp.key + '\',\'' + p.key + '\',this.value)"></div>';
       }).join('');
       return rows;
     }).join('');
     var compWrap = document.getElementById('te-components');
     if (compWrap) compWrap.innerHTML = compHtml;
 
-    // mode toggle
     setVal('te_mode', Engine.mode);
   }
 
@@ -208,7 +173,6 @@
   }
   function updateFont(key, val) {
     editorState.draft.tokens.fonts[key] = val;
-    // ensure font loaded
     ensureFont(val);
     livePreview();
   }
@@ -237,7 +201,6 @@
     }
   }
 
-  // ── Live preview (applies to current page immediately) ──
   function livePreview() {
     Engine.register(editorState.draft, { silent: true });
     Engine.apply(editorState.draft.id, Engine.mode);
@@ -245,7 +208,7 @@
 
   function previewTheme(id) {
     Engine.apply(id, Engine.mode);
-    toastAdmin('معاينة: ' + (Engine.get(id) ? Engine.get(id).name : id));
+    global.toast('معاينة: ' + (Engine.get(id) ? Engine.get(id).name : id), true);
   }
 
   // ── Save ──
@@ -256,13 +219,19 @@
     d.version = (document.getElementById('te_version') || {}).value || d.version;
     d.id = (document.getElementById('te_id') || {}).value || d.id;
     d.base = (document.getElementById('te_base') || {}).value || d.base;
+    if (!d.id) { global.toast('❌ أدخل معرّف الثيم', true); return; }
     var payload = {
       id: d.id, name: d.name, author: d.author, version: d.version,
-      base: d.base, theme_json: JSON.stringify({ colors: d.tokens.colors, fonts: d.tokens.fonts, spacing: d.tokens.spacing, radius: d.tokens.radius, shadow: d.tokens.shadow, components: d.tokens.components })
+      base: d.base,
+      theme_json: JSON.stringify({
+        colors: d.tokens.colors, fonts: d.tokens.fonts,
+        spacing: d.tokens.spacing, radius: d.tokens.radius,
+        shadow: d.tokens.shadow, components: d.tokens.components
+      })
     };
-    apiGet('admin_save_theme', payload, function (res) {
-      if (res && res.error) { toastAdmin('خطأ: ' + res.error); return; }
-      toastAdmin('✅ تم حفظ الثيم', true);
+    global.apiGet('admin_save_theme', payload, function (res) {
+      if (res && res.error) { global.toast('❌ ' + res.error, true); return; }
+      global.toast('✅ تم حفظ الثيم', true);
       closeEditorModal();
       loadThemesAdmin();
     });
@@ -277,15 +246,14 @@
       try {
         var parsed = JSON.parse(e.target.result);
         var theme = Engine.importFile(parsed);
-        // detect source format for naming hint
         editorState.isNew = true;
         editorState.current = null;
         editorState.draft = theme;
         renderEditor();
         openEditorModal();
-        toastAdmin('تم استيراد الثيم: ' + theme.name + ' — راجع الألوان ثم احفظه');
+        global.toast('تم استيراد الثيم: ' + theme.name + ' — راجع الألوان ثم احفظه', true);
       } catch (err) {
-        toastAdmin('❌ فشل الاستيراد: ' + err.message);
+        global.toast('❌ فشل الاستيراد: ' + err.message, true);
       }
     };
     reader.readAsText(file);
@@ -294,19 +262,20 @@
 
   // ── Set default ──
   function setDefault(id) {
-    apiPost('admin_set_default_theme', { theme_id: id }, function (res) {
-      if (res && res.error) { toastAdmin('خطأ: ' + res.error); return; }
-      toastAdmin('✅ تم التعيين كثيم افتراضي');
+    global.apiGet('admin_set_default_theme', { id: id }, function (res) {
+      if (res && res.error) { global.toast('❌ ' + res.error, true); return; }
+      global.toast('✅ تم التعيين كثيم افتراضي', true);
       loadThemesAdmin();
     });
   }
 
   // ── Delete ──
   function deleteTheme(id) {
+    if (!id) { global.toast('❌ لا يوجد معرّف الثيم', true); return; }
     if (!confirm('حذف الثيم "' + id + '"؟')) return;
-    apiGet('admin_delete_theme', { id: id }, function (res) {
-      if (res && res.error) { toastAdmin('خطأ: ' + res.error); return; }
-      toastAdmin('✅ تم الحذف', true);
+    global.apiGet('admin_delete_theme', { id: id }, function (res) {
+      if (res && res.error) { global.toast('❌ ' + res.error, true); return; }
+      global.toast('✅ تم الحذف', true);
       loadThemesAdmin();
     });
   }
@@ -317,7 +286,6 @@
     if (!id) return;
     if (Engine.get(id)) Engine.exportTheme(id);
     else if (editorState.draft) {
-      // export draft directly
       var blob = new Blob([JSON.stringify({ __format: 'smartkiosk', id: editorState.draft.id, name: editorState.draft.name, author: editorState.draft.author, version: editorState.draft.version, base: editorState.draft.base, tokens: editorState.draft.tokens }, null, 2)], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a'); a.href = url; a.download = editorState.draft.id + '.json';
@@ -334,14 +302,6 @@
   function closeEditorModal() {
     var m = document.getElementById('themeEditorModal');
     if (m) m.classList.remove('open');
-  }
-
-  function toastAdmin(msg) {
-    var el = document.createElement('div');
-    el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:8px;font-weight:700;font-size:.85rem;z-index:999999;background:#1a1a2e;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.3);';
-    el.textContent = msg;
-    document.body.appendChild(el);
-    setTimeout(function () { el.remove(); }, 3000);
   }
 
   global.ThemeEditor = {
