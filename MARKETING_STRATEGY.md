@@ -231,8 +231,8 @@
 ## 📞 معلومات التواصل
 
 - **واتساب**: +213557543177
-- **المتجر**: https://MOSTAPHASERKHAD.github.io/smartkiosk/
-- **الإدارة**: https://MOSTAPHASERKHAD.github.io/smartkiosk/admin.html
+- **المتجر**: https://MOSTAPHASERKHAD.github.io/smartshopping/
+- **الإدارة**: https://MOSTAPHASERKHAD.github.io/smartshopping/admin.html
 
 ---
 

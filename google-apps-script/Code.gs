@@ -1,4 +1,4 @@
-// SmartKiosk - Google Apps Script Backend
+// SmartShopping - Google Apps Script Backend
 // Deploy as Web App → Execute as: Me → Who has access: Anyone
 
 function testAuth() {
@@ -529,10 +529,10 @@ function adminUploadImage(params) {
 
 function getOrCreateFolderId() {
   var props = PropertiesService.getScriptProperties();
-  var folderId = props.getProperty('smartkiosk_images_folder');
+  var folderId = props.getProperty('smartshopping_images_folder');
   if (folderId) return folderId;
-  var folder = DriveApp.createFolder('SmartKiosk_Images');
-  props.setProperty('smartkiosk_images_folder', folder.getId());
+  var folder = DriveApp.createFolder('SmartShopping_Images');
+  props.setProperty('smartshopping_images_folder', folder.getId());
   return folder.getId();
 }
 

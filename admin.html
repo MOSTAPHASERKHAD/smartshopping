@@ -972,7 +972,7 @@ function loadProducts() {
         '<td>' + (p.category_ar || '-') + '</td>' +
         '<td>' + (p.stock <= 0 ? '<span class="badge badge-cancelled">نفذ</span>' : p.stock <= 5 ? '<span class="badge badge-pending">متبقي ' + p.stock + '</span>' : p.stock) + '</td>' +
         '<td>' + (p.active ? '<span class="badge badge-confirmed">نشط</span>' : '<span class="badge badge-cancelled">غير نشط</span>') + '</td>' +
-        '<td><div style="display:flex;flex-direction:column;gap:4px"><input type="text" readonly value="' + window.location.origin + '/smartkiosk/?product=' + (p.id || '') + '" style="font-size:.65rem;padding:4px 6px;border:1px solid #eaeaea;border-radius:4px;width:180px;background:#f9f9f9;direction:ltr;text-align:left" id="lp-link-' + p.id + '"><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:#25d366;color:#fff;padding:3px 8px;font-size:.65rem" onclick="copyLandingLink(\'' + p.id + '\')">نسخ</button><a href="' + window.location.origin + '/smartkiosk/?product=' + (p.id || '') + '" target="_blank" class="btn btn-sm" style="background:#3b82f6;color:#fff;padding:3px 8px;font-size:.65rem;text-decoration:none">فتح</a></div></div></td>' +
+        '<td><div style="display:flex;flex-direction:column;gap:4px"><input type="text" readonly value="' + window.location.origin + '/smartshopping/?product=' + (p.id || '') + '" style="font-size:.65rem;padding:4px 6px;border:1px solid #eaeaea;border-radius:4px;width:180px;background:#f9f9f9;direction:ltr;text-align:left" id="lp-link-' + p.id + '"><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:#25d366;color:#fff;padding:3px 8px;font-size:.65rem" onclick="copyLandingLink(\'' + p.id + '\')">نسخ</button><a href="' + window.location.origin + '/smartshopping/?product=' + (p.id || '') + '" target="_blank" class="btn btn-sm" style="background:#3b82f6;color:#fff;padding:3px 8px;font-size:.65rem;text-decoration:none">فتح</a></div></div></td>' +
         '<td><button class="btn btn-info btn-sm" onclick="editProduct(' + p._row + ')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p._row + ',\'' + (p.title_ar || '') + '\')">حذف</button></td>' +
       '</tr>';
     }).join('');
@@ -1249,7 +1249,7 @@ function updateOrderStatus(row, status) {
         var msg = 'مرحبا ' + (o.name || '') + '\n' +
           'طلبك رقم ' + (o.order_id || '') + '\n' +
           'الحالة الجديدة: ' + (statusNames[status] || status) + '\n\n' +
-          'تتبع طلبك: https://smartkiosk-yjt.pages.dev/';
+          'تتبع طلبك: https://smartshopping-yjt.pages.dev/';
         if (confirm('إرسال تحديث الحالة لعميل ' + o.name + ' عبر واتساب؟')) {
           window.open('https://wa.me/' + o.phone + '?text=' + encodeURIComponent(msg), '_blank');
         }
