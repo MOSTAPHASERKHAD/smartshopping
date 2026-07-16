@@ -2,7 +2,7 @@
   "name": "Smart Shopping - تسوّق بذكاء",
   "short_name": "Smart Shopping",
   "description": "متجر إلكتروني جزائري — منتجات متنوعة بأفضل الأسعار",
-  "start_url": "/smartkiosk/",
+  "start_url": "/smartshopping/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1a1a2e",

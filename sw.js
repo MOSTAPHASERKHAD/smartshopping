@@ -1,8 +1,8 @@
-const CACHE_NAME = 'smartkiosk-v11';
+const CACHE_NAME = 'smartshopping-v11';
 const ASSETS = [
-  '/smartkiosk/',
-  '/smartkiosk/index.html',
-  '/smartkiosk/manifest.json'
+  '/smartshopping/',
+  '/smartshopping/index.html',
+  '/smartshopping/manifest.json'
 ];
 
 self.addEventListener('install', e => {
@@ -28,6 +28,6 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
       }
       return resp;
-    }).catch(() => caches.match('/smartkiosk/index.html')))
+    }).catch(() => caches.match('/smartshopping/index.html')))
   );
 });
