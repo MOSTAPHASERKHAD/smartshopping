@@ -80,7 +80,9 @@
   // ── Convert tokens → CSS custom properties string ──
   ThemeEngine.prototype._tokensToCSS = function (tokens, mode, themeBase) {
     var lines = [];
-    var c = tokens.colors;
+    // Clone colors so we never mutate the original theme tokens
+    var c = {};
+    Object.keys(tokens.colors).forEach(function (k) { c[k] = tokens.colors[k]; });
     // In dark mode, override color subset with darkTokens only for light-base themes.
     // Dark-base themes (e.g. Shrine dark, Midnight) keep their own colors.
     if (mode === 'dark' && themeBase !== 'dark') {
@@ -99,7 +101,7 @@
         lines.push('  --' + comp + '-' + p + ':' + props[p] + ';');
       });
     });
-    // legacy aliases used by existing CSS
+    // legacy aliases used by existing CSS (must all be present or old CSS breaks)
     lines.push('  --bg:' + c.background + ';');
     lines.push('  --card:' + c.surface + ';');
     lines.push('  --text:' + c.text + ';');
@@ -114,6 +116,8 @@
     lines.push('  --success:' + c.success + ';');
     lines.push('  --danger:' + c.danger + ';');
     lines.push('  --font:' + tokens.fonts.body + ';');
+    lines.push('  --radius:' + Schema.RADIUS_TOKENS[2].def + ';');
+    lines.push('  --shadow:0 2px 8px rgba(0,0,0,.06);');
     lines.push('  --max-w:1200px;');
     return ':root{\n' + lines.join('\n') + '\n}';
   };
@@ -275,7 +279,11 @@
   ThemeEngine.prototype.list = function () {
     var self = this;
     return Object.keys(this.themes).map(function (id) {
-      return { id: id, name: self.themes[id].name, base: self.themes[id].base, author: self.themes[id].author };
+      var t = self.themes[id];
+      return {
+        id: id, name: t.name, base: t.base, author: t.author,
+        tokens: t.tokens  // needed by theme switcher for color swatches
+      };
     });
   };
 
