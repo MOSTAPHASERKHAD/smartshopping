@@ -1524,7 +1524,7 @@ function openThemeSwitcher(){
   var existing=document.getElementById('themeSwitcherPanel');
   if(existing){existing.remove();return;}
   var themes=window.ThemeEngine?ThemeEngine.list():[];
-  var cur=window.ThemeEngine?ThemeEngine.currentId:null;
+  var cur=window.ThemeEngine?ThemeEngine.activeId:null;
   var html='<div class="ts-backdrop" onclick="closeThemeSwitcher()"></div>'+
     '<div class="ts-panel" id="themeSwitcherPanel">'+
     '<div class="ts-head"><span>🎨 اختر الثيم</span><button class="dark-btn" onclick="closeThemeSwitcher()">✕</button></div>'+
@@ -1548,7 +1548,7 @@ function applyStoreTheme(id){
   closeThemeSwitcher();
 }
 function exportCurrentTheme(){
-  if(window.ThemeEngine&&ThemeEngine.currentId)ThemeEngine.exportTheme(ThemeEngine.currentId);
+  if(window.ThemeEngine&&ThemeEngine.activeId)ThemeEngine.exportTheme(ThemeEngine.activeId);
 }
 
 
@@ -1658,7 +1658,14 @@ function init(){
   genCaptcha('pdCaptchaQ','pdCaptchaE');
   apiCall('settings',{},function(d){if(!d||d.error)return;storeSettings=d;
     var n=currentLang==='ar'?d.store_name_ar:d.store_name_en;
-    if(n){document.querySelector('.logo').textContent='🛒'}
+    if(n){
+      var logoEl=document.querySelector('header .logo');
+      if(logoEl){
+        var logoImg=logoEl.querySelector('img');
+        if(logoImg) logoImg.alt=n;
+        if(!logoImg){var ii=document.createElement('img');ii.style.cssText='height:48px;width:auto';logoEl.prepend(ii);}
+      }
+    }
     if(d.phone){document.querySelectorAll('a[href*="wa.me"]').forEach(function(a){a.href='https://wa.me/'+d.phone})}
     loadHeroBanners(d);
     checkCookieConsent();
