@@ -205,10 +205,18 @@
     if (!imgs) return;
     // update logo images
     var logoUrl = Schema.makeLogoSvg(imgs.logoText || 'Smart Shopping', imgs.logoIcon || '🛒', theme.tokens.colors.primary, 'transparent');
-    var logoEls = document.querySelectorAll('.logo img');
+    var logoEls = document.querySelectorAll('header .logo, .footer-brand .logo');
     for (var i = 0; i < logoEls.length; i++) {
-      logoEls[i].src = logoUrl;
-      logoEls[i].alt = imgs.logoText || 'Smart Shopping';
+      var el = logoEls[i];
+      var logoImg = el.querySelector('img');
+      if (!logoImg) {
+        logoImg = document.createElement('img');
+        logoImg.style.width = 'auto';
+        el.prepend(logoImg);
+      }
+      logoImg.style.height = el.closest('footer') ? '40px' : '48px';
+      logoImg.src = logoUrl;
+      logoImg.alt = imgs.logoText || 'Smart Shopping';
     }
     // update favicon
     if (imgs.favicon) {
