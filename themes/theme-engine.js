@@ -150,35 +150,45 @@
 
   // ── Apply a theme by id (and mode) ──
   ThemeEngine.prototype.apply = function (themeId, mode) {
-    var theme = this.themes[themeId];
-    if (!theme) return false;
-    this.activeId = themeId;
-    if (mode) this.mode = mode;
-    var effectiveMode = this._effectiveMode();
+    try {
+      var theme = this.themes[themeId];
+      if (!theme) { console.warn('ThemeEngine: theme not found', themeId); return false; }
+      this.activeId = themeId;
+      if (mode) this.mode = mode;
+      var effectiveMode = this._effectiveMode();
+      console.log('ThemeEngine.apply:', themeId, mode, '→', effectiveMode, 'base:', theme.base);
 
-    // inject CSS
-    var styleEl = document.getElementById('theme-engine-style');
-    if (!styleEl) {
-      styleEl = document.createElement('style');
-      styleEl.id = 'theme-engine-style';
-      document.head.appendChild(styleEl);
+      // inject CSS
+      var styleEl = document.getElementById('theme-engine-style');
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = 'theme-engine-style';
+        document.head.appendChild(styleEl);
+        console.log('ThemeEngine: created style element');
+      }
+      var css = this._tokensToCSS(theme.tokens, effectiveMode, theme.base);
+      styleEl.textContent = css;
+      console.log('ThemeEngine: CSS injected, length=' + css.length + ', has--bg=' + css.includes('--bg'));
+
+      // body classes
+      document.body.classList.toggle('dark-mode', effectiveMode === 'dark');
+      document.documentElement.setAttribute('data-theme', themeId);
+      document.documentElement.setAttribute('data-mode', effectiveMode);
+      console.log('ThemeEngine: body classes/attrs set, dark-mode=' + (effectiveMode === 'dark'));
+
+      // update manifest theme-color
+      this._updateManifest(theme, effectiveMode);
+
+      // update theme images (logo, favicon) — wrapped to prevent breaking
+      try { this._applyImages(theme); } catch (e) { console.warn('ThemeEngine: _applyImages error', e); }
+
+      this._persist();
+      if (this._onChange) this._onChange(theme, effectiveMode);
+      return true;
+    } catch (e) {
+      console.error('ThemeEngine.apply error:', e);
+      return false;
     }
-    styleEl.textContent = this._tokensToCSS(theme.tokens, effectiveMode, theme.base);
-
-    // body classes
-    document.body.classList.toggle('dark-mode', effectiveMode === 'dark');
-    document.documentElement.setAttribute('data-theme', themeId);
-    document.documentElement.setAttribute('data-mode', effectiveMode);
-
-    // update manifest theme-color
-    this._updateManifest(theme, effectiveMode);
-
-    // update theme images (logo, favicon)
-    this._applyImages(theme);
-
-    this._persist();
-    if (this._onChange) this._onChange(theme, effectiveMode);
-    return true;
   };
 
   ThemeEngine.prototype._effectiveMode = function () {
