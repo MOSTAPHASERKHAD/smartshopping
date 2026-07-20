@@ -284,11 +284,37 @@
   ThemeEngine.prototype.init = function (opts) {
     opts = opts || {};
     this._initMedia();
-    // register built-ins (default-themes.js sets global.SmartKioskThemes)
-    if (global.SmartKioskThemes) {
-      var self = this;
+    this._initRegister(opts);
+  };
+
+  // Register built-in themes. If default-themes.js hasn't executed yet
+  // (async script load, or a stale cached HTML), poll briefly until it is.
+  ThemeEngine.prototype._initRegister = function (opts) {
+    var self = this;
+    function doRegister() {
+      if (!global.SmartKioskThemes) return false;
       global.SmartKioskThemes.forEach(function (t) { self.register(t, { silent: true }); });
+      return true;
     }
+    if (doRegister()) {
+      this._initApply(opts);
+      return;
+    }
+    // themes not ready — poll (handles async / late script execution)
+    if (this._initTimer) return; // already polling
+    var tries = 0;
+    this._initTimer = setInterval(function () {
+      tries++;
+      if (doRegister() || tries > 60) {
+        clearInterval(self._initTimer);
+        self._initTimer = null;
+        self._initApply(opts);
+      }
+    }, 80);
+  };
+
+  ThemeEngine.prototype._initApply = function (opts) {
+    opts = opts || {};
     var local = this.loadLocal();
     if (opts.defaultThemeId) this.defaultThemeId = opts.defaultThemeId;
     if (opts.themes && opts.themes.length) {

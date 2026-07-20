@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smartshopping-v16';
+const CACHE_NAME = 'smartshopping-v17';
 const ASSETS = [
   '/smartshopping/',
   '/smartshopping/index.html',
@@ -26,15 +26,17 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Network-first: always fetch fresh content; fall back to cache only when offline.
 self.addEventListener('fetch', e => {
   if (e.request.url.includes('script.google.com')) return;
+  if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
-      if (resp.status === 200 && e.request.method === 'GET') {
+    fetch(e.request).then(function (resp) {
+      if (resp && resp.status === 200) {
         const clone = resp.clone();
         caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
       }
       return resp;
-    }).catch(() => caches.match('/smartshopping/index.html')))
+    }).catch(() => caches.match(e.request).then(r => r || caches.match('/smartshopping/index.html')))
   );
 });

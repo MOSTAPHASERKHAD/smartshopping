@@ -1,0 +1,22 @@
+{
+  "name": "smartkiosk",
+  "version": "1.0.0",
+  "description": "متجر إلكتروني مجاني -類似 Shopify - الجزائر - الدفع عند الاستلام (COD)",
+  "main": "gen-icons.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MOSTAPHASERKHAD/smartshopping.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MOSTAPHASERKHAD/smartshopping/issues"
+  },
+  "homepage": "https://github.com/MOSTAPHASERKHAD/smartshopping#readme"
+}
