@@ -2461,7 +2461,7 @@ function renderHeroSlide(idx) {
   if (!slide) return;
   var el = document.createElement('div');
   el.className = 'slide active';
-  var html = '<img src="' + slide.img + '" alt="" onerror="this.parentElement.style.display=\'none\'">';
+  var html = '<img src="' + slide.img + '" alt="" onerror="this.style.display=\'none\';this.parentElement.style.background=\'linear-gradient(135deg,var(--accent),var(--accent2,#764ba2))\'">';
   if (slide.title) {
     html += '<div class="slide-text"><h3>' + slide.title + '</h3>';
     if (slide.subtitle) html += '<p>' + slide.subtitle + '</p>';

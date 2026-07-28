@@ -1,9 +1,12 @@
-const CACHE_NAME = 'smartshopping-v27';
+const CACHE_NAME = 'smartshopping-v28';
 const ASSETS = [
   '/smartshopping/',
   '/smartshopping/index.html',
   '/smartshopping/admin.html',
   '/smartshopping/manifest.json',
+  '/smartshopping/banner-hero.png',
+  '/smartshopping/banner-sale.png',
+  '/smartshopping/banner-accessories.png',
   '/smartshopping/themes/theme-schema.js',
   '/smartshopping/themes/theme-engine.js',
   '/smartshopping/themes/default-themes.js',
