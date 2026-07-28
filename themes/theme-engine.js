@@ -305,7 +305,7 @@
     var tries = 0;
     this._initTimer = setInterval(function () {
       tries++;
-      if (doRegister() || tries > 60) {
+      if (doRegister() || tries > 150) {
         clearInterval(self._initTimer);
         self._initTimer = null;
         self._initApply(opts);

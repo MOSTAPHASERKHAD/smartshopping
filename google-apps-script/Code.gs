@@ -175,6 +175,17 @@ function getCatalog() {
     var row = data[i];
     var product = {};
     for (var j = 0; j < headers.length; j++) { product[headers[j]] = row[j]; }
+    
+    // Parse variant options JSON if present
+    if (product.variant_options) {
+      try { product.variant_options = JSON.parse(product.variant_options); } catch(e) { product.variant_options = []; }
+    } else { product.variant_options = []; }
+    
+    // Auto-convert display values
+    if (product.variant_price && !product.variant_price.startsWith('EGP')) {
+      product.variant_price = 'EGP ' + product.variant_price;
+    }
+    
     if (product.active === true || product.active === 'TRUE' || product.active === 'true' || product.active === 1) {
       products.push(product);
     }
@@ -250,12 +261,56 @@ function adminListProducts() {
   var sheet = ss.getSheetByName('Catalog');
   if (!sheet) return { products: [] };
   var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { products: [] };
   var headers = data[0];
   var products = [];
   for (var i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue; // تخطي الصفوف الفارغة
     var row = data[i];
     var product = { _row: i + 1 };
     for (var j = 0; j < headers.length; j++) { product[headers[j]] = row[j]; }
+    
+    // توقع حقول التفاعل مع تهيئة افتراضية
+    var size = product.size || '';
+    var color = product.color || '';
+    var variant_name = product.variant_name || '';
+    var variant_sku = product.variant_sku || '';
+    var variant_price = product.variant_price || '';
+    var variant_stock = product.variant_stock || '';
+    var variant_options = product.variant_options || '[]';
+    
+    // تكوين نموذج خيارات التفاعل
+    var variantModel = {
+      sizes: size ? size.split(',').map(s => s.trim()).filter(s => s) : [],
+      colors: color ? color.split(',').map(c => c.trim()).filter(c => c) : [],
+      name: variant_name,
+      sku: variant_sku,
+      price: variant_price ? parseFloat(variant_price) || 0 : 0,
+      stock: variant_stock ? parseInt(variant_stock) || 0 : 0,
+      options: []
+    };
+    
+    // إنشاء مجموعة بجميع التركيبات الممكنة
+    if (variantModel.sizes.length > 0 && variantModel.colors.length > 0) {
+      variantModel.sizes.forEach(function(s) {
+        variantModel.colors.forEach(function(c) {
+          variantModel.options.push({
+            size: s,
+            color: c,
+            sku: variantModel.sku || (variantModel.sizes.length <= 2 && variantModel.colors.length <= 2 ? 
+              (s === variantModel.sizes[0] && c === variantModel.colors[0] ? 'BASE' : 
+               'COMBO') : 
+              'VAR-' + s + '-' + c),
+            price: variantModel.price,
+            stock: variantModel.stock,
+            image: variantModel.image || ''
+          });
+        });
+      });
+    }
+    
+    product.variant_model = variantModel;
+    
     products.push(product);
   }
   return { products: products };
@@ -266,13 +321,47 @@ function adminAddProduct(params) {
   var sheet = ss.getSheetByName('Catalog');
   if (!sheet) return { error: 'Catalog sheet not found' };
   var id = params.id || ('PROD-' + Date.now());
+
+  // SELECTION HANDLERS for variant fields - support both string and array
+  var size = '';
+  if (params.size) {
+    if (Array.isArray(params.size)) size = params.size.join(', ');
+    else size = String(params.size);
+  }
+
+  var color = '';
+  if (params.color) {
+    if (Array.isArray(params.color)) color = params.color.join(', ');
+    else color = String(params.color);
+  }
+
+  var variant_name = params.variant_name || '';
+  var variant_sku = params.variant_sku || '';
+  var variant_price = params.variant_price || '';
+  var variant_stock = params.variant_stock || '';
+
+  // FIX: Handle variant matrix — if comma-separated string, use first value
+  if (size.includes(',') && !variant_name) {
+    variant_name = size.split(',')[0];
+    size = size.split(',')[0].trim();
+  }
+  if (color.includes(',') && !variant_sku) {
+    variant_sku = color.split(',')[0];
+    color = color.split(',')[0].trim();
+  }
+
   sheet.appendRow([
     id, params.title_ar || '', params.title_en || '',
     params.price || 0, params.old_price || 0, params.currency || 'DZD',
     params.image1 || '', params.image2 || '', params.image3 || '',
     params.category_ar || '', params.category_en || '',
     params.desc_ar || '', params.desc_en || '',
-    params.stock || 0, params.active === false || params.active === 'false' ? false : true
+    params.stock || 0,
+    params.active === false || params.active === 'false' ? false : true,
+    size, color, // حقول التفاعل الجديدة
+    variant_name, variant_sku, // خاصية جديدة وأس او كي للمتغير
+    variant_price, variant_stock, // أسعار ومخزون خاص بالمتغير
+    JSON.stringify(params.variant_options || []) // خيارات JSON للتفاعل
   ]);
   return { ok: true, id: id };
 }
@@ -285,8 +374,48 @@ function adminEditProduct(params) {
   if (!row || row < 2) return { error: 'Invalid row' };
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
+  
+  // SELECTION HANDLERS for variant fields - support both string and array
+  var size = params.size !== undefined ? (Array.isArray(params.size) ? params.size.join(', ') : String(params.size)) : null;
+  if (size !== null) {
+    var colIndex = headers.indexOf('size');
+    if (colIndex >= 0) sheet.getRange(row, colIndex + 1).setValue(size);
+  }
+  
+  var color = params.color !== undefined ? (Array.isArray(params.color) ? params.color.join(', ') : String(params.color)) : null;
+  if (color !== null) {
+    var colIndex = headers.indexOf('color');
+    if (colIndex >= 0) sheet.getRange(row, colIndex + 1).setValue(color);
+  }
+
+  var variant_name = params.variant_name !== undefined ? String(params.variant_name) : null;
+  if (variant_name !== null) {
+    var colIndex = headers.indexOf('variant_name');
+    if (colIndex >= 0) sheet.getRange(row, colIndex + 1).setValue(variant_name);
+  }
+
+  var variant_sku = params.variant_sku !== undefined ? String(params.variant_sku) : null;
+  if (variant_sku !== null) {
+    var colIndex = headers.indexOf('variant_sku');
+    if (colIndex >= 0) sheet.getRange(row, colIndex + 1).setValue(variant_sku);
+  }
+
+  var variant_price = params.variant_price !== undefined ? String(params.variant_price) : null;
+  if (variant_price !== null) {
+    var colIndex = headers.indexOf('variant_price');
+    if (colIndex >= 0) sheet.getRange(row, colIndex + 1).setValue(variant_price);
+  }
+
+  var variant_stock = params.variant_stock !== undefined ? String(params.variant_stock) : null;
+  if (variant_stock !== null) {
+    var colIndex = headers.indexOf('variant_stock');
+    if (colIndex >= 0) sheet.getRange(row, colIndex + 1).setValue(variant_stock);
+  }
+
+  // Process other fields
   for (var j = 0; j < headers.length; j++) {
-    if (params[headers[j]] !== undefined) {
+    if (['size', 'color', 'variant_name', 'variant_sku', 'variant_price', 'variant_stock', '_row'].indexOf(headers[j]) >= 0) continue;
+    if (params[headers[j]] !== undefined && params[headers[j]] !== null) {
       var val = params[headers[j]];
       if (headers[j] === 'active') { val = (val === true || val === 'true' || val === 'TRUE' || val === 1 || val === '1'); }
       sheet.getRange(row, j + 1).setValue(val);

@@ -597,6 +597,39 @@ body.rtl{font-family:var(--font-ar)}
         <div class="form-group"><label>الوصف (إنجليزي)</label><textarea id="p_desc_en" rows="2"></textarea></div>
         <div class="form-group"><label>المخزون</label><input type="number" id="p_stock" value="0"></div>
         <div class="form-group"><label>الحالة</label><select id="p_active"><option value="true">نشط</option><option value="false">غير نشط</option></select></div>
+        <div class="form-group full" style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
+          <label style="font-weight:700;font-size:.82rem;color:var(--text)">📦 خيارات المنتج (المقاسات والألوان) <span style="font-weight:400;color:var(--text2)">— اختياري</span></label>
+          <div class="form-row" style="margin-top:6px">
+            <div class="form-group">
+              <label>المقاسات (افصل بفاصلة)</label>
+              <input id="p_size" placeholder="مثال: S, M, L, XL">
+            </div>
+            <div class="form-group">
+              <label>الألوان (افصل بفاصلة)</label>
+              <input id="p_color" placeholder="مثال: أحمر, أزرق, أسود">
+            </div>
+          </div>
+          <div class="form-row" style="margin-top:6px">
+            <div class="form-group">
+              <label>اسم المتغير (اختياري)</label>
+              <input id="p_variant_name" placeholder="مثال: نسخة خاصة">
+            </div>
+            <div class="form-group">
+              <label>الـ SKU (اختياري)</label>
+              <input id="p_variant_sku" placeholder="مثال: TSHIRT-M-RED">
+            </div>
+          </div>
+          <div class="form-row" style="margin-top:6px">
+            <div class="form-group">
+              <label>سعر المتغير (إن كان مختلفًا)</label>
+              <input type="number" id="p_variant_price" placeholder="اتركه فارغاً = نفس سعر المنتج">
+            </div>
+            <div class="form-group">
+              <label>مخزون المتغير (إن كان مختلفًا)</label>
+              <input type="number" id="p_variant_stock" placeholder="اتركه فارغاً = نفس مخزون المنتج">
+            </div>
+          </div>
+        </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button type="submit" class="btn btn-accent">حفظ</button>
@@ -1070,6 +1103,12 @@ function openProductModal(row) {
     });
     document.getElementById('p_stock').value = '0';
     document.getElementById('p_active').value = 'true';
+    document.getElementById('p_size').value = '';
+    document.getElementById('p_color').value = '';
+    document.getElementById('p_variant_name').value = '';
+    document.getElementById('p_variant_sku').value = '';
+    document.getElementById('p_variant_price').value = '';
+    document.getElementById('p_variant_stock').value = '';
   }
 }
 
@@ -1092,6 +1131,12 @@ function editProduct(row) {
   document.getElementById('p_desc_en').value = p.desc_en || '';
   document.getElementById('p_stock').value = p.stock || 0;
   document.getElementById('p_active').value = p.active ? 'true' : 'false';
+  document.getElementById('p_size').value = p.size || '';
+  document.getElementById('p_color').value = p.color || '';
+  document.getElementById('p_variant_name').value = p.variant_name || '';
+  document.getElementById('p_variant_sku').value = p.variant_sku || '';
+  document.getElementById('p_variant_price').value = p.variant_price || '';
+  document.getElementById('p_variant_stock').value = p.variant_stock || '';
   [1,2,3].forEach(function(num) {
     var url = p['image' + num];
     if (url) {
@@ -1126,8 +1171,17 @@ function saveProduct(e) {
       desc_ar: document.getElementById('p_desc_ar').value,
       desc_en: document.getElementById('p_desc_en').value,
       stock: Number(document.getElementById('p_stock').value) || 0,
-      active: document.getElementById('p_active').value === 'true'
+      active: document.getElementById('p_active').value === 'true',
+      size: document.getElementById('p_size').value,
+      color: document.getElementById('p_color').value,
+      variant_name: document.getElementById('p_variant_name').value,
+      variant_sku: document.getElementById('p_variant_sku').value,
+      variant_price: document.getElementById('p_variant_price').value || '',
+      variant_stock: document.getElementById('p_variant_stock').value || '',
+      variant_options: []
     };
+    if (data.size) data.size = data.size.split(',').map(function(s){return s.trim();}).filter(function(s){return s;}).join(', ');
+    if (data.color) data.color = data.color.split(',').map(function(c){return c.trim();}).filter(function(c){return c;}).join(', ');
 
     var endpoint = row ? 'admin_edit_product' : 'admin_add_product';
     if (row) data._row = row;
