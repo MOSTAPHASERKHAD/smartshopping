@@ -49,22 +49,18 @@ body.rtl{direction:rtl;text-align:right}
 /* Announcement bar */
 .announcement{background:var(--accent);color:rgba(255,255,255,.85);text-align:center;padding:7px 16px;font-size:.72rem;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px}
 
-/* Dark Mode */
-body{transition:background-color .3s,color .3s}
-body.dark-mode{
-  --bg:#0f0f1a;--card:#1a1a2e;--text:#e8e6ff;--text2:#9d9bc0;--text3:#6b6a8a;
-  --border:#2d2b4e;--accent:#818cf8;--accent2:#a5b4fc;
-  --shadow:0 2px 12px rgba(0,0,0,.5);
-}
-body.dark-mode header{background:rgba(15,15,26,.96)!important;border-color:#2d2b4e}
-body.dark-mode .cart-drawer{background:#1a1a2e}
-body.dark-mode .modal{background:#1a1a2e}
-body.dark-mode .search-bar input{background:#2d2b4e;color:#e8e6ff;border-color:#2d2b4e}
-body.dark-mode .form-group input,body.dark-mode .form-group select,body.dark-mode .form-group textarea{background:#2d2b4e;color:#e8e6ff;border-color:#2d2b4e}
-body.dark-mode footer{background:linear-gradient(135deg,#060610,#0d0d1a)}
-body.dark-mode .summary-box{background:#2d2b4e}
-body.dark-mode .announcement{background:#2d2b4e;color:var(--accent)}
-body.dark-mode .cat-btn{background:#1a1a2e;color:#9d9bc0;border-color:#2d2b4e}
+/* Dark Mode — vars handled by ThemeEngine (injects :root + body.dark-mode block) */
+body{transition:background-color .35s,color .35s,border-color .35s}
+/* Structural-only dark overrides (layout, not colors) */
+body.dark-mode header{background:var(--card)!important;border-color:var(--border)}
+body.dark-mode .cart-drawer{background:var(--card)}
+body.dark-mode .modal{background:var(--card)}
+body.dark-mode .search-bar input{background:var(--card);color:var(--text);border-color:var(--border)}
+body.dark-mode .form-group input,body.dark-mode .form-group select,body.dark-mode .form-group textarea{background:var(--card);color:var(--text);border-color:var(--border)}
+body.dark-mode footer{background:var(--bg)}
+body.dark-mode .summary-box{background:var(--card)}
+body.dark-mode .announcement{background:var(--accent);color:#fff}
+body.dark-mode .cat-btn{background:var(--card);color:var(--text2);border-color:var(--border)}
 body.dark-mode .cat-btn.active{background:var(--accent);color:#fff}
 .dark-btn{background:none;border:none;cursor:pointer;font-size:1.1rem;padding:4px 6px;border-radius:6px;transition:background .2s;line-height:1}
 .dark-btn:hover{background:var(--border)}
@@ -3296,7 +3292,13 @@ function buildLandingPageHTML(p){
   html+='<div class="lp-grid">';
   html+='<div class="lp-media">';
   html+='<div class="lp-main-img" id="lpMainImg">';
-  html+='<img src="'+imgs[0]+'" alt="'+title+'" id="lpMainImgTag">';
+  // skeleton shimmer shown while loading
+  html+='<div class="lp-img-skeleton" id="lpSkeleton"></div>';
+  if(imgs[0]&&!imgs[0].startsWith('data:')){
+    html+='<img src="'+imgs[0]+'" alt="'+title+'" id="lpMainImgTag" style="opacity:0;transition:opacity .35s" onclick="lpOpenLightbox(0)" onload="lpImgLoaded(this)">';
+  }else{
+    html+='<div class="lp-placeholder-img" id="lpMainImgTag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>'+(lang==='ar'?'لا توجد صورة':'No image')+'</span></div>';
+  }
   if(imgs.length>1){
     html+='<button class="lp-arrow prev" onclick="lpCarouselNav(-1)">‹</button>';
     html+='<button class="lp-arrow next" onclick="lpCarouselNav(1)">›</button>';
@@ -3357,7 +3359,12 @@ function lpCarouselGo(idx){
 }
 function updateLpImage(){
   var img=document.getElementById('lpMainImgTag');
-  if(img)img.src=lpImgs[lpIdx];
+  if(img&&img.tagName==='IMG'){
+    img.style.opacity='0';
+    img.src=lpImgs[lpIdx];
+    img.onload=function(){img.style.opacity='1';};
+    img.onclick=function(){lpOpenLightbox(lpIdx);};
+  }
   var counter=document.getElementById('lpImgIdx');
   if(counter)counter.textContent=lpIdx+1;
   document.querySelectorAll('.lp-thumb').forEach(function(t,i){
