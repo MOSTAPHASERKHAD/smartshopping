@@ -254,15 +254,35 @@
     var container = document.getElementById('mainContentWrapper');
     if (!container) return; // Wait until DOM is ready
     
+    var idMap = {
+      'announcement': 'section-announcement',
+      'header': 'section-header',
+      'hero': 'section-hero',
+      'products': 'section-products',
+      'benefits': 'section-trust',
+      'track': 'track-section',
+      'testimonials': 'testimonialsSection',
+      'footer': 'section-footer'
+    };
+    
+    // First, push unmanaged children to the end by default, or keep their natural order.
+    // Actually, setting order on the managed ones from 1 to N is fine, 
+    // but we need to ensure productDetailSection stays where it belongs.
+    // Best is to give all children a high order by default.
+    Array.prototype.forEach.call(container.children, function(child) {
+       child.style.order = 99;
+    });
+
     sections.forEach(function(sec, idx) {
-      var el = document.getElementById('section-' + sec.id);
+      var domId = idMap[sec.id] || ('section-' + sec.id);
+      var el = document.getElementById(domId);
       if (el) {
         if (sec.visible === false) {
           el.style.display = 'none';
         } else {
           el.style.display = '';
         }
-        el.style.order = idx;
+        el.style.order = idx + 1;
       }
     });
   };
