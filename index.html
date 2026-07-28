@@ -758,7 +758,6 @@ document.head.appendChild(ld);
     </button>
   </div>
   <div class="header-actions">
-    <button class="dark-btn hidden" id="themeSwitcherBtn" onclick="openThemeSwitcher()" title="الثيمات" style="display:none">🎨</button>
     <button class="dark-btn" id="darkToggle" onclick="toggleDark()" title="وضع داكن / فاتح">🌙</button>
     <button class="icon-btn lang-btn" id="langToggle" onclick="toggleLang()">EN</button>
     <button class="icon-btn user-btn" id="userBtn" onclick="openAuthModal()" style="position:relative">
@@ -1596,37 +1595,7 @@ function initDarkMode(){
   }
 }
 
-// === Theme Switcher (storefront) ===
-function openThemeSwitcher(){
-  var existing=document.getElementById('themeSwitcherPanel');
-  if(existing){existing.remove();return;}
-  var themes=window.ThemeEngine?ThemeEngine.list():[];
-  var cur=window.ThemeEngine?ThemeEngine.activeId:null;
-  var html='<div class="ts-backdrop" onclick="closeThemeSwitcher()"></div>'+
-    '<div class="ts-panel" id="themeSwitcherPanel">'+
-    '<div class="ts-head"><span>🎨 اختر الثيم</span><button class="dark-btn" onclick="closeThemeSwitcher()">✕</button></div>'+
-    '<div class="ts-grid">'+
-    themes.map(function(t){
-      var tk=t.tokens&&t.tokens.colors?t.tokens.colors:{};
-      var bg=tk.background||'#fff',ac=tk.accent||'#333',sa=tk.secondary||'#e94560';
-      return '<button class="ts-item'+(t.id===cur?' active':'')+'" onclick="applyStoreTheme(\''+t.id+'\')">'+
-        '<span class="ts-swatch" style="background:'+bg+';border-color:'+(tk.border||'#ddd')+'">'+
-          '<span style="background:'+ac+'"></span><span style="background:'+sa+'"></span></span>'+
-        '<span class="ts-name">'+t.name+'</span></button>';
-    }).join('')+
-    '</div>'+
-    '<div class="ts-foot"><button class="btn btn-outline btn-xs" onclick="exportCurrentTheme()">تصدير الثيم الحالي</button></div>'+
-    '</div>';
-  var wrap=document.createElement('div');wrap.innerHTML=html;document.body.appendChild(wrap);
-}
-function closeThemeSwitcher(){var p=document.getElementById('themeSwitcherPanel');if(p){p.parentNode.remove();}}
-function applyStoreTheme(id){
-  if(window.ThemeEngine){ThemeEngine.apply(id,ThemeEngine.mode);}
-  closeThemeSwitcher();
-}
-function exportCurrentTheme(){
-  if(window.ThemeEngine&&ThemeEngine.activeId)ThemeEngine.exportTheme(ThemeEngine.activeId);
-}
+// Old theme switcher was removed (now integrated into Admin Customizer)
 
 
 function apiCall(action,params,callback){
