@@ -253,11 +253,16 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 .back-link{display:inline-flex;align-items:center;gap:4px;color:var(--text2);text-decoration:none;font-size:.8rem;font-weight:500;margin-bottom:20px;transition:color .15s}
 .back-link:hover{color:var(--text)}
 .pdetail-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;align-items:start}
-.pdetail-left{display:flex;flex-direction:column}
-.pdetail-img{background:#f7f7f7;height:420px;min-height:300px;overflow:visible;position:relative}
-.pdetail-img img{width:100%;height:100%;object-fit:cover;display:block;border-radius:var(--radius)}
-.pdetail-img .carousel{height:420px;min-height:300px;max-height:500px;border-radius:var(--radius)}
-.pdetail-features{padding:20px 24px;border-top:1px solid var(--border)}
+.pdetail-left{display:flex;flex-direction:column;gap:0}
+.pdetail-main-img{background:#f7f7f7;height:420px;min-height:300px;overflow:hidden;position:relative;border-radius:var(--radius) var(--radius) 0 0;cursor:zoom-in}
+.pdetail-main-img img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.pdetail-main-img:hover img{transform:scale(1.05)}
+.pdetail-thumbs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:12px 16px;background:var(--card);border-top:1px solid var(--border)}
+.pdetail-thumb{aspect-ratio:1;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all .2s;opacity:.6}
+.pdetail-thumb.active{border-color:var(--accent);opacity:1}
+.pdetail-thumb:hover{opacity:1}
+.pdetail-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.pdetail-features{padding:16px 20px;border-top:1px solid var(--border)}
 .pdetail-features h4{font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
 .pd-feature-list{display:flex;flex-direction:column;gap:8px}
 .pd-feature-item{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text)}
@@ -283,9 +288,9 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 
 @media(max-width:768px){
   .pdetail-layout{grid-template-columns:1fr !important;gap:0 !important}
-  .pdetail-img{height:260px !important;min-height:200px !important;max-height:300px !important;overflow:visible !important}
-  .pdetail-img .carousel{height:260px !important;max-height:300px !important}
-  .carousel-arrow{width:34px;height:34px;font-size:1rem}
+  .pdetail-main-img{height:260px !important;min-height:200px !important;max-height:300px !important}
+  .pdetail-thumbs{grid-template-columns:repeat(3,1fr);gap:4px;padding:8px 12px}
+  .pdetail-features{padding:12px 14px}
   .pdetail-features{padding:14px 16px}
   .pdetail-info{padding:16px}
   body.ltr .pdetail-info{padding:16px}
@@ -731,9 +736,10 @@ body.rtl .back-to-top{left:auto;right:24px}
   <a href="#" class="back-link" onclick="hideProductDetail();return false" data-i18n="back_products">← العودة للمنتجات</a>
   <div class="pdetail-layout">
     <div class="pdetail-left">
-      <div class="pdetail-img" id="pdImage">
+      <div class="pdetail-main-img" id="pdMainImage">
         <div style="color:var(--text2);font-size:.85rem;text-align:center;padding:40px" data-i18n="loading">جاري التحميل...</div>
       </div>
+      <div class="pdetail-thumbs" id="pdThumbs"></div>
       <div class="pdetail-features" id="pdFeatures"></div>
     </div>
     <div class="pdetail-info">
@@ -2058,25 +2064,24 @@ function showProductDetail(id){
   el=document.getElementById('pdDesc');if(el)el.textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
   renderVariantSection(p);
   renderProductFeatures(p);
-  var imgs=[p.image1,p.image2,p.image3].filter(function(i){return i});
-  el=document.getElementById('pdImage');
+  var imgs=[p.image1,p.image2,p.image3,p.image4,p.image5,p.image6].filter(function(i){return i});
+  el=document.getElementById('pdMainImage');
   if(el){
-    var mainImg=imgs.length>1?imgs[0]:(imgs.length===1?imgs[0]:'');
-    if(imgs.length>1){
-      var cHtml='<div class="carousel" id="pdCarousel"><img src="'+mainImg+'" id="pdCarouselImg" alt="">';
-      cHtml+='<button class="carousel-arrow prev" onclick="carouselNav(-1)">‹</button>';
-      cHtml+='<button class="carousel-arrow next" onclick="carouselNav(1)">›</button></div>';
-      cHtml+='<div class="carousel-dots">';
-      imgs.forEach(function(_,i){cHtml+='<button class="carousel-dot'+(i===0?' active':'')+'" onclick="carouselGo('+i+')"></button>'});
-      cHtml+='</div>';
-      el.innerHTML=cHtml;
+    if(imgs.length>0){
+      el.innerHTML='<img src="'+imgs[0]+'" id="pdMainImg" alt="" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">';
       window._pdImgs=imgs;window._pdImgIdx=0;
-    }else if(imgs.length===1){
-      el.innerHTML='<img src="'+mainImg+'" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML=\'<div style=color:var(--text2);font-size:.85rem;padding:40px;text-align:center>No Image</div>\'">';
     }else{
       el.innerHTML='<div style="color:var(--text2);font-size:.85rem;display:flex;align-items:center;justify-content:center;height:100%">No Image</div>';
     }
   }
+  var thumbsEl=document.getElementById('pdThumbs');
+  if(thumbsEl&&imgs.length>1){
+    var th='<img src="'+imgs[0]+'" class="pdetail-thumb active" onclick="selectPdImg(0)" alt="">';
+    for(var ti=1;ti<imgs.length;ti++){
+      th+='<img src="'+imgs[ti]+'" class="pdetail-thumb" onclick="selectPdImg('+ti+')" alt="">';
+    }
+    thumbsEl.innerHTML=th;
+  }else if(thumbsEl){thumbsEl.innerHTML='';}
   var saved=JSON.parse(localStorage.getItem(CUSTOMER_KEY)||'{}');
   el=document.getElementById('pdName');if(el)el.value=saved.name||'';
   el=document.getElementById('pdPhone');if(el)el.value=saved.phone||'';
@@ -2099,6 +2104,15 @@ function showProductDetail(id){
 }
 
 var carouselTimer=null;
+function selectPdImg(idx){
+  try{
+    var imgs=window._pdImgs;if(!imgs||!imgs[idx])return;
+    window._pdImgIdx=idx;
+    var mainImg=document.getElementById('pdMainImg');
+    if(mainImg)mainImg.src=imgs[idx];
+    document.querySelectorAll('.pdetail-thumb').forEach(function(t,i){t.classList.toggle('active',i===idx);});
+  }catch(e){}
+}
 function carouselNav(dir){
   try{
     var imgs=window._pdImgs;if(!imgs||imgs.length<2)return;

@@ -584,11 +584,16 @@ body.rtl{font-family:var(--font-ar)}
               <span id="upload-label-3" style="color:#999;font-size:.75rem">+ صورة 3</span>
             </label>
           </div>
-          <small style="color:var(--text3);margin-top:4px;display:block">أو أدخل رابط الصورة يدوياً:</small>
+          <small style="color:var(--text3);margin-top:4px;display:block">أو أدخل رابط الصورة يدوياً (6 صور كحد أقصى):</small>
           <div class="form-row" style="margin-top:4px">
-            <div class="form-group"><input id="p_image1" placeholder="رابط الصورة 1"></div>
+            <div class="form-group"><input id="p_image1" placeholder="رابط الصورة 1 (الرئيسية)"></div>
             <div class="form-group"><input id="p_image2" placeholder="رابط الصورة 2"></div>
             <div class="form-group"><input id="p_image3" placeholder="رابط الصورة 3"></div>
+          </div>
+          <div class="form-row" style="margin-top:4px">
+            <div class="form-group"><input id="p_image4" placeholder="رابط الصورة 4"></div>
+            <div class="form-group"><input id="p_image5" placeholder="رابط الصورة 5"></div>
+            <div class="form-group"><input id="p_image6" placeholder="رابط الصورة 6"></div>
           </div>
         </div>
         <div class="form-group"><label>التصنيف (عربي)</label><input id="p_category_ar"></div>
@@ -1098,7 +1103,7 @@ function openProductModal(row) {
     if (fileInput) fileInput.value = '';
   });
   if (!row) {
-    ['p_title_ar','p_title_en','p_price','p_old_price','p_image1','p_image2','p_image3','p_category_ar','p_category_en','p_desc_ar','p_desc_en'].forEach(function(id) {
+    ['p_title_ar','p_title_en','p_price','p_old_price','p_image1','p_image2','p_image3','p_image4','p_image5','p_image6','p_category_ar','p_category_en','p_desc_ar','p_desc_en'].forEach(function(id) {
       document.getElementById(id).value = '';
     });
     document.getElementById('p_stock').value = '0';
@@ -1125,6 +1130,9 @@ function editProduct(row) {
   document.getElementById('p_image1').value = p.image1 || '';
   document.getElementById('p_image2').value = p.image2 || '';
   document.getElementById('p_image3').value = p.image3 || '';
+  document.getElementById('p_image4').value = p.image4 || '';
+  document.getElementById('p_image5').value = p.image5 || '';
+  document.getElementById('p_image6').value = p.image6 || '';
   document.getElementById('p_category_ar').value = p.category_ar || '';
   document.getElementById('p_category_en').value = p.category_en || '';
   document.getElementById('p_desc_ar').value = p.desc_ar || '';
@@ -1166,6 +1174,9 @@ function saveProduct(e) {
       image1: urls[1] || document.getElementById('p_image1').value,
       image2: urls[2] || document.getElementById('p_image2').value,
       image3: urls[3] || document.getElementById('p_image3').value,
+      image4: urls[4] || document.getElementById('p_image4').value,
+      image5: urls[5] || document.getElementById('p_image5').value,
+      image6: urls[6] || document.getElementById('p_image6').value,
       category_ar: document.getElementById('p_category_ar').value,
       category_en: document.getElementById('p_category_en').value,
       desc_ar: document.getElementById('p_desc_ar').value,

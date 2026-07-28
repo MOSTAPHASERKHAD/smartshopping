@@ -354,14 +354,15 @@ function adminAddProduct(params) {
     id, params.title_ar || '', params.title_en || '',
     params.price || 0, params.old_price || 0, params.currency || 'DZD',
     params.image1 || '', params.image2 || '', params.image3 || '',
+    params.image4 || '', params.image5 || '', params.image6 || '',
     params.category_ar || '', params.category_en || '',
     params.desc_ar || '', params.desc_en || '',
     params.stock || 0,
     params.active === false || params.active === 'false' ? false : true,
-    size, color, // حقول التفاعل الجديدة
-    variant_name, variant_sku, // خاصية جديدة وأس او كي للمتغير
-    variant_price, variant_stock, // أسعار ومخزون خاص بالمتغير
-    JSON.stringify(params.variant_options || []) // خيارات JSON للتفاعل
+    size, color,
+    variant_name, variant_sku,
+    variant_price, variant_stock,
+    JSON.stringify(params.variant_options || [])
   ]);
   return { ok: true, id: id };
 }
