@@ -188,13 +188,15 @@
       // dynamically load theme Google Fonts
       this._loadThemeFonts(theme.tokens && theme.tokens.fonts);
 
-      // inject CSS
+      // inject CSS — always move to end of <head> so it wins specificity over static CSS
       var styleEl = document.getElementById('theme-engine-style');
       if (!styleEl) {
         styleEl = document.createElement('style');
         styleEl.id = 'theme-engine-style';
-        document.head.appendChild(styleEl);
       }
+      // Remove and re-append so it's always the LAST stylesheet (highest cascade priority)
+      if (styleEl.parentNode) styleEl.parentNode.removeChild(styleEl);
+      document.head.appendChild(styleEl);
       var css = this._tokensToCSS(theme.tokens, effectiveMode, theme.base);
       styleEl.textContent = css;
 
