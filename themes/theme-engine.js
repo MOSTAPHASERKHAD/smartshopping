@@ -314,7 +314,9 @@
     if (!imgs) return;
     if (imgs.bannerGradient) {
       var hero = document.getElementById('heroSlider');
-      if (hero) hero.style.background = imgs.bannerGradient;
+      if (hero) {
+        hero.style.background = imgs.bannerGradient;
+      }
     }
   };
 
@@ -431,6 +433,20 @@
                : (Object.keys(this.themes)[0] || null))));
     var showMode = (local && local.mode) ? local.mode : (opts.defaultMode || 'auto');
     this.apply(showId, showMode);
+
+    // Guarantee sections are always ordered/visible, even if theme doesn't define them.
+    // This fixes cold-start where the default theme has no .tokens.sections array.
+    var self3 = this;
+    setTimeout(function() {
+      var activeTheme = self3.themes[self3.activeId];
+      if (activeTheme && (!activeTheme.tokens.sections || !activeTheme.tokens.sections.length)) {
+        // Build defaults from SECTION_TOKENS
+        var defaultSections = Schema.SECTION_TOKENS.map(function(s) {
+          return { id: s.id, visible: s.defaultVisible };
+        });
+        self3._applySections(defaultSections);
+      }
+    }, 0);
   };
 
   // ── Import a theme file (delegates to importer) ──
