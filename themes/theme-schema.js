@@ -112,8 +112,8 @@
     { id: 'announcement', label: 'شريط الإعلانات', defaultVisible: true },
     { id: 'header', label: 'رأس الصفحة (الهيدر)', defaultVisible: true },
     { id: 'hero', label: 'البانر الإعلاني', defaultVisible: true },
-    { id: 'benefits', label: 'المميزات (الدفع عند الاستلام...)', defaultVisible: true },
     { id: 'products', label: 'شبكة المنتجات', defaultVisible: true },
+    { id: 'benefits', label: 'المميزات (الدفع عند الاستلام...)', defaultVisible: true },
     { id: 'track', label: 'تتبع الطلب', defaultVisible: true },
     { id: 'testimonials', label: 'آراء العملاء', defaultVisible: true },
     { id: 'footer', label: 'ذيل الصفحة (الفوتر)', defaultVisible: true }
@@ -206,20 +206,13 @@
       });
     }
     if (input.sections && Array.isArray(input.sections)) {
-      // Create a map of updated sections to merge with defaults (preserving new order if desired, or just updating visibility)
-      // If the theme provides a sections array, we use its order and visibility.
       var mergedSections = [];
-      input.sections.forEach(function(inSec) {
-        var baseSec = SECTION_TOKENS.find(function(s) { return s.id === inSec.id; });
-        if (baseSec) {
-          mergedSections.push({ id: inSec.id, visible: typeof inSec.visible === 'boolean' ? inSec.visible : baseSec.defaultVisible });
-        }
-      });
-      // Append any missing sections from base
       SECTION_TOKENS.forEach(function(baseSec) {
-        if (!mergedSections.find(function(ms) { return ms.id === baseSec.id; })) {
-          mergedSections.push({ id: baseSec.id, visible: baseSec.defaultVisible });
-        }
+        var inSec = input.sections.find(function(s) { return s.id === baseSec.id; });
+        mergedSections.push({
+          id: baseSec.id,
+          visible: (inSec && typeof inSec.visible === 'boolean') ? inSec.visible : baseSec.defaultVisible
+        });
       });
       base.sections = mergedSections;
     }
