@@ -3581,24 +3581,5 @@ function lpCloseLightbox(){
   <a href="https://wa.me/213557543177" target="_blank"><span class="icon">💬</span><span>WhatsApp</span></a>
 </nav>
 
-<!-- Admin Tools (Customizer FAB) -->
-<script>
-  if (location.search.includes('admin=1')) {
-    localStorage.setItem('isAdmin', '1');
-  }
-  if (localStorage.getItem('isAdmin') === '1') {
-    var adminFab = document.createElement('button');
-    adminFab.innerHTML = '⚙️ تخصيص المتجر';
-    adminFab.style.cssText = 'position:fixed;bottom:24px;left:24px;z-index:9999;background:var(--accent, #6366f1);color:#fff;border:none;border-radius:30px;padding:12px 24px;font-weight:bold;font-size:14px;font-family:var(--font);box-shadow:0 10px 25px rgba(0,0,0,0.2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:transform 0.2s;';
-    adminFab.onmouseover = function() { this.style.transform = 'scale(1.05)'; };
-    adminFab.onmouseout = function() { this.style.transform = 'scale(1)'; };
-    adminFab.onclick = function() {
-      if (window.ThemeCustomizer && window.ThemeEngine) {
-        ThemeCustomizer.open(window.ThemeEngine.activeId || 'smartkiosk-default');
-      }
-    };
-    document.body.appendChild(adminFab);
-  }
-</script>
 </body>
 </html>
