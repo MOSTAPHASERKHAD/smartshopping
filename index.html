@@ -254,9 +254,9 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 .back-link:hover{color:var(--text)}
 .pdetail-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;align-items:start}
 .pdetail-left{display:flex;flex-direction:column}
-.pdetail-img{background:#f7f7f7;height:420px;min-height:300px;overflow:hidden;position:relative}
-.pdetail-img img{width:100%;height:100%;object-fit:cover;display:block}
-.pdetail-img .carousel{height:420px;min-height:300px;max-height:500px}
+.pdetail-img{background:#f7f7f7;height:420px;min-height:300px;overflow:visible;position:relative}
+.pdetail-img img{width:100%;height:100%;object-fit:cover;display:block;border-radius:var(--radius)}
+.pdetail-img .carousel{height:420px;min-height:300px;max-height:500px;border-radius:var(--radius)}
 .pdetail-features{padding:20px 24px;border-top:1px solid var(--border)}
 .pdetail-features h4{font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
 .pd-feature-list{display:flex;flex-direction:column;gap:8px}
@@ -283,8 +283,9 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 
 @media(max-width:768px){
   .pdetail-layout{grid-template-columns:1fr !important;gap:0 !important}
-  .pdetail-img{height:260px !important;min-height:200px !important;max-height:300px !important;overflow:hidden}
-  .pdetail-img .carousel{height:260px !important;max-height:300px !important;aspect-ratio:unset !important}
+  .pdetail-img{height:260px !important;min-height:200px !important;max-height:300px !important;overflow:visible !important}
+  .pdetail-img .carousel{height:260px !important;max-height:300px !important}
+  .carousel-arrow{width:34px;height:34px;font-size:1rem}
   .pdetail-features{padding:14px 16px}
   .pdetail-info{padding:16px}
   body.ltr .pdetail-info{padding:16px}
@@ -326,20 +327,17 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 .testimonials-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 
 /* Carousel */
-.carousel{position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:var(--radius);background:#f7f7f7}
+.carousel{position:relative;width:100%;overflow:visible;border-radius:var(--radius);background:#f7f7f7}
 .carousel img{width:100%;height:100%;object-fit:cover;transition:opacity .3s}
-@media(max-width:768px){
-  .carousel{aspect-ratio:1;max-height:130px}
-}
-.carousel-dots{display:flex;gap:6px;justify-content:center;margin-top:10px}
-.carousel-dot{width:8px;height:8px;border-radius:50%;border:none;background:var(--border);cursor:pointer;transition:background .2s}
-.carousel-dot.active{background:var(--accent)}
-.carousel-arrow{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;border-radius:50%;background:rgba(255,255,255,.85);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:background .2s;z-index:2;box-shadow:0 2px 6px rgba(0,0,0,.15)}
-.carousel-arrow:hover{background:#fff}
-.carousel-arrow.prev{left:8px}
-.carousel-arrow.next{right:8px}
-body.rtl .carousel-arrow.prev{left:auto;right:8px}
-body.rtl .carousel-arrow.next{right:auto;left:8px}
+.carousel-dots{display:flex;gap:8px;justify-content:center;margin-top:12px;padding:4px 0}
+.carousel-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--border);background:transparent;cursor:pointer;transition:all .2s}
+.carousel-dot.active{background:var(--accent);border-color:var(--accent);transform:scale(1.2)}
+.carousel-arrow{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border:none;border-radius:50%;background:rgba(255,255,255,.92);cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.2);color:var(--text)}
+.carousel-arrow:hover{background:#fff;transform:translateY(-50%) scale(1.1)}
+.carousel-arrow.prev{left:10px}
+.carousel-arrow.next{right:10px}
+body.rtl .carousel-arrow.prev{left:auto;right:10px}
+body.rtl .carousel-arrow.next{right:auto;left:10px}
 
 /* Promo Banner Slider */
 .hero-slider{position:relative;overflow:hidden;border-radius:var(--radius);margin-bottom:24px;height:250px;width:100%;background:#f7f7f7}
