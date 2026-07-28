@@ -51,10 +51,19 @@
     if (state.themeId) Engine.apply(state.themeId, Engine.mode);
   }
 
-  // ── Build the customizer UI and inject it ──
   function showCustomizerUI() {
     var existing = document.getElementById('sk-customizer');
-    if (existing) return;
+    if (existing) {
+      // Re-render panel only
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = getHTML();
+      var oldPanel = document.getElementById('sk-customizer-panel');
+      var newPanel = wrapper.querySelector('#sk-customizer-panel');
+      if (oldPanel && newPanel) {
+        oldPanel.parentNode.replaceChild(newPanel, oldPanel);
+      }
+      return;
+    }
     var div = document.createElement('div');
     div.id = 'sk-customizer';
     div.innerHTML = getHTML();
@@ -122,13 +131,23 @@
     });
     iconPickers += '</select></div>';
 
+    var themeSelector = '<div class="sk-cp-row" style="margin-bottom:12px"><label style="font-weight:bold;color:var(--accent)">القالب الأساسي</label><select onchange="ThemeCustomizer.switchBaseTheme(this.value)" style="background:#f0f0f0;font-weight:bold">';
+    if (Engine) {
+      Engine.list().forEach(function(t) {
+        var sel = t.id === state.themeId ? 'selected' : '';
+        themeSelector += '<option value="' + t.id + '" ' + sel + '>' + t.name + '</option>';
+      });
+    }
+    themeSelector += '</select></div>';
+
     return '<div id="sk-customizer-overlay"></div>' +
       '<div id="sk-customizer-panel" dir="rtl">' +
         '<div class="sk-cp-header">' +
-          '<span class="sk-cp-title">🎨 تخصيص: ' + state.themeName + '</span>' +
+          '<span class="sk-cp-title">⚙️ إدارة المتجر</span>' +
           '<button class="sk-cp-close" onclick="ThemeCustomizer.close()">✕</button>' +
         '</div>' +
         '<div class="sk-cp-scroll">' +
+          '<section>' + themeSelector + '</section>' +
           '<section><h4>🎯 الألوان</h4>' + colorPickers + '</section>' +
           '<section><h4>📝 الخطوط</h4>' + fontPickers + '</section>' +
           '<section><h4>🔄 الزوايا</h4>' + radiusPickers + '</section>' +
@@ -188,6 +207,19 @@
   }
   function iconShapeChange(val) {
     state.tokens.icons.shape = val;
+    sendPreview();
+  }
+  function switchBaseTheme(id) {
+    var theme = Engine.get(id);
+    if (!theme) return;
+    state.themeId = theme.id;
+    state.themeName = theme.name;
+    state.base = theme.base;
+    state.tokens = JSON.parse(JSON.stringify(theme.tokens));
+    if (!state.tokens.sections) state.tokens.sections = Schema.defaultTokens().sections;
+    if (!state.tokens.icons) state.tokens.icons = Schema.defaultTokens().icons;
+    state.tokens.sections.forEach(function(s) { visibility[s.id] = s.visible; });
+    showCustomizerUI();
     sendPreview();
   }
 
@@ -265,6 +297,7 @@
     radiusChange: radiusChange,
     iconShapeChange: iconShapeChange,
     toggleElement: toggleElement,
+    switchBaseTheme: switchBaseTheme,
     save: save,
     exportPreview: exportPreview,
     autoOpen: autoOpen
