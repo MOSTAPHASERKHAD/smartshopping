@@ -8,7 +8,7 @@
 
   var Schema = global.ThemeSchema;
   var Engine = global.ThemeEngine;
-  var STORE_URL = 'https://mostaphaserkhad.github.io/smartshopping/?preview=1';
+  var STORE_URL = 'index.html?preview=1';
 
   var state = {
     themeId: null,
