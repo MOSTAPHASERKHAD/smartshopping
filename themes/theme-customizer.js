@@ -226,8 +226,9 @@
   // ── Save from customizer ──
   function save() {
     Engine.register({ id: state.themeId, name: state.themeName, base: state.base, tokens: state.tokens }, { silent: true });
+    if (Engine.saveCustomTheme) Engine.saveCustomTheme(state.themeId);
     Engine.apply(state.themeId, Engine.mode);
-    if (!global.apiGet) { toastCustom('❌ السيرفر غير متاح'); return; }
+    if (!global.apiGet) { toastCustom('✅ تم الحفظ محلياً بنجاح (لا يوجد سيرفر)'); return; }
     var payload = {
       id: state.themeId, name: state.themeName,
       author: 'Admin', version: '1.0',

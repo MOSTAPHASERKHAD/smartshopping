@@ -325,6 +325,16 @@
     } catch (e) {}
   };
 
+  ThemeEngine.prototype.saveCustomTheme = function(themeId) {
+    var t = this.themes[themeId];
+    if (!t) return;
+    try {
+      var custom = JSON.parse(localStorage.getItem('sk_custom_themes_v1') || '{}');
+      custom[themeId] = t;
+      localStorage.setItem('sk_custom_themes_v1', JSON.stringify(custom));
+    } catch(e) {}
+  };
+
   ThemeEngine.prototype.loadLocal = function () {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -371,10 +381,26 @@
 
   ThemeEngine.prototype._initApply = function (opts) {
     opts = opts || {};
+    
+    // Load customized themes from local storage to override defaults
+    var self2 = this;
+    try {
+      var custom = JSON.parse(localStorage.getItem('sk_custom_themes_v1') || '{}');
+      Object.keys(custom).forEach(function(k) {
+        self2.register(custom[k], { silent: true });
+      });
+    } catch(e) {}
+
     var local = this.loadLocal();
     if (opts.defaultThemeId) this.defaultThemeId = opts.defaultThemeId;
+    
+    // Override default with admin's local choice if exists
+    try {
+      var adminDef = localStorage.getItem('sk_default_theme_v1');
+      if (adminDef) this.defaultThemeId = adminDef;
+    } catch(e) {}
+
     if (opts.themes && opts.themes.length) {
-      var self2 = this;
       opts.themes.forEach(function (t) { self2.register(t, { silent: true }); });
     }
     // Decide which theme to show

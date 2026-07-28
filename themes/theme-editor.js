@@ -279,6 +279,14 @@
 
   // ── Set default ──
   function setDefault(id) {
+    try { localStorage.setItem('sk_default_theme_v1', id); } catch(e) {}
+    try { localStorage.removeItem('sk_theme_v1'); } catch(e) {} // remove user active to force default
+    
+    if (!global.apiGet) {
+       global.toast('✅ تم التعيين كثيم افتراضي محلياً', true);
+       loadThemesAdmin();
+       return;
+    }
     global.apiGet('admin_set_default_theme', { id: id }, function (res) {
       if (res && res.error) { global.toast('❌ ' + res.error, true); return; }
       global.toast('✅ تم التعيين كثيم افتراضي', true);
