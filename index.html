@@ -772,13 +772,6 @@ body.rtl .back-to-top{left:auto;right:24px}
           <span>⚠️</span>
           <span data-i18n="delivery_note">سعر التوصيل يتم تأكيده بعد التواصل معك.</span>
         </div>
-        <div class="captcha-row" style="display:flex;gap:8px;align-items:center;margin:12px 0">
-          <label style="font-size:.8rem;color:var(--text2);white-space:nowrap">أثبت أنك إنسان:</label>
-          <span id="pdCaptchaQ" style="font-weight:700;font-size:.9rem"></span>
-          <input type="number" id="pdCaptchaA" required style="width:60px;padding:6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);text-align:center;font-size:.85rem">
-          <input type="text" id="pdCaptchaHP" style="position:absolute;left:-9999px;opacity:0" tabindex="-1" autocomplete="off">
-          <input type="hidden" id="pdCaptchaE">
-        </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="pdSubmit" data-i18n="submit_order">تأكيد الطلب</button>
         <a href="#" onclick="orderViaWhatsApp(event)" class="btn btn-block btn-lg" style="margin-top:10px; background:#25d366; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
           <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.405 0 .022 5.372.022 11.99c0 2.115.553 4.183 1.605 6L.004 24l6.155-1.609a11.96 11.96 0 0 0 5.872 1.53h.005c6.626 0 12.008-5.372 12.008-11.99A11.986 11.986 0 0 0 12.031 0zM12.03 21.916a9.98 9.98 0 0 1-5.093-1.39l-.365-.216-3.785.991.996-3.69-.236-.375a9.965 9.965 0 0 1-1.523-5.344C1.986 6.47 6.472 1.986 12.03 1.986a9.97 9.97 0 0 1 7.076 2.929 9.986 9.986 0 0 1 2.924 7.075c-.001 5.523-4.486 10.006-10.046 10.006zm5.503-7.518c-.302-.15-1.786-.881-2.062-.982-.276-.1-.477-.15-.678.15-.201.3-.778.982-.954 1.182-.176.2-.352.226-.654.076-.302-.15-1.275-.47-2.428-1.5-.896-.803-1.503-1.794-1.68-2.096-.176-.301-.019-.464.132-.614.136-.135.302-.351.453-.526.15-.175.201-.3.301-.5.1-.2.05-.375-.025-.525-.075-.15-.678-1.635-.928-2.241-.242-.589-.488-.508-.678-.518-.176-.008-.377-.01-.578-.01-.2 0-.527.075-.803.375s-1.054 1.028-1.054 2.508 1.08 2.909 1.23 3.109c.15.2 2.118 3.232 5.132 4.536.717.31 1.277.495 1.713.633.72.23 1.376.197 1.895.12.58-.086 1.786-.73 2.038-1.434.25-.704.25-1.309.175-1.434-.075-.125-.276-.2-.578-.35z"/></svg>
@@ -1078,13 +1071,6 @@ body.rtl .back-to-top{left:auto;right:24px}
       <div class="delivery-note">
         <span>⚠️</span>
         <span data-i18n="delivery_note">سعر التوصيل يتم تأكيده بعد التواصل.</span>
-      </div>
-      <div class="captcha-row" style="display:flex;gap:8px;align-items:center;margin:12px 0">
-        <label style="font-size:.8rem;color:var(--text2);white-space:nowrap">أثبت أنك إنسان:</label>
-        <span id="captchaQ1" style="font-weight:700;font-size:.9rem"></span>
-        <input type="number" id="captchaA" required style="width:60px;padding:6px;border:1.5px solid var(--border);border-radius:var(--radius-sm);text-align:center;font-size:.85rem">
-        <input type="text" id="captchaHP" style="position:absolute;left:-9999px;opacity:0" tabindex="-1" autocomplete="off">
-        <input type="hidden" id="captchaE">
       </div>
       <div class="summary-box" id="orderSummary"></div>
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="submitBtn" data-i18n="submit_order">تأكيد الطلب</button>
@@ -1657,7 +1643,6 @@ function init(){
   loadCustomerSession();
   initViewMode();
   checkReferralParam();
-  genCaptcha('pdCaptchaQ','pdCaptchaE');
   apiCall('settings',{},function(d){if(!d||d.error)return;storeSettings=d;
     var n=currentLang==='ar'?d.store_name_ar:d.store_name_en;
     if(n){
@@ -1949,7 +1934,6 @@ function openCheckout(){
   document.getElementById('checkoutForm').classList.remove('hidden');
   document.getElementById('orderSuccess').classList.add('hidden');
   populateWilayas();renderOrderSummary();
-  genCaptcha('captchaQ1','captchaE');
   autoFillOrderForms();
   try{var total=getCartSubtotal();trackInitiateCheckout(total)}catch(e){}
   document.getElementById('orderWilaya').onchange=function(){renderOrderSummary()};
@@ -1990,13 +1974,6 @@ function submitOrder(e){
   var d=document.getElementById('orderDelivery').value;
   var note=document.getElementById('orderNote').value.trim();
   if(!n||!p||!w)return;
-  // CAPTCHA check
-  if (!checkCaptcha('captchaA','captchaHP','captchaE')) {
-    alert('الإجابة على السؤال الرياضي خاطئة');
-    genCaptcha('captchaQ1','captchaE');
-    document.getElementById('captchaA').value='';
-    return;
-  }
   // Minimum order check
   var sub=getCartSubtotal();
   var minOrd=parseInt(storeSettings.minimum_order_amount)||0;
@@ -2104,7 +2081,6 @@ function showProductDetail(id){
   var mnav=document.querySelector('.mobile-nav');if(mnav)mnav.style.display='none';
   el=document.getElementById('productDetailSection');if(el)el.classList.remove('hidden');
   renderSuggested(id);
-  genCaptcha('pdCaptchaQ','pdCaptchaE');
   try{trackViewContent({id:p.id,name:p.title_ar,price:Number(p.price)})}catch(e){}
   loadReviews(id);
   var detailEl=document.getElementById('productDetailSection');
@@ -2239,13 +2215,6 @@ function submitProductDetail(e){
   var addr=document.getElementById('pdAddress').value.trim();
   var note=(document.getElementById('pdNote').value.trim())+' | '+addr;
   if(!n||!ph||!w||!addr)return;
-  // CAPTCHA check
-  if (!checkCaptcha('pdCaptchaA','pdCaptchaHP','pdCaptchaE')) {
-    alert('الإجابة على السؤال الرياضي خاطئة');
-    genCaptcha('pdCaptchaQ','pdCaptchaE');
-    document.getElementById('pdCaptchaA').value='';
-    return;
-  }
   var pid=document.getElementById('pdProductId').value;
   var prod=allProducts.find(function(x){return x.id===pid});if(!prod)return;
   // Minimum order check
@@ -2321,23 +2290,9 @@ function applyCoupon() {
   });
 }
 
-// === CAPTCHA ===
-function genCaptcha(qId, eId) {
-  var a = Math.floor(Math.random() * 15) + 3;
-  var b = Math.floor(Math.random() * 15) + 3;
-  var q = document.getElementById(qId);
-  var e = document.getElementById(eId);
-  if (q) q.textContent = a + ' + ' + b;
-  if (e) e.value = a + b;
-}
-
-function checkCaptcha(aId, hpId, eId) {
-  var hp = document.getElementById(hpId);
-  if (hp && hp.value) return false;
-  var answer = parseInt(document.getElementById(aId).value);
-  var expected = parseInt(document.getElementById(eId).value);
-  return answer === expected;
-}
+// === CAPTCHA (disabled) ===
+function genCaptcha() {}
+function checkCaptcha() { return true; }
 
 // === Cookie Consent ===
 function checkCookieConsent() {
