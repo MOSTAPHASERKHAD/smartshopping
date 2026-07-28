@@ -205,33 +205,13 @@
     } catch (e) {}
   };
 
-  // ── Apply theme images (logo, favicon) to DOM ──
+  // ── Apply theme images ──
+  // NOTE: Logo and favicon represent the store's brand identity.
+  // They are intentionally NOT changed by theme switching.
+  // Only the hero banner gradient (decorative) is updated.
   ThemeEngine.prototype._applyImages = function (theme) {
-    var imgs = theme.tokens.images;
+    var imgs = theme.tokens && theme.tokens.images;
     if (!imgs) return;
-    // update logo images
-    var logoUrl = Schema.makeLogoSvg(imgs.logoText || 'Smart Shopping', imgs.logoIcon || '🛒', theme.tokens.colors.primary, 'transparent');
-    var logoEls = document.querySelectorAll('header .logo, .footer-brand .logo');
-    for (var i = 0; i < logoEls.length; i++) {
-      var el = logoEls[i];
-      var logoImg = el.querySelector('img');
-      if (!logoImg) {
-        logoImg = document.createElement('img');
-        logoImg.style.width = 'auto';
-        el.prepend(logoImg);
-      }
-      logoImg.style.height = el.closest('footer') ? '40px' : '48px';
-      logoImg.src = logoUrl;
-      logoImg.alt = imgs.logoText || 'Smart Shopping';
-    }
-    // update favicon
-    if (imgs.favicon) {
-      var link = document.querySelector('link[rel="icon"]');
-      if (link) {
-        link.href = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">' + encodeURIComponent(imgs.favicon) + '</text></svg>';
-      }
-    }
-    // update hero banner gradient
     if (imgs.bannerGradient) {
       var hero = document.getElementById('heroSlider');
       if (hero) hero.style.background = imgs.bannerGradient;
