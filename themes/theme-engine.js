@@ -103,6 +103,7 @@
     });
     // legacy aliases used by existing CSS (must all be present or old CSS breaks)
     lines.push('  --bg:' + c.background + ';');
+    lines.push('  --surface:' + c.surface + ';');
     lines.push('  --card:' + c.surface + ';');
     lines.push('  --text:' + c.text + ';');
     lines.push('  --text2:' + c.textMuted + ';');
@@ -115,7 +116,8 @@
     lines.push('  --sale-hover:' + this._darken(c.secondary, 0.12) + ';');
     lines.push('  --success:' + c.success + ';');
     lines.push('  --danger:' + c.danger + ';');
-    lines.push('  --font:' + tokens.fonts.body + ';');
+    lines.push('  --font:' + (tokens.fonts ? tokens.fonts.body : "'Almarai','Inter',sans-serif") + ';');
+    lines.push('  --font-heading:' + (tokens.fonts ? (tokens.fonts.heading || tokens.fonts.body) : "'Cairo',sans-serif") + ';');
     lines.push('  --radius:' + Schema.RADIUS_TOKENS[2].def + ';');
     lines.push('  --shadow:0 2px 8px rgba(0,0,0,.06);');
     lines.push('  --max-w:1200px;');
@@ -137,6 +139,32 @@
     return rootCss + '\n' + darkBlock;
   };
 
+  ThemeEngine.prototype._loadThemeFonts = function (fonts) {
+    if (!fonts) return;
+    var families = [];
+    ['heading', 'body'].forEach(function (k) {
+      if (fonts[k]) {
+        var match = fonts[k].match(/['"]?([^'",]+)['"]?/);
+        if (match && match[1]) {
+          var name = match[1].trim();
+          if (name !== 'sans-serif' && name !== 'serif' && name !== 'monospace') {
+            families.push(name);
+          }
+        }
+      }
+    });
+    families.forEach(function (fam) {
+      var fontId = 'gfont-' + fam.toLowerCase().replace(/\s+/g, '-');
+      if (!document.getElementById(fontId)) {
+        var link = document.createElement('link');
+        link.id = fontId;
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(fam).replace(/%20/g, '+') + ':wght@300;400;600;700;800&display=swap';
+        document.head.appendChild(link);
+      }
+    });
+  };
+
   ThemeEngine.prototype._darken = function (color, amt) {
     var m = /^#([0-9a-f]{6})$/i.exec(color || '');
     if (!m) return color;
@@ -156,6 +184,9 @@
       this.activeId = themeId;
       if (mode) this.mode = mode;
       var effectiveMode = this._effectiveMode();
+
+      // dynamically load theme Google Fonts
+      this._loadThemeFonts(theme.tokens && theme.tokens.fonts);
 
       // inject CSS
       var styleEl = document.getElementById('theme-engine-style');
