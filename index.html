@@ -21,7 +21,7 @@
 <link rel="canonical" href="https://mostaphaserkhad.github.io/smartshopping/">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a1a2e">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Smart Shopping">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -1546,13 +1546,7 @@ function exportCurrentTheme(){
 function apiCall(action,params,callback){
   var url=API_URL+'?action='+action;
   if(params){for(var k in params){url+='&'+encodeURIComponent(k)+'='+encodeURIComponent(params[k])}}
-  var cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*9999);
-  var full=url+'&callback='+cb;var called=false;
-  window[cb]=function(d){if(called)return;called=true;delete window[cb];document.head.removeChild(s);callback(d)};
-  var s=document.createElement('script');s.src=full;
-  s.onerror=function(){if(called)return;called=true;delete window[cb];callback({error:'Network error'})};
-  document.head.appendChild(s);
-  setTimeout(function(){if(!called){called=true;delete window[cb];document.head.removeChild(s);callback({error:'Timeout'})}},15000);
+  fetch(url).then(function(r){return r.json()}).then(function(d){callback(d)}).catch(function(){callback({error:'Network error'})});
 }
 
 // === Load default theme from admin Themes sheet (Google Sheets) ===
@@ -1578,13 +1572,7 @@ function loadServerTheme(){
 function apiCallAdmin(action,params,callback){
   var url=ADMIN_API_URL+'?action='+action;
   if(params){for(var k in params){url+='&'+encodeURIComponent(k)+'='+encodeURIComponent(params[k])}}
-  var cb='cb_adm_'+Date.now()+'_'+Math.floor(Math.random()*9999);
-  var full=url+'&callback='+cb;var called=false;
-  window[cb]=function(d){if(called)return;called=true;delete window[cb];try{document.head.removeChild(s);}catch(e){}callback(d)};
-  var s=document.createElement('script');s.src=full;
-  s.onerror=function(){if(called)return;called=true;delete window[cb];callback({error:'Network error'})};
-  document.head.appendChild(s);
-  setTimeout(function(){if(!called){called=true;delete window[cb];callback({error:'Timeout'})}},15000);
+  fetch(url).then(function(r){return r.json()}).then(function(d){callback(d)}).catch(function(){callback({error:'Network error'})});
 }
 
 function loadTrackingPixels(s){
