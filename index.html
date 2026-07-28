@@ -780,6 +780,20 @@ document.head.appendChild(ld);
     <div class="dots" id="heroDots"></div>
   </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  if(typeof renderHeroSlide==='function' && heroSlides && heroSlides.length===0){
+    heroSlides=[
+      {img:'banner-hero.png',title:'تسوّق بذكاء',subtitle:'منتجات متنوعة بأفضل الأسعار',link:''},
+      {img:'banner-sale.png',title:'عروض حصرية',subtitle:'خصومات تصل إلى 50%',link:''},
+      {img:'banner-accessories.png',title:'إكسسوارات',subtitle:'أحدث الإكسسوارات التقنية',link:''}
+    ];
+    renderHeroSlide(0);renderHeroDots();
+    clearInterval(heroTimer);
+    heroTimer=setInterval(function(){heroNav(1);},4000);
+  }
+});
+</script>
 
 <!-- Theme Engine (advanced theming system) -->
 <script src="themes/theme-schema.js"></script>
