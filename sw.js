@@ -37,6 +37,12 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
       }
       return resp;
-    }).catch(() => caches.match(e.request).then(r => r || caches.match('/smartshopping/index.html')))
+    }).catch(() => caches.match(e.request).then(r => {
+      if (r) return r;
+      if (e.request.mode === 'navigate' || (e.request.headers.get('accept') && e.request.headers.get('accept').includes('text/html'))) {
+        return caches.match('/smartshopping/index.html');
+      }
+      return new Response('', {status: 404, statusText: 'Not Found'});
+    }))
   );
 });
