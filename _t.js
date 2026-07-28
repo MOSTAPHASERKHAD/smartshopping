@@ -1,0 +1,1 @@
+try { new Function('متجر إلكتروني جزائري — منتجات متنوعة بأفضل الأسعار مع التوصيل لجميع الولايات والدفع عند الاستلام'); } catch(e) { console.log('ERR: ' + e.message); process.exit(1); }
