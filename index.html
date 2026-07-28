@@ -2103,55 +2103,7 @@ function trackOrder(){
 var CUSTOMER_KEY = 'sk_customer';
 var pdVariantSize=null;var pdVariantColor=null;
 function showProductDetail(id){
-  var p=allProducts.find(function(x){return x.id===id});
-  if(!p){console.error('Product not found:',id);return;}
-  pdVariantSize=null;pdVariantColor=null;
-  var el;
-  el=document.getElementById('pdProductId');if(el)el.value=id;
-  el=document.getElementById('pdTitle');if(el)el.textContent=currentLang==='ar'?p.title_ar:p.title_en||p.title_ar;
-  var ph='<span>'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>';
-  if(p.old_price>0)ph+=' <span class="pd-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>';
-  el=document.getElementById('pdPrice');if(el)el.innerHTML=ph;
-  el=document.getElementById('pdDesc');if(el)el.textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
-  renderVariantSection(p);
-  renderProductFeatures(p);
-  var imgs=[p.image1,p.image2,p.image3,p.image4,p.image5,p.image6].filter(function(i){return i && typeof i==='string' && (i.trim().startsWith('http') || i.trim().startsWith('data:'))});
-  el=document.getElementById('pdMainImage');
-  if(el){
-    if(imgs.length>0){
-      el.innerHTML='<img src="'+imgs[0]+'" id="pdMainImg" alt="" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in" onerror="this.onerror=null;this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22 fill=%22%23f0f0f0%22%3E%3Crect width=%22400%22 height=%22400%22/%3E%3C/svg%3E\';">';
-      window._pdImgs=imgs;window._pdImgIdx=0;
-    }else{
-      el.innerHTML='<div style="color:var(--text2);font-size:.85rem;display:flex;align-items:center;justify-content:center;height:100%">'+(currentLang==='ar'?'لا توجد صورة':'No image')+'</div>';
-    }
-  }
-  var thumbsEl=document.getElementById('pdThumbs');
-  if(thumbsEl&&imgs.length>1){
-    var th='<div class="pdetail-thumb active" onclick="selectPdImg(0)"><img src="'+imgs[0]+'" alt=""></div>';
-    for(var ti=1;ti<imgs.length;ti++){
-      th+='<div class="pdetail-thumb" onclick="selectPdImg('+ti+')"><img src="'+imgs[ti]+'" alt=""></div>';
-    }
-    thumbsEl.innerHTML=th;
-  }else if(thumbsEl){thumbsEl.innerHTML='';}
-  var saved=JSON.parse(localStorage.getItem(CUSTOMER_KEY)||'{}');
-  el=document.getElementById('pdName');if(el)el.value=saved.name||'';
-  el=document.getElementById('pdPhone');if(el)el.value=saved.phone||'';
-  el=document.getElementById('pdAddress');if(el)el.value=saved.address||'';
-  el=document.getElementById('pdSuccess');if(el)el.classList.add('hidden');
-  el=document.getElementById('pdForm');if(el)el.classList.remove('hidden');
-  el=document.getElementById('pdSubmit');if(el)el.disabled=false;
-  populatePdWilaya();
-  el=document.getElementById('products');if(el)el.classList.add('hidden');
-  var sbb=document.getElementById('stickyBuyBar');if(sbb)sbb.classList.remove('hidden');
-  updateStickyBuyBarPrice(p);
-  var mnav=document.querySelector('.mobile-nav');if(mnav)mnav.style.display='none';
-  el=document.getElementById('productDetailSection');if(el)el.classList.remove('hidden');
-  renderSuggested(id);
-  try{trackViewContent({id:p.id,name:p.title_ar,price:Number(p.price)})}catch(e){}
-  loadReviews(id);
-  var detailEl=document.getElementById('productDetailSection');
-  if(detailEl){detailEl.scrollIntoView({behavior:'smooth',block:'start'});}
-  else{window.scrollTo(0,0);}
+  window.location.href='product.html?id='+encodeURIComponent(id);
 }
 
 var carouselTimer=null;
