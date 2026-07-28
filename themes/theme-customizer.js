@@ -19,17 +19,8 @@
   };
 
   // Elements that can be toggled on/off in preview
-  var TOGGLEABLE = [
-    { id: 'announce', label: 'الشريط العلوي', selector: '#announceSection, .announcement' },
-    { id: 'hero', label: 'البانرات', selector: '#heroSlider' },
-    { id: 'headerCatBar', label: 'شريط التصنيفات', selector: '#headerCatBar' },
-    { id: 'products', label: 'المنتجات', selector: '#products' },
-    { id: 'footer', label: 'التذييل', selector: 'footer' },
-    { id: 'mobileNav', label: 'القوائم السفلية', selector: '.mobile-nav' }
-  ];
-
+  // Now derived dynamically from Schema.SECTION_TOKENS during openCustomizer
   var visibility = {};
-  TOGGLEABLE.forEach(function (t) { visibility[t.id] = true; });
 
   // ── Open customizer ──
   function openCustomizer(themeId) {
@@ -40,6 +31,14 @@
     state.themeName = theme.name;
     state.base = theme.base;
     state.tokens = JSON.parse(JSON.stringify(theme.tokens));
+    if (!state.tokens.sections) state.tokens.sections = Schema.defaultTokens().sections;
+    if (!state.tokens.icons) state.tokens.icons = Schema.defaultTokens().icons;
+    
+    // Sync visibility state from the active theme
+    state.tokens.sections.forEach(function(s) {
+      visibility[s.id] = s.visible;
+    });
+    
     state.customizerOpen = true;
     showCustomizerUI();
   }
@@ -108,12 +107,20 @@
         ' <span id="sk-rlps-' + tk.key + '">' + v + '</span>px</div>';
     }).join('');
 
-    var toggles = TOGGLEABLE.map(function (t) {
+    var toggles = Schema.SECTION_TOKENS.map(function (t) {
       var chk = visibility[t.id] ? 'checked' : '';
       return '<div class="sk-cp-row"><label style="cursor:pointer">' +
         '<input type="checkbox" ' + chk + ' onchange="ThemeCustomizer.toggleElement(\'' + t.id + '\',this.checked)"> ' +
         t.label + '</label></div>';
     }).join('');
+
+    var iconShapes = ['round', 'square', 'triangle'];
+    var currentShape = state.tokens.icons.shape || 'round';
+    var iconPickers = '<div class="sk-cp-row"><label>شكل الأيقونات</label><select onchange="ThemeCustomizer.iconShapeChange(this.value)">';
+    iconShapes.forEach(function(s) {
+      iconPickers += '<option value="'+s+'" '+(currentShape===s?'selected':'')+'>'+s+'</option>';
+    });
+    iconPickers += '</select></div>';
 
     return '<div id="sk-customizer-overlay"></div>' +
       '<div id="sk-customizer-panel" dir="rtl">' +
@@ -125,7 +132,8 @@
           '<section><h4>🎯 الألوان</h4>' + colorPickers + '</section>' +
           '<section><h4>📝 الخطوط</h4>' + fontPickers + '</section>' +
           '<section><h4>🔄 الزوايا</h4>' + radiusPickers + '</section>' +
-          '<section><h4>👁️ إظهار/إخفاء</h4>' + toggles + '</section>' +
+          '<section><h4>⚙️ الأيقونات</h4>' + iconPickers + '</section>' +
+          '<section><h4>👁️ إظهار/إخفاء الأقسام</h4>' + toggles + '</section>' +
         '</div>' +
         '<div class="sk-cp-footer">' +
           '<button class="btn btn-success btn-sm" onclick="ThemeCustomizer.save()">💾 حفظ</button>' +
@@ -150,7 +158,7 @@
       name: state.themeName,
       mode: Engine ? Engine.mode : 'light',
       tokens: state.tokens,
-      toggleElements: TOGGLEABLE.map(function (t) {
+      toggleElements: Schema.SECTION_TOKENS.map(function (t) {
         return { id: t.id, visible: visibility[t.id] };
       })
     };
@@ -174,6 +182,12 @@
   }
   function toggleElement(id, visible) {
     visibility[id] = visible;
+    var sec = state.tokens.sections.find(function(s) { return s.id === id; });
+    if (sec) sec.visible = visible;
+    sendPreview();
+  }
+  function iconShapeChange(val) {
+    state.tokens.icons.shape = val;
     sendPreview();
   }
 
@@ -249,6 +263,7 @@
     colorChange: colorChange,
     fontChange: fontChange,
     radiusChange: radiusChange,
+    iconShapeChange: iconShapeChange,
     toggleElement: toggleElement,
     save: save,
     exportPreview: exportPreview,
