@@ -156,7 +156,6 @@
       this.activeId = themeId;
       if (mode) this.mode = mode;
       var effectiveMode = this._effectiveMode();
-      console.log('ThemeEngine.apply:', themeId, mode, '→', effectiveMode, 'base:', theme.base);
 
       // inject CSS
       var styleEl = document.getElementById('theme-engine-style');
@@ -164,17 +163,14 @@
         styleEl = document.createElement('style');
         styleEl.id = 'theme-engine-style';
         document.head.appendChild(styleEl);
-        console.log('ThemeEngine: created style element');
       }
       var css = this._tokensToCSS(theme.tokens, effectiveMode, theme.base);
       styleEl.textContent = css;
-      console.log('ThemeEngine: CSS injected, length=' + css.length + ', has--bg=' + css.includes('--bg'));
 
       // body classes
       document.body.classList.toggle('dark-mode', effectiveMode === 'dark');
       document.documentElement.setAttribute('data-theme', themeId);
       document.documentElement.setAttribute('data-mode', effectiveMode);
-      console.log('ThemeEngine: body classes/attrs set, dark-mode=' + (effectiveMode === 'dark'));
 
       // update manifest theme-color
       this._updateManifest(theme, effectiveMode);

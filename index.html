@@ -2230,6 +2230,7 @@ function updatePdVariantInfo(p){
   var skuText=v.sku?'<span class="v-sku">SKU: '+v.sku+'</span>':'';
   info.innerHTML=priceText+' '+stockText+' '+skuText;
 }
+function submitProductDetail(e){
   e.preventDefault();
   var n=document.getElementById('pdName').value.trim();
   var ph=document.getElementById('pdPhone').value.trim();
