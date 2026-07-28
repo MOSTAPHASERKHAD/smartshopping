@@ -1689,7 +1689,12 @@ function init(){
   loadCustomerSession();
   initViewMode();
   checkReferralParam();
-  apiCall('settings',{},function(d){if(!d||d.error)return;storeSettings=d;
+  apiCall('settings',{},function(d){
+    if(!d||d.error) {
+      loadHeroBanners({}); // Fallback to default banners
+      return;
+    }
+    storeSettings=d;
     var n=currentLang==='ar'?d.store_name_ar:d.store_name_en;
     if(n){
       var logoEl=document.querySelector('header .logo');
@@ -2404,16 +2409,17 @@ function loadHeroBanners(settings) {
     heroSlides = [];
     for (var i = 1; i <= 5; i++) {
       var img = settings['banner' + i + '_img'];
-      if (img) {
+      // Ensure img is not just whitespace and looks like a valid path or URL or data URI
+      if (img && typeof img === 'string' && img.trim().length > 4) {
         heroSlides.push({
-          img: img,
+          img: img.trim(),
           title: settings['banner' + i + '_title'] || '',
           subtitle: settings['banner' + i + '_subtitle'] || '',
           link: settings['banner' + i + '_link'] || ''
         });
       }
     }
-    if (!heroSlides.length) {
+    if (heroSlides.length === 0) {
       heroSlides = [
         { img: 'banner-hero.png', title: 'تسوّق بذكاء', subtitle: 'منتجات متنوعة بأفضل الأسعار', link: '' },
         { img: 'banner-sale.png', title: 'عروض حصرية', subtitle: 'خصومات تصل إلى 50%', link: '' },
