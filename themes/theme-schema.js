@@ -113,8 +113,9 @@
     { id: 'header', label: 'رأس الصفحة (الهيدر)', defaultVisible: true },
     { id: 'hero', label: 'البانر الإعلاني', defaultVisible: true },
     { id: 'benefits', label: 'المميزات (الدفع عند الاستلام...)', defaultVisible: true },
-    { id: 'categories', label: 'الأقسام', defaultVisible: true },
     { id: 'products', label: 'شبكة المنتجات', defaultVisible: true },
+    { id: 'track', label: 'تتبع الطلب', defaultVisible: true },
+    { id: 'testimonials', label: 'آراء العملاء', defaultVisible: true },
     { id: 'footer', label: 'ذيل الصفحة (الفوتر)', defaultVisible: true }
   ];
 

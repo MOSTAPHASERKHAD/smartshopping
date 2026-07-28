@@ -117,7 +117,8 @@
     }).join('');
 
     var toggles = Schema.SECTION_TOKENS.map(function (t) {
-      var chk = visibility[t.id] ? 'checked' : '';
+      var isVis = visibility[t.id] !== undefined ? visibility[t.id] : t.defaultVisible;
+      var chk = isVis ? 'checked' : '';
       return '<div class="sk-cp-row"><label style="cursor:pointer">' +
         '<input type="checkbox" ' + chk + ' onchange="ThemeCustomizer.toggleElement(\'' + t.id + '\',this.checked)"> ' +
         t.label + '</label></div>';
@@ -202,7 +203,11 @@
   function toggleElement(id, visible) {
     visibility[id] = visible;
     var sec = state.tokens.sections.find(function(s) { return s.id === id; });
-    if (sec) sec.visible = visible;
+    if (sec) {
+      sec.visible = visible;
+    } else {
+      state.tokens.sections.push({ id: id, visible: visible });
+    }
     sendPreview();
   }
   function iconShapeChange(val) {
