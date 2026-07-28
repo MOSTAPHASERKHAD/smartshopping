@@ -248,20 +248,27 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .hidden{display:none!important}
 
-/* Product Detail Section (inline, not overlay) */
+/* Product Detail Section (landing page layout) */
 #productDetailSection{background:var(--bg);padding:32px 0 48px}
 .back-link{display:inline-flex;align-items:center;gap:4px;color:var(--text2);text-decoration:none;font-size:.8rem;font-weight:500;margin-bottom:20px;transition:color .15s}
 .back-link:hover{color:var(--text)}
-.pdetail-layout{display:grid;grid-template-columns:2fr 3fr;gap:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;align-items:start}
-.pdetail-img{background:#f7f7f7;height:160px;min-height:unset;max-height:160px;overflow:hidden}
+.pdetail-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;align-items:start}
+.pdetail-left{display:flex;flex-direction:column}
+.pdetail-img{background:#f7f7f7;height:420px;min-height:300px;overflow:hidden;position:relative}
 .pdetail-img img{width:100%;height:100%;object-fit:cover;display:block}
-.pdetail-info{padding:28px 28px 28px 0}
-body.ltr .pdetail-info{padding:28px 0 28px 28px}
-.pdetail-info h2{font-size:1.25rem;font-weight:800;margin-bottom:6px}
-.pdetail-info .pd-price{font-size:1.3rem;font-weight:800;color:var(--sale);margin-bottom:4px}
-.pdetail-info .pd-price .pd-old{font-size:.85rem;color:var(--text2);text-decoration:line-through;font-weight:400;margin-right:6px}
-.pdetail-info .pd-desc{font-size:.82rem;color:var(--text2);line-height:1.7;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)}
-.pdetail-info .pd-form-title{font-size:.85rem;font-weight:700;margin-bottom:14px}
+.pdetail-img .carousel{height:420px;min-height:300px;max-height:500px}
+.pdetail-features{padding:20px 24px;border-top:1px solid var(--border)}
+.pdetail-features h4{font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.pd-feature-list{display:flex;flex-direction:column;gap:8px}
+.pd-feature-item{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text)}
+.pd-feature-item .pd-feat-icon{width:28px;height:28px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+.pd-feature-item .pd-feat-text{line-height:1.4}
+.pdetail-info{padding:28px}
+.pdetail-info h2{font-size:1.35rem;font-weight:800;margin-bottom:8px;line-height:1.4}
+.pdetail-info .pd-price{font-size:1.5rem;font-weight:800;color:var(--sale);margin-bottom:6px}
+.pdetail-info .pd-price .pd-old{font-size:.9rem;color:var(--text2);text-decoration:line-through;font-weight:400;margin-right:6px}
+.pdetail-info .pd-desc{font-size:.85rem;color:var(--text2);line-height:1.8;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.pdetail-info .pd-form-title{font-size:.9rem;font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--accent);display:inline-block}
 .pdetail-info .pd-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pdetail-info .pd-group{margin-bottom:12px}
 .pdetail-info .pd-group label{display:block;font-size:.72rem;font-weight:600;margin-bottom:3px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px}
@@ -276,10 +283,11 @@ body.ltr .pdetail-info{padding:28px 0 28px 28px}
 
 @media(max-width:768px){
   .pdetail-layout{grid-template-columns:1fr !important;gap:0 !important}
-  .pdetail-img{height:140px !important;min-height:unset !important;max-height:140px !important;overflow:hidden}
-  .pdetail-img .carousel{max-height:140px !important;aspect-ratio:unset !important;height:140px !important}
-  .pdetail-info{padding:12px}
-  body.ltr .pdetail-info{padding:12px}
+  .pdetail-img{height:260px !important;min-height:200px !important;max-height:300px !important;overflow:hidden}
+  .pdetail-img .carousel{height:260px !important;max-height:300px !important;aspect-ratio:unset !important}
+  .pdetail-features{padding:14px 16px}
+  .pdetail-info{padding:16px}
+  body.ltr .pdetail-info{padding:16px}
   .pdetail-info .pd-row{grid-template-columns:1fr}
 }
 
@@ -724,8 +732,11 @@ body.rtl .back-to-top{left:auto;right:24px}
 <div class="container">
   <a href="#" class="back-link" onclick="hideProductDetail();return false" data-i18n="back_products">← العودة للمنتجات</a>
   <div class="pdetail-layout">
-    <div class="pdetail-img" id="pdImage">
-      <div style="color:var(--text2);font-size:.85rem;text-align:center;padding:40px" data-i18n="loading">جاري التحميل...</div>
+    <div class="pdetail-left">
+      <div class="pdetail-img" id="pdImage">
+        <div style="color:var(--text2);font-size:.85rem;text-align:center;padding:40px" data-i18n="loading">جاري التحميل...</div>
+      </div>
+      <div class="pdetail-features" id="pdFeatures"></div>
     </div>
     <div class="pdetail-info">
       <h2 id="pdTitle"></h2>
@@ -2048,6 +2059,7 @@ function showProductDetail(id){
   el=document.getElementById('pdPrice');if(el)el.innerHTML=ph;
   el=document.getElementById('pdDesc');if(el)el.textContent=currentLang==='ar'?p.desc_ar:p.desc_en||'';
   renderVariantSection(p);
+  renderProductFeatures(p);
   var imgs=[p.image1,p.image2,p.image3].filter(function(i){return i});
   el=document.getElementById('pdImage');
   if(el){
@@ -2205,6 +2217,23 @@ function updatePdVariantInfo(p){
   var stockText=v.stock>0?'<span class="v-stock" style="color:var(--success)">متوفر ('+v.stock+')</span>':'<span class="v-stock" style="color:var(--danger)">غير متوفر</span>';
   var skuText=v.sku?'<span class="v-sku">SKU: '+v.sku+'</span>':'';
   info.innerHTML=priceText+' '+stockText+' '+skuText;
+}
+function renderProductFeatures(p){
+  var sec=document.getElementById('pdFeatures');if(!sec||!p)return;
+  var feats=[];
+  feats.push({icon:'📦',text:'الدفع عند الاستلام'});
+  feats.push({icon:'🚚',text:'توصيل لجميع ولايات الجزائر (58 ولاية)'});
+  feats.push({icon:'✅',text:'منتج أصلي 100%'});
+  if(p.stock>0)feats.push({icon:'✔️',text:'متوفر في المخزون ('+p.stock+' قطعة)'});
+  else feats.push({icon:'⚠️',text:'غير متوفر حالياً'});
+  if(p.old_price>0){var disc=Math.round((p.old_price-p.price)/p.old_price*100);feats.push({icon:'🔥',text:'خصم '+disc+'% — وفر '+Number(p.old_price-p.price).toLocaleString()+' دج'});}
+  if(p.size&&p.size.trim()&&p.size!=='N/A')feats.push({icon:'📏',text:'مقاسات: '+p.size.split(',').map(function(s){return s.trim();}).filter(function(s){return s;}).join(' | ')});
+  if(p.color&&p.color.trim()&&p.color!=='N/A')feats.push({icon:'🎨',text:'ألوان: '+p.color.split(',').map(function(c){return c.trim();}).filter(function(c){return c;}).join(' | ')});
+  if(p.category_ar)feats.push({icon:'🏷️',text:p.category_ar});
+  var html='<h4>مميزات المنتج</h4><div class="pd-feature-list">';
+  feats.forEach(function(f){html+='<div class="pd-feature-item"><span class="pd-feat-icon">'+f.icon+'</span><span class="pd-feat-text">'+f.text+'</span></div>';});
+  html+='</div>';
+  sec.innerHTML=html;
 }
 function submitProductDetail(e){
   e.preventDefault();
