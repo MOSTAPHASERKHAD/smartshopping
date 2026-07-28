@@ -101,6 +101,23 @@
     { key: 'bannerAccent',   label: 'لون البانر',   desc: 'لون مميز للبانر', def: '' }
   ];
 
+  // ── Icon shapes and custom paths ──
+  var ICON_TOKENS = [
+    { key: 'shape', label: 'شكل الأيقونات', desc: 'round, square, triangle', def: 'round' },
+    { key: 'deliveryIcon', label: 'أيقونة التوصيل', desc: 'مسار أو SVG لأيقونة الدفع عند الاستلام', def: '' }
+  ];
+
+  // ── Dynamic Sections ──
+  var SECTION_TOKENS = [
+    { id: 'announcement', label: 'شريط الإعلانات', defaultVisible: true },
+    { id: 'header', label: 'رأس الصفحة (الهيدر)', defaultVisible: true },
+    { id: 'hero', label: 'البانر الإعلاني', defaultVisible: true },
+    { id: 'benefits', label: 'المميزات (الدفع عند الاستلام...)', defaultVisible: true },
+    { id: 'categories', label: 'الأقسام', defaultVisible: true },
+    { id: 'products', label: 'شبكة المنتجات', defaultVisible: true },
+    { id: 'footer', label: 'ذيل الصفحة (الفوتر)', defaultVisible: true }
+  ];
+
   // ── Generate SVG logo data URI ──
   function makeLogoSvg(text, icon, fg, bg) {
     fg = fg || '#1a1a2e'; bg = bg || 'transparent';
@@ -113,7 +130,7 @@
 
   // ── Build a default token object from schema defaults ──
   function defaultTokens() {
-    var t = { colors: {}, fonts: {}, spacing: {}, radius: {}, shadow: {}, components: {}, images: {} };
+    var t = { colors: {}, fonts: {}, spacing: {}, radius: {}, shadow: {}, components: {}, images: {}, icons: {}, sections: [] };
     COLOR_TOKENS.forEach(function (c) { t.colors[c.key] = c.def; });
     FONT_TOKENS.forEach(function (f) { t.fonts[f.key] = f.def; });
     SPACING_TOKENS.forEach(function (s) { t.spacing[s.key] = s.def; });
@@ -124,6 +141,12 @@
       c.props.forEach(function (p) { t.components[c.key][p.key] = p.def; });
     });
     IMAGE_TOKENS.forEach(function (img) { t.images[img.key] = img.def; });
+    ICON_TOKENS.forEach(function (ic) { t.icons[ic.key] = ic.def; });
+    
+    // Default sections order and visibility
+    SECTION_TOKENS.forEach(function(sec) {
+      t.sections.push({ id: sec.id, visible: sec.defaultVisible });
+    });
     return t;
   }
 
@@ -176,6 +199,29 @@
         if (input.images[img.key] != null) base.images[img.key] = String(input.images[img.key]);
       });
     }
+    if (input.icons) {
+      ICON_TOKENS.forEach(function (ic) {
+        if (input.icons[ic.key] != null) base.icons[ic.key] = String(input.icons[ic.key]);
+      });
+    }
+    if (input.sections && Array.isArray(input.sections)) {
+      // Create a map of updated sections to merge with defaults (preserving new order if desired, or just updating visibility)
+      // If the theme provides a sections array, we use its order and visibility.
+      var mergedSections = [];
+      input.sections.forEach(function(inSec) {
+        var baseSec = SECTION_TOKENS.find(function(s) { return s.id === inSec.id; });
+        if (baseSec) {
+          mergedSections.push({ id: inSec.id, visible: typeof inSec.visible === 'boolean' ? inSec.visible : baseSec.defaultVisible });
+        }
+      });
+      // Append any missing sections from base
+      SECTION_TOKENS.forEach(function(baseSec) {
+        if (!mergedSections.find(function(ms) { return ms.id === baseSec.id; })) {
+          mergedSections.push({ id: baseSec.id, visible: baseSec.defaultVisible });
+        }
+      });
+      base.sections = mergedSections;
+    }
     return base;
   }
 
@@ -188,6 +234,8 @@
     SHADOW_TOKENS: SHADOW_TOKENS,
     COMPONENT_TOKENS: COMPONENT_TOKENS,
     IMAGE_TOKENS: IMAGE_TOKENS,
+    ICON_TOKENS: ICON_TOKENS,
+    SECTION_TOKENS: SECTION_TOKENS,
     defaultTokens: defaultTokens,
     darkTokens: darkTokens,
     isColor: isColor,

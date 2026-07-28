@@ -737,9 +737,12 @@ document.head.appendChild(ld);
 </head>
 <body class="rtl">
 
-<div class="announcement" data-i18n="announce">🇩🇿 الدفع عند الاستلام — التوصيل لجميع ولايات الجزائر</div>
+<!-- Main Content Wrapper for Theme Engine Reordering -->
+<main id="mainContentWrapper" style="display:flex;flex-direction:column">
 
-<header>
+<div id="section-announcement" class="announcement" data-i18n="announce" style="order:0">🇩🇿 الدفع عند الاستلام — التوصيل لجميع ولايات الجزائر</div>
+
+<header id="section-header" style="order:1">
 <div class="container header-inner">
   <a href="#" class="logo"><img src="logo1.png" alt="Smart Shopping" style="height:48px;width:auto"></a>
   <div class="search-bar">
@@ -755,7 +758,7 @@ document.head.appendChild(ld);
     </button>
   </div>
   <div class="header-actions">
-    <button class="dark-btn" id="themeSwitcherBtn" onclick="openThemeSwitcher()" title="الثيمات">🎨</button>
+    <button class="dark-btn hidden" id="themeSwitcherBtn" onclick="openThemeSwitcher()" title="الثيمات" style="display:none">🎨</button>
     <button class="dark-btn" id="darkToggle" onclick="toggleDark()" title="وضع داكن / فاتح">🌙</button>
     <button class="icon-btn lang-btn" id="langToggle" onclick="toggleLang()">EN</button>
     <button class="icon-btn user-btn" id="userBtn" onclick="openAuthModal()" style="position:relative">
@@ -771,7 +774,7 @@ document.head.appendChild(ld);
 </header>
 
 <!-- Promo Banner -->
-<div class="container" style="margin-top:16px">
+<div id="section-hero" class="container" style="margin-top:16px;order:2">
   <div class="hero-slider" id="heroSlider" style="display:none">
     <div class="nav-arrow prev" onclick="heroNav(-1)">‹</div>
     <div class="nav-arrow next" onclick="heroNav(1)">›</div>
@@ -786,7 +789,7 @@ document.head.appendChild(ld);
 <script src="themes/theme-importer.js"></script>
 <script src="themes/theme-editor.js"></script>
 
-<section id="products">
+<section id="section-products" style="order:5">
 <div class="container">
   <div class="products-header">
     <h2 data-i18n="products_title">المنتجات</h2>
@@ -927,7 +930,7 @@ document.head.appendChild(ld);
 </div>
 </section>
 
-<div class="trust-bar" style="margin-top:40px">
+<section id="section-trust" class="trust-bar" style="margin-top:40px">
   <div class="trust-item">
     <div class="trust-icon">🚚</div>
     <h4 data-i18n="trust_ship">شحن لجميع الولايات</h4>
@@ -948,9 +951,9 @@ document.head.appendChild(ld);
     <h4 data-i18n="trust_return">استرجاع سهل</h4>
     <p data-i18n="trust_return_sub"> خلال 7 أيام</p>
   </div>
-</div>
+</section>
 
-<footer>
+<footer id="section-footer">
 <div class="container">
   <div class="footer-inner">
     <div class="footer-brand">
@@ -982,6 +985,7 @@ document.head.appendChild(ld);
   <div class="footer-bottom" data-i18n="footer_copy">© 2026 Smart Shopping</div>
 </div>
 </footer>
+</main> <!-- End mainContentWrapper -->
 
 <!-- About Page -->
 <div class="modal-overlay" id="aboutPage" onclick="if(event.target===this)closePage('about')">
@@ -3608,5 +3612,24 @@ function lpCloseLightbox(){
   <a href="https://wa.me/213557543177" target="_blank"><span class="icon">💬</span><span>WhatsApp</span></a>
 </nav>
 
+<!-- Admin Tools (Customizer FAB) -->
+<script>
+  if (location.search.includes('admin=1')) {
+    localStorage.setItem('isAdmin', '1');
+  }
+  if (localStorage.getItem('isAdmin') === '1') {
+    var adminFab = document.createElement('button');
+    adminFab.innerHTML = '⚙️ تخصيص المتجر';
+    adminFab.style.cssText = 'position:fixed;bottom:24px;left:24px;z-index:9999;background:var(--accent, #6366f1);color:#fff;border:none;border-radius:30px;padding:12px 24px;font-weight:bold;font-size:14px;font-family:var(--font);box-shadow:0 10px 25px rgba(0,0,0,0.2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:transform 0.2s;';
+    adminFab.onmouseover = function() { this.style.transform = 'scale(1.05)'; };
+    adminFab.onmouseout = function() { this.style.transform = 'scale(1)'; };
+    adminFab.onclick = function() {
+      if (window.ThemeCustomizer && window.ThemeEngine) {
+        ThemeCustomizer.open(window.ThemeEngine.activeId || 'smartkiosk-default');
+      }
+    };
+    document.body.appendChild(adminFab);
+  }
+</script>
 </body>
 </html>

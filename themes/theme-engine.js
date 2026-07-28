@@ -132,6 +132,26 @@
       if (imgs.bannerGradient) lines.push('  --banner-gradient:' + imgs.bannerGradient + ';');
       if (imgs.bannerAccent) lines.push('  --banner-accent:' + imgs.bannerAccent + ';');
     }
+    // icon tokens
+    if (tokens.icons) {
+      var shape = tokens.icons.shape || 'round';
+      if (shape === 'square') {
+        lines.push('  --icon-radius: 8px;');
+        lines.push('  --icon-clip: none;');
+      } else if (shape === 'triangle') {
+        lines.push('  --icon-radius: 0;');
+        lines.push('  --icon-clip: polygon(50% 0%, 0% 100%, 100% 100%);');
+      } else {
+        lines.push('  --icon-radius: 50%;');
+        lines.push('  --icon-clip: none;');
+      }
+      if (tokens.icons.deliveryIcon && tokens.icons.deliveryIcon.trim() !== '') {
+        // Encode SVG or use raw URL for delivery icon
+        var dIcon = tokens.icons.deliveryIcon;
+        if (dIcon.indexOf('<svg') >= 0) dIcon = 'data:image/svg+xml,' + encodeURIComponent(dIcon);
+        lines.push('  --icon-delivery: url(' + dIcon + ');');
+      }
+    }
     var rootCss = ':root{\n' + lines.join('\n') + '\n}';
     // Also generate body.dark-mode with same values to override the ORIGINAL hardcoded body.dark-mode block
     // (original CSS has higher-specificity body.dark-mode vars that would otherwise override our :root)
@@ -210,6 +230,15 @@
 
       // update theme images (logo, favicon) — wrapped to prevent breaking
       try { this._applyImages(theme); } catch (e) { console.warn('ThemeEngine: _applyImages error', e); }
+      
+      this._loadThemeFonts(theme.tokens.fonts);
+      if (theme.tokens.sections) {
+        this._applySections(theme.tokens.sections);
+      }
+      
+      // dispatch event
+      var evt = new CustomEvent('themechanged', { detail: { theme: theme, mode: mode } });
+      document.dispatchEvent(evt);
 
       this._persist();
       if (this._onChange) this._onChange(theme, effectiveMode);
@@ -218,6 +247,24 @@
       console.error('ThemeEngine.apply error:', e);
       return false;
     }
+  };
+
+  ThemeEngine.prototype._applySections = function(sections) {
+    // Reorder and toggle visibility of main page sections.
+    var container = document.getElementById('mainContentWrapper');
+    if (!container) return; // Wait until DOM is ready
+    
+    sections.forEach(function(sec, idx) {
+      var el = document.getElementById('section-' + sec.id);
+      if (el) {
+        if (sec.visible === false) {
+          el.style.display = 'none';
+        } else {
+          el.style.display = '';
+        }
+        el.style.order = idx;
+      }
+    });
   };
 
   ThemeEngine.prototype._effectiveMode = function () {

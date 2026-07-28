@@ -17,6 +17,8 @@
       if (extra.fonts) t.tokens.fonts = extra.fonts;
       if (extra.radius) t.tokens.radius = extra.radius;
       if (extra.images) t.tokens.images = extra.images;
+      if (extra.icons) t.tokens.icons = extra.icons;
+      if (extra.sections) t.tokens.sections = extra.sections;
     }
     return t;
   }
@@ -44,6 +46,7 @@
         text: '#4c0519', textMuted: '#881337', textSubtle: '#be6c7f', border: '#fecdd3',
         success: '#22c55e', warning: '#f59e0b', danger: '#be123c', info: '#e11d48', accent: '#fb7185' },
       { fonts: { heading: "'Playfair Display',serif", body: "'Inter',sans-serif" },
+        icons: { shape: 'round' },
         images: { logoText: 'Rose Store', logoIcon: '🌸', favicon: '🌸',
           bannerGradient: 'linear-gradient(135deg, #831843 0%, #be185d 50%, #f43f5e 100%)' } }),
 
@@ -62,6 +65,7 @@
         text: '#0d2818', textMuted: '#3f6b54', textSubtle: '#7fa890', border: '#d6e8df',
         success: '#006233', warning: '#f59e0b', danger: '#d21034', info: '#006233', accent: '#14a04a' },
       { fonts: { heading: "'Tajawal',sans-serif", body: "'Almarai',sans-serif" },
+        icons: { shape: 'square' },
         images: { logoText: 'متجر جزائري', logoIcon: '🇩🇿', favicon: '🇩🇿',
           bannerGradient: 'linear-gradient(135deg, #006233 0%, #006233 33%, #ffffff 33%, #ffffff 66%, #d21034 66%, #d21034 100%)' } }),
 
@@ -71,6 +75,7 @@
         text: '#f5eedc', textMuted: '#c7b896', textSubtle: '#94875f', border: '#2a3a5c',
         success: '#22c55e', warning: '#f59e0b', danger: '#ef4444', info: '#c8a84e', accent: '#e8c766' },
       { fonts: { heading: "'Amiri',serif", body: "'Almarai',sans-serif" },
+        icons: { shape: 'triangle' },
         images: { logoText: 'رمضان كريم', logoIcon: '🌙', favicon: '🌙',
           bannerGradient: 'linear-gradient(135deg, #0a0e1a 0%, #131b33 50%, #1a2744 100%)' } }),
 
