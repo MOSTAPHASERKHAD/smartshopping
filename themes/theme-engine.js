@@ -277,7 +277,7 @@
       var domId = idMap[sec.id] || ('section-' + sec.id);
       var el = document.getElementById(domId);
       if (el) {
-        if (sec.visible === false) {
+        if (sec.visible === false && sec.id !== 'hero') {
           el.style.display = 'none';
         } else {
           el.style.display = '';
