@@ -716,8 +716,11 @@ body.rtl .back-to-top{left:auto;right:24px}
 @keyframes thumb-select{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
 .lp-thumb.active{animation:thumb-select .25s ease;}
 </style>
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","name":"Smart Shopping","url":"https://mostaphaserkhad.github.io/smartshopping/","description":"متجر إلكتروني جزائري — منتجات متنوعة بأفضل الأسعار مع التوصيل لجميع الولايات","potentialAction":{"@type":"SearchAction","target":"https://mostaphaserkhad.github.io/smartshopping/?q={search_term_string}","query-input":"required name=search_term_string"}}
+<script>
+// Dynamically inject JSON-LD to prevent in-app browsers from parsing it as JS
+var ld=document.createElement('script');ld.type='application/ld+json';
+ld.textContent=JSON.stringify({"@context":"https://schema.org","@type":"WebSite","name":"Smart Shopping","url":"https://mostaphaserkhad.github.io/smartshopping/","description":"متجر إلكتروني جزائري — منتجات متنوعة بأفضل الأسعار مع التوصيل لجميع الولايات","potentialAction":{"@type":"SearchAction","target":"https://mostaphaserkhad.github.io/smartshopping/?q={search_term_string}","query-input":"required name=search_term_string"}});
+document.head.appendChild(ld);
 </script>
 </head>
 <body class="rtl">
