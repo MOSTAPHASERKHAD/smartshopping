@@ -648,6 +648,75 @@ body.rtl .back-to-top{left:auto;right:24px}
   .lp-trust-item h4{font-size:.68rem}
   .lp-trust-item p{font-size:.6rem}
 }
+
+/* ===== LANDING PAGE IMAGE ENHANCEMENTS ===== */
+/* Skeleton shimmer while image loads */
+@keyframes lp-shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.lp-img-skeleton{
+  position:absolute;inset:0;border-radius:12px;
+  background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);
+  background-size:800px 100%;
+  animation:lp-shimmer 1.4s infinite linear;
+  z-index:1;transition:opacity .3s;
+}
+.lp-img-skeleton.hidden{opacity:0;pointer-events:none;}
+
+/* Zoom cursor on main image */
+.lp-main-img img{cursor:zoom-in;}
+.lp-main-img img.zoomed{cursor:zoom-out;}
+
+/* Lightbox overlay */
+.lp-lightbox{
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,.92);align-items:center;justify-content:center;
+  animation:lp-lb-in .2s ease;
+}
+.lp-lightbox.open{display:flex;}
+@keyframes lp-lb-in{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.lp-lightbox img{
+  max-width:92vw;max-height:88vh;border-radius:12px;
+  object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,.5);
+  user-select:none;
+}
+.lp-lightbox-close{
+  position:fixed;top:20px;right:24px;width:44px;height:44px;
+  background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);
+  border-radius:50%;color:#fff;font-size:1.4rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(8px);transition:background .2s;
+}
+.lp-lightbox-close:hover{background:rgba(255,255,255,.28);}
+.lp-lightbox-nav{
+  position:fixed;top:50%;transform:translateY(-50%);
+  width:48px;height:48px;background:rgba(255,255,255,.15);
+  border:2px solid rgba(255,255,255,.25);border-radius:50%;
+  color:#fff;font-size:1.6rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(8px);transition:background .2s;
+  user-select:none;
+}
+.lp-lightbox-nav:hover{background:rgba(255,255,255,.28);}
+.lp-lightbox-nav.prev{left:16px;}
+.lp-lightbox-nav.next{right:16px;}
+.lp-lightbox-counter{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  color:rgba(255,255,255,.7);font-size:.82rem;letter-spacing:.5px;
+  background:rgba(0,0,0,.4);padding:6px 16px;border-radius:20px;
+  backdrop-filter:blur(6px);
+}
+
+/* Placeholder for products without images */
+.lp-placeholder-img{
+  width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;
+  background:linear-gradient(135deg,#f8f8f8,#efefef);color:#ccc;
+}
+.lp-placeholder-img svg{width:64px;height:64px;opacity:.4;}
+.lp-placeholder-img span{font-size:.75rem;opacity:.5;}
+
+/* Thumb active pulse */
+@keyframes thumb-select{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+.lp-thumb.active{animation:thumb-select .25s ease;}
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebSite","name":"Smart Shopping","url":"https://mostaphaserkhad.github.io/smartshopping/","description":"متجر إلكتروني جزائري — منتجات متنوعة بأفضل الأسعار مع التوصيل لجميع الولايات","potentialAction":{"@type":"SearchAction","target":"https://mostaphaserkhad.github.io/smartshopping/?q={search_term_string}","query-input":"required name=search_term_string"}}
@@ -3235,7 +3304,7 @@ function buildLandingPageHTML(p){
   if(imgs.length>1){
     html+='<div class="lp-thumbs">';
     imgs.forEach(function(src,i){
-      html+='<div class="lp-thumb'+(i===0?' active':'')+'" onclick="lpCarouselGo('+i+')"><img src="'+src+'" alt=""></div>';
+      html+='<div class="lp-thumb'+(i===0?' active':'')+'" onclick="lpCarouselGo('+i+')"><img src="'+src+'" alt="" loading="lazy"></div>';
     });
     html+='</div>';
   }
@@ -3395,6 +3464,65 @@ function orderViaWhatsApp(e){
   var text = "مرحباً، أريد الاستفسار أو طلب: " + pName + "\n\nالرابط: " + window.location.href;
   var waUrl = "https://wa.me/213557543177?text=" + encodeURIComponent(text);
   window.open(waUrl, '_blank');
+}
+
+// ── Landing Page Image: skeleton removal on load ──
+function lpImgLoaded(img){
+  img.style.opacity='1';
+  var sk=document.getElementById('lpSkeleton');
+  if(sk){sk.classList.add('hidden');setTimeout(function(){sk.remove();},350);}
+}
+
+// ── Landing Page Lightbox ──
+var _lpLbActive=0;
+function lpOpenLightbox(idx){
+  if(!lpImgs||!lpImgs.length)return;
+  _lpLbActive=idx||0;
+  var lb=document.getElementById('lpLightbox');
+  if(!lb){
+    lb=document.createElement('div');
+    lb.id='lpLightbox';
+    lb.className='lp-lightbox';
+    lb.innerHTML=
+      '<button class="lp-lightbox-close" onclick="lpCloseLightbox()">✕</button>'+
+      '<button class="lp-lightbox-nav prev" onclick="lpLbNav(-1)">‹</button>'+
+      '<img id="lpLbImg" src="" alt="">'+
+      '<button class="lp-lightbox-nav next" onclick="lpLbNav(1)">›</button>'+
+      '<div class="lp-lightbox-counter" id="lpLbCounter"></div>';
+    document.body.appendChild(lb);
+    lb.addEventListener('click',function(e){if(e.target===lb)lpCloseLightbox();});
+    // keyboard nav
+    document.addEventListener('keydown',lpLbKey);
+  }
+  lpLbSetImg();
+  lb.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function lpLbSetImg(){
+  var img=document.getElementById('lpLbImg');
+  var ctr=document.getElementById('lpLbCounter');
+  if(img)img.src=lpImgs[_lpLbActive]||'';
+  if(ctr)ctr.textContent=(_lpLbActive+1)+' / '+lpImgs.length;
+  // hide nav if single image
+  var lb=document.getElementById('lpLightbox');
+  if(lb){
+    lb.querySelectorAll('.lp-lightbox-nav').forEach(function(b){
+      b.style.display=lpImgs.length>1?'flex':'none';
+    });
+  }
+}
+function lpLbNav(dir){
+  _lpLbActive=(_lpLbActive+dir+lpImgs.length)%lpImgs.length;
+  lpLbSetImg();
+}
+function lpLbKey(e){
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'){lpLbNav(e.key==='ArrowLeft'?-1:1);}
+  if(e.key==='Escape'){lpCloseLightbox();}
+}
+function lpCloseLightbox(){
+  var lb=document.getElementById('lpLightbox');
+  if(lb){lb.classList.remove('open');document.body.style.overflow='';}
+  document.removeEventListener('keydown',lpLbKey);
 }
 </script>
 
