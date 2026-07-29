@@ -897,6 +897,11 @@ document.head.appendChild(ld);
         <input type="text" id="reviewName" placeholder="اسمك" data-i18n-placeholder="review_name">
         <input type="text" id="reviewLocation" placeholder="المدينة" data-i18n-placeholder="review_location">
       </div>
+      <div class="form-row" style="gap:6px;align-items:center">
+        <span id="captchaQuestion" style="font-weight:700;font-size:.9rem;min-width:80px"></span>
+        <input type="text" id="captchaInput" placeholder="?" style="width:50px;text-align:center">
+        <button type="button" onclick="genCaptcha()" style="background:none;border:none;cursor:pointer;font-size:.85rem">🔄</button>
+      </div>
       <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="submitReview()" data-i18n="submit_review">إرسال التقييم</button>
     </div>
   </div>
@@ -1738,6 +1743,7 @@ function init(){
   apiCall('settings',{},function(d){
     if(!d||d.error) { return; }
     storeSettings=d;
+    if(d.gemini_api_key){chatAIEnabled=true;try{delete d.gemini_api_key}catch(e){}}
     var n=currentLang==='ar'?d.store_name_ar:d.store_name_en;
     if(n){
       var logoEl=document.querySelector('header .logo');
@@ -1789,28 +1795,28 @@ function showPage(name){
     if(t1)t1.textContent=currentLang==='ar'?(storeSettings.about_title_ar||'من نحن'):(storeSettings.about_title_en||'About Us');
     if(b1){
       var body=currentLang==='ar'?storeSettings.about_body_ar:storeSettings.about_body_en;
-      if(body){b1.innerHTML=body.split('\n').map(function(l){return'<p>'+l+'</p>'}).join('')}
+      if(body){b1.innerHTML=body.split('\n').map(function(l){return'<p>'+esc(l)+'</p>'}).join('')}
     }
   }
   if(name==='return'){
     var b2=document.getElementById('returnBody');
     if(b2){
       var body2=currentLang==='ar'?storeSettings.return_body_ar:storeSettings.return_body_en;
-      if(body2){b2.innerHTML=body2.split('\n').map(function(l){return'<p>'+l+'</p>'}).join('')}
+      if(body2){b2.innerHTML=body2.split('\n').map(function(l){return'<p>'+esc(l)+'</p>'}).join('')}
     }
   }
   if(name==='terms'){
     var b3=document.getElementById('termsBody');
     if(b3){
       var body3=currentLang==='ar'?storeSettings.terms_body_ar:storeSettings.terms_body_en;
-      if(body3){b3.innerHTML=body3.split('\n').map(function(l){return'<p>'+l+'</p>'}).join('')}
+      if(body3){b3.innerHTML=body3.split('\n').map(function(l){return'<p>'+esc(l)+'</p>'}).join('')}
     }
   }
   if(name==='privacy'){
     var b4=document.getElementById('privacyBody');
     if(b4){
       var body4=currentLang==='ar'?storeSettings.privacy_body_ar:storeSettings.privacy_body_en;
-      if(body4){b4.innerHTML=body4.split('\n').map(function(l){return'<p>'+l+'</p>'}).join('')}
+      if(body4){b4.innerHTML=body4.split('\n').map(function(l){return'<p>'+esc(l)+'</p>'}).join('')}
     }
   }
 }
@@ -2354,9 +2360,25 @@ function applyCoupon() {
   });
 }
 
-// === CAPTCHA (disabled) ===
-function genCaptcha() {}
-function checkCaptcha() { return true; }
+// === CAPTCHA ===
+var _captchaAnswer=0;
+function genCaptcha(){
+  var a=Math.floor(Math.random()*9)+1;
+  var b=Math.floor(Math.random()*9)+1;
+  _captchaAnswer=a+b;
+  var el=document.getElementById('captchaQuestion');
+  if(el)el.textContent=a+' + '+b+' = ?';
+  var inp=document.getElementById('captchaInput');
+  if(inp){inp.value='';inp.dataset.valid='false';}
+}
+function checkCaptcha(){
+  var inp=document.getElementById('captchaInput');
+  if(!inp)return true;
+  var v=parseInt(inp.value.trim());
+  var ok=v===_captchaAnswer;
+  inp.dataset.valid=ok?'true':'false';
+  return ok;
+}
 
 // === Cookie Consent ===
 function checkCookieConsent() {
@@ -2577,6 +2599,7 @@ function removeReviewPhoto(idx) {
 }
 
 function loadReviews(productId) {
+  genCaptcha();
   try {
     if (REVIEWS_CACHE[productId]) { renderReviews(productId, REVIEWS_CACHE[productId]); return; }
     apiCall('get_reviews', { product_id: productId }, function(data) {
@@ -2600,7 +2623,8 @@ function renderReviews(productId, reviews) {
         if (photos && photos.length) {
           photosHtml = '<div class="review-photos">' + photos.map(function(url) {
             var safeUrl = escapeAttr(url);
-            return '<img src="' + safeUrl + '" onclick="window.open(\'' + safeUrl + '\',\'_blank\')">';
+            if(!safeUrl.startsWith('https://')&&!safeUrl.startsWith('http://'))safeUrl='#';
+            return '<img src="' + safeUrl + '" onclick="if(this.src!==\'#\')window.open(this.src,\'_blank\')">';
           }).join('') + '</div>';
         }
       } catch(e) {}
@@ -2617,6 +2641,7 @@ function setReviewRating(val) {
 }
 
 function submitReview() {
+  if (!checkCaptcha()) { alert('حل التحقق الرياضي أولاً'); genCaptcha(); return; }
   var text = document.getElementById('reviewText').value.trim();
   var name = document.getElementById('reviewName').value.trim();
   var loc = document.getElementById('reviewLocation').value.trim();
@@ -2786,7 +2811,8 @@ function doRegister() {
   var phone = document.getElementById('authRegPhone').value.trim();
   var pass = document.getElementById('authRegPass').value;
   if (!name || !phone || !pass) { showAuthError('أدخل جميع البيانات'); return; }
-  if (pass.length < 4) { showAuthError('كلمة المرور 4 أحرف على الأقل'); return; }
+  if (pass.length < 8) { showAuthError('كلمة المرور 8 أحرف على الأقل'); return; }
+  if (phone.length < 9) { showAuthError('رقم الهاتف غير صالح'); return; }
   apiCall('customer_register', { name: name, phone: phone, password: pass }, function(data) {
     if (data && data.ok && data.customer) {
       currentCustomer = data.customer;
@@ -2823,7 +2849,7 @@ function loadCustomerOrders() {
   var section = document.getElementById('accountOrdersSection');
   if (!list || !section) return;
   section.style.display = 'block';
-  apiCall('admin_orders', {}, function(data) {
+  apiCall('admin_orders', { phone: currentCustomer.phone }, function(data) {
     if (!data || !data.orders) { list.innerHTML = '<p style="color:var(--text2);font-size:.82rem">' + t('account_no_orders') + '</p>'; return; }
     var myOrders = data.orders.filter(function(o) { return o.phone === currentCustomer.phone; });
     if (!myOrders.length) { list.innerHTML = '<p style="color:var(--text2);font-size:.82rem">' + t('account_no_orders') + '</p>'; return; }
@@ -2831,7 +2857,7 @@ function loadCustomerOrders() {
     list.innerHTML = myOrders.map(function(o) {
       var statusColors = { pending: '#f59e0b', confirmed: '#22c55e', shipped: '#3b82f6', delivered: '#0ea5e9' };
       var sk = 'status_' + (o.status || 'pending');
-      return '<div class="account-order-item"><div><div class="order-id">' + o.order_id + '</div><div style="font-size:.72rem;color:var(--text2)">' + (o.created_at || '') + '</div></div><span class="order-status" style="background:' + (statusColors[o.status] || '#f59e0b') + ';color:#fff">' + t(sk) + '</span></div>';
+      return '<div class="account-order-item"><div><div class="order-id">' + esc(o.order_id) + '</div><div style="font-size:.72rem;color:var(--text2)">' + esc(o.created_at || '') + '</div></div><span class="order-status" style="background:' + (statusColors[o.status] || '#f59e0b') + ';color:#fff">' + t(sk) + '</span></div>';
     }).join('');
   });
 }
@@ -2855,7 +2881,9 @@ function _onThemePreview(e){
       ThemeEngine.apply(d.themeId, d.mode || ThemeEngine.mode);
     }
     if (d.toggleElements) {
+      var allowedIds = { hero:1, announcements:1, header:1, featured_products:1, products:1, testimonialsSection:1, footer:1 };
       d.toggleElements.forEach(function(t){
+        if (!allowedIds[t.id]) return;
         var el = document.getElementById(t.id);
         if (el) el.style.display = t.visible ? '' : 'none';
       });
@@ -2879,7 +2907,7 @@ function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
 // === Newsletter ===
 function subscribeNewsletter(){
   var email=document.getElementById('newsletterEmail').value.trim();
-  if(!email||email.indexOf('@')<1){return}
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){return}
   var msg=document.getElementById('newsletterMsg');
   apiCall('newsletter_subscribe',{email:email},function(d){
     msg.style.display='block';
@@ -3059,8 +3087,7 @@ function toggleChatbot() {
   document.getElementById('chatbotWindow').classList.toggle('open', chatOpen);
   document.getElementById('chatUnread').style.display = 'none';
   if (chatOpen && chatHistory.length === 0) {
-    if (storeSettings && storeSettings.gemini_api_key) {
-      chatAIEnabled = true;
+    if (chatAIEnabled) {
       addBotMsg('مرحباً! 👋 أنا مساعد Smart Shopping الذكي.\n\nأقدر أساعدك في:\n• البحث عن منتجات\n• معلومات الأسعار والشحن\n• تتبع الطلبات\n• سياسة الإرجاع\n\nوش تبي اليوم؟ 😊');
     } else {
       addBotMsg(t('chat_welcome'));
@@ -3173,8 +3200,7 @@ function processChatInput(text) {
   }
 
   // If AI is enabled, send to Gemini
-  if (storeSettings && storeSettings.gemini_api_key) {
-    chatAIEnabled = true;
+  if (chatAIEnabled) {
     showTyping();
     var historyForAI = chatHistory.slice(-8).map(function(h) {
       return (h.role === 'user' ? 'Customer' : 'Assistant') + ': ' + h.text;
