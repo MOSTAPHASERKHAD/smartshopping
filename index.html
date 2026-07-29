@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -532,7 +532,7 @@ body.rtl .back-to-top{left:auto;right:24px}
 
 @media(max-width:768px){
   .products-grid{grid-template-columns:repeat(3,1fr);gap:6px}
-  .product-image-wrap{aspect-ratio:1/1 !important;max-height:110px;overflow:hidden}
+  .product-image-wrap{aspect-ratio:1/1 !important;max-height:160px;overflow:hidden}
   .product-card{border-radius:8px}
   .product-body{padding:4px 6px 6px}
   .product-title{font-size:.65rem;font-weight:600;line-height:1.2;margin-bottom:2px}
@@ -695,7 +695,7 @@ body.rtl .back-to-top{left:auto;right:24px}
   background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);
   border-radius:50%;color:#fff;font-size:1.4rem;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  backdrop-filter:blur(8px);transition:background .2s;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background .2s;
 }
 .lp-lightbox-close:hover{background:rgba(255,255,255,.28);}
 .lp-lightbox-nav{
@@ -704,7 +704,7 @@ body.rtl .back-to-top{left:auto;right:24px}
   border:2px solid rgba(255,255,255,.25);border-radius:50%;
   color:#fff;font-size:1.6rem;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  backdrop-filter:blur(8px);transition:background .2s;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background .2s;
   user-select:none;
 }
 .lp-lightbox-nav:hover{background:rgba(255,255,255,.28);}
@@ -714,7 +714,7 @@ body.rtl .back-to-top{left:auto;right:24px}
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
   color:rgba(255,255,255,.7);font-size:.82rem;letter-spacing:.5px;
   background:rgba(0,0,0,.4);padding:6px 16px;border-radius:20px;
-  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
 }
 
 /* Placeholder for products without images */
@@ -754,21 +754,21 @@ document.head.appendChild(ld);
   <div id="headerCatBar" class="header-cat-bar"></div>
   <select class="sort-select" id="sortSelectMobile" onchange="filterProducts()" style="display:none"></select>
   <div class="header-view-btns">
-    <button id="viewGrid" onclick="setViewMode('grid')" title="Grid">
+    <button type="button" id="viewGrid" onclick="setViewMode('grid')" title="Grid">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
     </button>
-    <button id="viewReels" onclick="setViewMode('reels')" title="Reels">
+    <button type="button" id="viewReels" onclick="setViewMode('reels')" title="Reels">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01" stroke-width="3" stroke-linecap="round"/></svg>
     </button>
   </div>
   <div class="header-actions">
-    <button class="dark-btn" id="darkToggle" onclick="toggleDark()" title="وضع داكن / فاتح">🌙</button>
-    <button class="icon-btn lang-btn" id="langToggle" onclick="toggleLang()">EN</button>
-    <button class="icon-btn user-btn" id="userBtn" onclick="openAuthModal()" style="position:relative">
+    <button type="button" class="dark-btn" id="darkToggle" onclick="toggleDark()" title="وضع داكن / فاتح">🌙</button>
+    <button type="button" class="icon-btn lang-btn" id="langToggle" onclick="toggleLang()">EN</button>
+    <button type="button" class="icon-btn user-btn" id="userBtn" onclick="openAuthModal()" style="position:relative">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       <span class="user-name" id="userLabel"></span>
     </button>
-    <button class="icon-btn" onclick="openCart()" style="position:relative">
+    <button type="button" class="icon-btn" onclick="openCart()" style="position:relative">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
       <span class="badge" id="cartCount">0</span>
     </button>
@@ -882,11 +882,11 @@ document.head.appendChild(ld);
     <div class="review-form">
       <h4 data-i18n="write_review">اكتب تقييمك</h4>
       <div class="review-rating" id="reviewRating">
-        <button onclick="setReviewRating(1)">★</button>
-        <button onclick="setReviewRating(2)">★</button>
-        <button onclick="setReviewRating(3)">★</button>
-        <button onclick="setReviewRating(4)">★</button>
-        <button onclick="setReviewRating(5)">★</button>
+        <button type="button" onclick="setReviewRating(1)">★</button>
+        <button type="button" onclick="setReviewRating(2)">★</button>
+        <button type="button" onclick="setReviewRating(3)">★</button>
+        <button type="button" onclick="setReviewRating(4)">★</button>
+        <button type="button" onclick="setReviewRating(5)">★</button>
       </div>
       <textarea id="reviewText" placeholder="اكتب رأيك في المنتج..." data-i18n-placeholder="review_ph"></textarea>
       <div class="review-photo-upload">
@@ -898,7 +898,7 @@ document.head.appendChild(ld);
         <input type="text" id="reviewName" placeholder="اسمك" data-i18n-placeholder="review_name">
         <input type="text" id="reviewLocation" placeholder="المدينة" data-i18n-placeholder="review_location">
       </div>
-      <button class="btn btn-primary" style="margin-top:10px" onclick="submitReview()" data-i18n="submit_review">إرسال التقييم</button>
+      <button type="button" class="btn btn-primary" style="margin-top:10px" onclick="submitReview()" data-i18n="submit_review">إرسال التقييم</button>
     </div>
   </div>
 </div>
@@ -921,7 +921,7 @@ document.head.appendChild(ld);
     <div class="track-card">
       <div class="track-form">
         <input type="text" id="trackInput" placeholder="SK-20260618-0001" data-i18n-placeholder="track_ph">
-        <button class="btn btn-primary" onclick="trackOrder()" data-i18n="track_btn">تتبع</button>
+        <button type="button" class="btn btn-primary" onclick="trackOrder()" data-i18n="track_btn">تتبع</button>
       </div>
       <div id="trackResult"></div>
     </div>
@@ -969,7 +969,7 @@ document.head.appendChild(ld);
         <h4 style="color:#fff;font-size:.8rem;margin-bottom:8px" data-i18n="newsletter_title">النشرة البريدية</h4>
         <div style="display:flex;gap:6px">
           <input type="email" id="newsletterEmail" placeholder="بريدك الإلكتروني" data-i18n-placeholder="newsletter_ph" style="flex:1;padding:8px 12px;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:transparent;color:#fff;font-family:var(--font);font-size:.8rem;outline:none">
-          <button class="btn btn-accent btn-sm" onclick="subscribeNewsletter()" data-i18n="newsletter_btn">اشترك</button>
+          <button type="button" class="btn btn-accent btn-sm" onclick="subscribeNewsletter()" data-i18n="newsletter_btn">اشترك</button>
         </div>
         <p id="newsletterMsg" style="font-size:.72rem;margin-top:6px;display:none"></p>
       </div>
@@ -996,7 +996,7 @@ document.head.appendChild(ld);
 <!-- About Page -->
 <div class="modal-overlay" id="aboutPage" onclick="if(event.target===this)closePage('about')">
 <div class="modal" style="max-width:650px">
-  <div class="modal-header"><h2 id="aboutTitle" data-i18n="about_title">من نحن</h2><button class="modal-close-btn" onclick="closePage('about')">✕</button></div>
+  <div class="modal-header"><h2 id="aboutTitle" data-i18n="about_title">من نحن</h2><button type="button" class="modal-close-btn" onclick="closePage('about')">✕</button></div>
   <div class="modal-body" id="aboutBody" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
     <p data-i18n="about_p1">Smart Shopping هو متجر إلكتروني جزائري يهدف لتوفير أفضل المنتجات بأسعار مناسبة للجميع.</p>
     <p data-i18n="about_p2">نعمل على تلبية احتياجات عملائنا مع ضمان جودة عالية وخدمة عملاء ممتازة.</p>
@@ -1008,7 +1008,7 @@ document.head.appendChild(ld);
 <!-- Return Policy Page -->
 <div class="modal-overlay" id="returnPage" onclick="if(event.target===this)closePage('return')">
 <div class="modal" style="max-width:650px">
-  <div class="modal-header"><h2 data-i18n="return_title">سياسة الاسترجاع</h2><button class="modal-close-btn" onclick="closePage('return')">✕</button></div>
+  <div class="modal-header"><h2 data-i18n="return_title">سياسة الاسترجاع</h2><button type="button" class="modal-close-btn" onclick="closePage('return')">✕</button></div>
   <div class="modal-body" id="returnBody" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
     <p data-i18n="return_p1">نحرص على رضاك التام عن مشترياتك. إذا لم تكن راضياً عن المنتج، يمكنك استرجاعه خلال 7 أيام من تاريخ الاستلام.</p>
     <h4 style="margin:12px 0 6px;font-size:.85rem;color:var(--text)" data-i18n="return_conditions_title">شروط الاسترجاع:</h4>
@@ -1025,7 +1025,7 @@ document.head.appendChild(ld);
 <!-- Terms Page -->
 <div class="modal-overlay" id="termsPage" onclick="if(event.target===this)closePage('terms')">
 <div class="modal" style="max-width:650px">
-  <div class="modal-header"><h2 data-i18n="terms_title">الشروط والأحكام</h2><button class="modal-close-btn" onclick="closePage('terms')">✕</button></div>
+  <div class="modal-header"><h2 data-i18n="terms_title">الشروط والأحكام</h2><button type="button" class="modal-close-btn" onclick="closePage('terms')">✕</button></div>
   <div class="modal-body" id="termsBody" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
     <p data-i18n="terms_p1">مرحباً بكم في متجر Smart Shopping! يُرجى قراءة شروط وأحكام الاستخدام هذه بعناية قبل استخدام موقعنا الإلكتروني أو الشراء منه. باستخدامك لموقعنا، فإنك توافق على الالتزام بهذه الشروط والأحكام.</p>
     <h4 style="margin:12px 0 6px;font-size:.85rem;color:var(--text)" data-i18n="terms_conditions">الشروط:</h4>
@@ -1065,7 +1065,7 @@ document.head.appendChild(ld);
 <!-- Privacy Page -->
 <div class="modal-overlay" id="privacyPage" onclick="if(event.target===this)closePage('privacy')">
 <div class="modal" style="max-width:650px">
-  <div class="modal-header"><h2 data-i18n="privacy_title">سياسة الخصوصية</h2><button class="modal-close-btn" onclick="closePage('privacy')">✕</button></div>
+  <div class="modal-header"><h2 data-i18n="privacy_title">سياسة الخصوصية</h2><button type="button" class="modal-close-btn" onclick="closePage('privacy')">✕</button></div>
   <div class="modal-body" id="privacyBody" style="line-height:1.8;font-size:.88rem;color:var(--text2)">
     <p data-i18n="privacy_p1">نحن في Smart Shopping نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية. توضح سياسة الخصوصية هذه كيفية جمع واستخدام وحماية معلوماتك الشخصية.</p>
     <h4 style="margin:12px 0 6px;font-size:.85rem;color:var(--text)" data-i18n="privacy_collect">المعلومات التي نجمعها:</h4>
@@ -1098,7 +1098,7 @@ document.head.appendChild(ld);
 <!-- Landing Page -->
 <div class="modal-overlay" id="landingPage" onclick="if(event.target===this)closeLanding()">
 <div class="modal" style="max-width:800px">
-  <div class="modal-header"><h2 id="landingTitle"></h2><button class="modal-close-btn" onclick="closeLanding()">✕</button></div>
+  <div class="modal-header"><h2 id="landingTitle"></h2><button type="button" class="modal-close-btn" onclick="closeLanding()">✕</button></div>
   <div class="modal-body" id="landingBody"></div>
 </div>
 </div>
@@ -1108,20 +1108,20 @@ document.head.appendChild(ld);
 <div class="cart-drawer" id="cartDrawer">
   <div class="cart-header">
     <h3><span data-i18n="cart_title">السلة</span> <span class="count" id="cartCountLabel"></span></h3>
-    <button class="cart-close" onclick="closeCart()">✕</button>
+    <button type="button" class="cart-close" onclick="closeCart()">✕</button>
   </div>
   <div class="cart-items" id="cartItems"></div>
   <div class="cart-footer" id="cartFooter" style="display:none">
     <div class="cart-discount">
       <input type="text" id="discountInput" placeholder="كود الخصم" data-i18n-placeholder="discount_ph">
-      <button class="btn btn-sm btn-accent" onclick="applyCoupon()" id="discountBtn">تطبيق</button>
+      <button type="button" class="btn btn-sm btn-accent" onclick="applyCoupon()" id="discountBtn">تطبيق</button>
     </div>
     <div class="cart-discount-result" id="discountResult" style="display:none;color:var(--success);font-size:.8rem;padding:4px 0"></div>
     <div class="cart-subtotal">
       <span class="cart-subtotal-label" data-i18n="subtotal">المجموع</span>
       <span class="cart-subtotal-value" id="cartSubtotal">0 DZD</span>
     </div>
-    <button class="btn btn-primary btn-block btn-lg" onclick="closeCart();openCheckout()" data-i18n="checkout_btn">إتمام الطلب</button>
+    <button type="button" class="btn btn-primary btn-block btn-lg" onclick="closeCart();openCheckout()" data-i18n="checkout_btn">إتمام الطلب</button>
   </div>
 </div>
 
@@ -1130,7 +1130,7 @@ document.head.appendChild(ld);
 <div class="modal">
   <div class="modal-header">
     <h2 data-i18n="checkout_title">الدفع</h2>
-    <button class="modal-close-btn" onclick="closeCheckout()">✕</button>
+    <button type="button" class="modal-close-btn" onclick="closeCheckout()">✕</button>
   </div>
   <div class="modal-body">
     <form id="checkoutForm" onsubmit="submitOrder(event)">
@@ -1183,8 +1183,8 @@ document.head.appendChild(ld);
 <div class="cookie-banner" id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;color:#fff;padding:14px 24px;display:none;justify-content:space-between;align-items:center;z-index:9999;gap:16px;flex-wrap:wrap;box-shadow:0 -2px 10px rgba(0,0,0,.2);font-size:.82rem">
   <p style="margin:0;flex:1;min-width:200px">نستخدم ملفات تعريف الارتباط لتحسين تجربتك وتحليل حركة المرور. <a href="#" onclick="showPage('privacy');return false" style="color:var(--accent)">سياسة الخصوصية</a></p>
   <div style="display:flex;gap:8px;flex-shrink:0">
-    <button class="btn btn-sm" onclick="acceptCookies('all')" style="background:var(--accent);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.8rem">قبول الكل</button>
-    <button class="btn btn-sm" onclick="acceptCookies('necessary')" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3);padding:8px 16px;border-radius:6px;cursor:pointer;font-size:.8rem">الضرورية فقط</button>
+    <button type="button" class="btn btn-sm" onclick="acceptCookies('all')" style="background:var(--accent);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.8rem">قبول الكل</button>
+    <button type="button" class="btn btn-sm" onclick="acceptCookies('necessary')" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3);padding:8px 16px;border-radius:6px;cursor:pointer;font-size:.8rem">الضرورية فقط</button>
   </div>
 </div>
 
@@ -1193,7 +1193,7 @@ document.head.appendChild(ld);
 <div class="modal auth-modal">
   <div class="modal-header">
     <h2 id="authModalTitle">حسابي</h2>
-    <button class="modal-close-btn" onclick="closeAuthModal()">✕</button>
+    <button type="button" class="modal-close-btn" onclick="closeAuthModal()">✕</button>
   </div>
   <div class="modal-body" id="authModalBody">
     <!-- Not logged in: show tabs -->
@@ -1213,7 +1213,7 @@ document.head.appendChild(ld);
           <label data-i18n="auth_password">كلمة المرور</label>
           <input type="password" id="authLoginPass" required>
         </div>
-        <button class="btn btn-primary btn-block" onclick="doLogin()" data-i18n="auth_login_btn">دخول</button>
+        <button type="button" class="btn btn-primary btn-block" onclick="doLogin()" data-i18n="auth_login_btn">دخول</button>
       </div>
       <!-- Register Form -->
       <div class="auth-form" id="registerForm">
@@ -1229,7 +1229,7 @@ document.head.appendChild(ld);
           <label data-i18n="auth_password">كلمة المرور</label>
           <input type="password" id="authRegPass" required minlength="4">
         </div>
-        <button class="btn btn-primary btn-block" onclick="doRegister()" data-i18n="auth_register_btn">إنشاء حساب</button>
+        <button type="button" class="btn btn-primary btn-block" onclick="doRegister()" data-i18n="auth_register_btn">إنشاء حساب</button>
       </div>
     </div>
     <!-- Logged in: show account info -->
@@ -1248,11 +1248,11 @@ document.head.appendChild(ld);
         <p style="font-size:.78rem;color:var(--text2);margin-bottom:8px" data-i18n="referral_desc">شارك رابطك واحصل على خصم 10% لكل صديق يطلب</p>
         <div style="display:flex;gap:6px">
           <input type="text" id="referralLink" readonly style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:#fff">
-          <button class="btn btn-primary btn-sm" onclick="copyReferral()" data-i18n="referral_copy">نسخ</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="copyReferral()" data-i18n="referral_copy">نسخ</button>
         </div>
         <p id="referralMsg" style="font-size:.72rem;color:var(--success);margin-top:4px;display:none"></p>
       </div>
-      <button class="btn btn-outline btn-block" onclick="doLogout()" style="margin-top:12px" data-i18n="auth_logout">تسجيل الخروج</button>
+      <button type="button" class="btn btn-outline btn-block" onclick="doLogout()" style="margin-top:12px" data-i18n="auth_logout">تسجيل الخروج</button>
     </div>
   </div>
 </div>
@@ -1689,6 +1689,19 @@ function trackInitiateCheckout(total){
   trackEvent('InitiateCheckout',{value:total,currency:'DZD'});
 }
 
+var _modalCount = 0;
+function _lockBody(lock) {
+  if (lock) { _modalCount++; } else { _modalCount = Math.max(0, _modalCount - 1); }
+  if (_modalCount > 0) {
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+  } else {
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+  }
+}
 function esc(s) {
   if (typeof s !== 'string' && typeof s !== 'number') s = String(s || '');
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -1702,6 +1715,7 @@ function setLoading(id, loading) {
   btn.querySelectorAll('.btn-text').forEach(function(el){el.style.display=loading?'none':'inline'});
 }
 function init(){
+  document.querySelectorAll('button:not([type])').forEach(function(b){b.type='button';});
   if(window.ThemeEngine){
     try{ThemeEngine.init();}catch(e){console.error('ThemeEngine init',e);}
     try{loadServerTheme();}catch(e){console.error('loadServerTheme',e);}
@@ -1770,7 +1784,7 @@ function init(){
 
 function showPage(name){
   var el=document.getElementById(name+'Page');if(el)el.classList.add('open');
-  document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.width='100%';
+  _lockBody(true);
   if(name==='about'){
     var t1=document.getElementById('aboutTitle');var b1=document.getElementById('aboutBody');
     if(t1)t1.textContent=currentLang==='ar'?(storeSettings.about_title_ar||'من نحن'):(storeSettings.about_title_en||'About Us');
@@ -1801,7 +1815,7 @@ function showPage(name){
     }
   }
 }
-function closePage(name){var el=document.getElementById(name+'Page');if(el)el.classList.remove('open');document.body.style.overflow='';document.body.style.position='';document.body.style.width='';}
+function closePage(name){var el=document.getElementById(name+'Page');if(el)el.classList.remove('open');_lockBody(false);}
 
 function renderSuggested(currentId){
   try{
@@ -1875,13 +1889,13 @@ function renderProducts(){
       variantBadges=parts.length?'<div class="product-variants-row" style="font-size:.65rem;color:var(--text2);margin-top:2px">'+parts.join(' | ')+'</div>':'';
     }
     var pid=esc(p.id);var ttl=esc(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar||'');
-    return '<div class="product-card fade-in" style="animation-delay:'+i*40+'ms">'+
+    return '<div class="product-card fade-in" style="animation-delay:'+Math.min(i*40,2000)+'ms">'+
       '<div class="product-image-wrap">'+
         '<img class="product-image" src="'+img+'" alt="'+esc(p.title_ar||'')+'" loading="lazy" onerror="this.src=\''+esc(fallbackSvg)+'\'">'+
         (disc?'<span class="product-badge">-'+Math.round((p.old_price-p.price)/p.old_price*100)+'%</span>':'')+
         (out&&!disc?'<span class="product-badge" style="background:#6b7280">'+t('out_of_stock')+'</span>':'')+
-        '<button class="wishlist-btn'+(getWishlist().indexOf(p.id)>-1?' active':'')+'" data-pid="'+pid+'" onclick="toggleWishlist(\''+pid+'\',event)">'+(getWishlist().indexOf(p.id)>-1?'♥':'♡')+'</button>'+
-        '<button class="compare-check'+(getCompare().indexOf(p.id)>-1?' active':'')+'" data-pid="'+pid+'" onclick="toggleCompare(\''+pid+'\',event)">✓</button>'+
+        '<button type="button" class="wishlist-btn'+(getWishlist().indexOf(p.id)>-1?' active':'')+'" data-pid="'+pid+'" onclick="toggleWishlist(\''+pid+'\',event)">'+(getWishlist().indexOf(p.id)>-1?'♥':'♡')+'</button>'+
+        '<button type="button" class="compare-check'+(getCompare().indexOf(p.id)>-1?' active':'')+'" data-pid="'+pid+'" onclick="toggleCompare(\''+pid+'\',event)">✓</button>'+
       '</div>'+
       '<div class="product-body">'+
         '<div class="product-title"><a href="#" onclick="showProductDetail(\''+pid+'\');return false">'+ttl+'</a></div>'+
@@ -1896,11 +1910,11 @@ function renderProducts(){
           '<a class="share-btn share-tw" href="https://twitter.com/intent/tweet?text='+encodeURIComponent(ttl+' - '+Number(p.price).toLocaleString()+' DZD')+'" target="_blank" title="Twitter">𝕏</a>'+
         '</div>'+
         (out?'':qty>0?
-          '<div class="product-actions"><div class="qty-inline"><button onclick="changeQty(\''+pid+'\',-1)">−</button>'+
+          '<div class="product-actions"><div class="qty-inline"><button type="button" onclick="changeQty(\''+pid+'\',-1)">−</button>'+
           '<input value="'+qty+'" readonly>'+
-          '<button onclick="changeQty(\''+pid+'\',1)">+</button></div></div>':
+          '<button type="button" onclick="changeQty(\''+pid+'\',1)">+</button></div></div>':
           '<div class="product-actions">'+
-          '<button class="btn-add buy-now" onclick="showProductDetail(\''+pid+'\')">'+t('buy_now')+'</button></div>'
+          '<button type="button" class="btn-add buy-now" onclick="showProductDetail(\''+pid+'\')">'+t('buy_now')+'</button></div>'
         )+
       '</div>'+
     '</div>';
@@ -1928,9 +1942,9 @@ function buildCategories(){
     var keys=Object.keys(cats).sort(function(a,b){return a.localeCompare(b)});
     var bar=document.getElementById('headerCatBar');
     if(!bar)return;
-    var html='<button class="cat-btn active" data-cat="" onclick="filterByCategory(this)">'+t('cat_all')+'</button>';
+    var html='<button type="button" class="cat-btn active" data-cat="" onclick="filterByCategory(this)">'+t('cat_all')+'</button>';
     keys.forEach(function(k){
-      html+='<button class="cat-btn" data-cat="'+k.replace(/'/g,"\\'")+'" onclick="filterByCategory(this)">'+k+'</button>';
+      html+='<button type="button" class="cat-btn" data-cat="'+k.replace(/'/g,"\\'")+'" onclick="filterByCategory(this)">'+k+'</button>';
     });
     var sortOpts='<option value="default">'+t('sort_default')+'</option>'+
       '<option value="price-asc">'+t('sort_price_asc')+'</option>'+
@@ -1997,9 +2011,9 @@ function renderCart(){
           '<div class="cart-item-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div>'+
           '<div class="cart-item-price">'+Number(p.price).toLocaleString()+' '+t('currency')+'</div>'+
           '<div class="cart-item-bottom">'+
-            '<div class="qty-inline"><button onclick="changeQty(\''+item.id+'\',-1)">−</button>'+
+            '<div class="qty-inline"><button type="button" onclick="changeQty(\''+item.id+'\',-1)">−</button>'+
             '<input value="'+item.qty+'" readonly>'+
-            '<button onclick="changeQty(\''+item.id+'\',1)">+</button></div>'+
+            '<button type="button" onclick="changeQty(\''+item.id+'\',1)">+</button></div>'+
             '<span class="cart-item-total">'+Number(t).toLocaleString()+' '+t('currency')+'</span>'+
           '</div>'+
           '<div class="cart-item-remove" onclick="removeFromCart(\''+item.id+'\')">'+t('remove')+'</div>'+
@@ -2015,7 +2029,7 @@ function renderCart(){
 }
 
 function openCart(){try{document.getElementById('cartOverlay').classList.add('open');document.getElementById('cartDrawer').classList.add('open');document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.width='100%'}catch(e){}}
-function closeCart(){try{document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartDrawer').classList.remove('open');document.body.style.overflow='';document.body.style.position='';document.body.style.width=''}catch(e){}}
+function closeCart(){try{document.getElementById('cartOverlay').classList.remove('open');document.getElementById('cartDrawer').classList.remove('open');_lockBody(false)}catch(e){}}
 
 function openCheckout(){
   if(!cart.length)return;
@@ -2027,9 +2041,9 @@ function openCheckout(){
   try{var total=getCartSubtotal();trackInitiateCheckout(total)}catch(e){}
   document.getElementById('orderWilaya').onchange=function(){renderOrderSummary()};
   document.getElementById('orderDelivery').onchange=function(){renderOrderSummary()};
-  document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.width='100%';
+  _lockBody(true);
 }
-function closeCheckout(){document.getElementById('checkoutModal').classList.remove('open');document.body.style.overflow='';document.body.style.position='';document.body.style.width=''}
+function closeCheckout(){document.getElementById('checkoutModal').classList.remove('open');_lockBody(false)}
 
 function populateWilayas(){
   var s=document.getElementById('orderWilaya');if(s.options.length>1)return;
@@ -2129,7 +2143,6 @@ function showProductDetail(id){
   window.location.href='product.html?id='+encodeURIComponent(id);
 }
 
-var carouselTimer=null;
 function selectPdImg(idx){
   try{
     var imgs=window._pdImgs;if(!imgs||!imgs[idx])return;
@@ -2174,7 +2187,7 @@ function renderVariantSection(p){
   if(hasSize){
     html+='<div class="pd-variant-title">المقاس</div><div class="size-options" id="sizeOptions">';
     p.size.split(',').map(function(s){return s.trim();}).filter(function(s){return s;}).forEach(function(s){
-      html+='<button class="size-btn" data-size="'+s+'" onclick="selectPdSize(\''+s.replace(/'/g,"\\'")+'\')">'+s+'</button>';
+      html+='<button type="button" class="size-btn" data-size="'+s+'" onclick="selectPdSize(\''+s.replace(/'/g,"\\'")+'\')">'+s+'</button>';
     });
     html+='</div>';
   }
@@ -2182,7 +2195,7 @@ function renderVariantSection(p){
     html+='<div class="pd-variant-title">اللون</div><div class="color-options" id="colorOptions">';
     p.color.split(',').map(function(c){return c.trim();}).filter(function(c){return c;}).forEach(function(c){
       var cv=getColorValue(c);
-      html+='<button class="color-swatch" data-color="'+c+'" style="background:'+cv+'" onclick="selectPdColor(\''+c.replace(/'/g,"\\'")+'\')" title="'+c+'"></button>';
+      html+='<button type="button" class="color-swatch" data-color="'+c+'" style="background:'+cv+'" onclick="selectPdColor(\''+c.replace(/'/g,"\\'")+'\')" title="'+c+'"></button>';
     });
     html+='</div>';
   }
@@ -2305,7 +2318,7 @@ function submitProductDetail(e){
       (variantNote?'<p style="color:var(--text2);font-size:.75rem;margin-top:4px">'+variantNote+'</p>':'')+
       '<p style="color:var(--text2);font-size:.75rem;margin-top:4px">'+t('delivery_note')+'</p>'+
       '<a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn" style="display:inline-flex;margin-top:12px">'+t('whatsapp_btn')+'</a>'+
-      '<br><button class="btn btn-outline btn-sm" style="margin-top:12px" onclick="hideProductDetail()" data-i18n="back_products">← العودة للمنتجات</button>'+
+      '<br><button type="button" class="btn btn-outline btn-sm" style="margin-top:12px" onclick="hideProductDetail()" data-i18n="back_products">← العودة للمنتجات</button>'+
     '</div>';
     document.querySelector('.pd-success .btn-outline').textContent=t('back_products');
   });
@@ -2546,7 +2559,7 @@ function previewReviewPhotos(input) {
       reader.onload = function(e) {
         var div = document.createElement('div');
         div.className = 'thumb';
-        div.innerHTML = '<img src="' + e.target.result + '"><button class="remove" onclick="removeReviewPhoto(' + idx + ')">✕</button>';
+        div.innerHTML = '<img src="' + e.target.result + '"><button type="button" class="remove" onclick="removeReviewPhoto(' + idx + ')">✕</button>';
         preview.appendChild(div);
       };
       reader.readAsDataURL(file);
@@ -2711,14 +2724,14 @@ function updateUserButton() {
 
 function openAuthModal() {
   document.getElementById('authModal').classList.add('open');
-  document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.width='100%';
+  _lockBody(true);
   if (currentCustomer && currentCustomer.phone) {
     showAccountView();
   } else {
     showGuestView();
   }
 }
-function closeAuthModal() { document.getElementById('authModal').classList.remove('open');document.body.style.overflow='';document.body.style.position='';document.body.style.width=''; }
+function closeAuthModal() { document.getElementById('authModal').classList.remove('open');_lockBody(false); }
 
 function showGuestView() {
   document.getElementById('authGuestView').style.display = 'block';
@@ -3027,7 +3040,7 @@ function openCompareModal() {
   }).join('');
   table.innerHTML = html;
   document.getElementById('compareOverlay').classList.add('open');
-  document.body.style.overflow='hidden';document.body.style.position='fixed';document.body.style.width='100%';
+  _lockBody(true);
 }
 
 function closeCompareModal() {
@@ -3105,7 +3118,7 @@ function hideTyping() {
 function showQuickReplies(replies) {
   var el = document.getElementById('chatQuickReplies');
   el.innerHTML = replies.map(function(r) {
-    return '<button class="chat-quick-btn" onclick="handleQuickReply(\'' + r.value + '\')">' + r.text + '</button>';
+    return '<button type="button" class="chat-quick-btn" onclick="handleQuickReply(\'' + r.value + '\')">' + r.text + '</button>';
   }).join('');
 }
 
@@ -3321,8 +3334,8 @@ function buildLandingPageHTML(p){
     html+='<div class="lp-placeholder-img" id="lpMainImgTag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>'+(lang==='ar'?'لا توجد صورة':'No image')+'</span></div>';
   }
   if(imgs.length>1){
-    html+='<button class="lp-arrow prev" onclick="lpCarouselNav(-1)">‹</button>';
-    html+='<button class="lp-arrow next" onclick="lpCarouselNav(1)">›</button>';
+    html+='<button type="button" class="lp-arrow prev" onclick="lpCarouselNav(-1)">‹</button>';
+    html+='<button type="button" class="lp-arrow next" onclick="lpCarouselNav(1)">›</button>';
     html+='<div class="lp-img-counter"><span id="lpImgIdx">1</span>/'+imgs.length+'</div>';
   }
   html+='</div>';
@@ -3514,10 +3527,10 @@ function lpOpenLightbox(idx){
     lb.id='lpLightbox';
     lb.className='lp-lightbox';
     lb.innerHTML=
-      '<button class="lp-lightbox-close" onclick="lpCloseLightbox()">✕</button>'+
-      '<button class="lp-lightbox-nav prev" onclick="lpLbNav(-1)">‹</button>'+
+      '<button type="button" class="lp-lightbox-close" onclick="lpCloseLightbox()">✕</button>'+
+      '<button type="button" class="lp-lightbox-nav prev" onclick="lpLbNav(-1)">‹</button>'+
       '<img id="lpLbImg" src="" alt="">'+
-      '<button class="lp-lightbox-nav next" onclick="lpLbNav(1)">›</button>'+
+      '<button type="button" class="lp-lightbox-nav next" onclick="lpLbNav(1)">›</button>'+
       '<div class="lp-lightbox-counter" id="lpLbCounter"></div>';
     document.body.appendChild(lb);
     lb.addEventListener('click',function(e){if(e.target===lb)lpCloseLightbox();});
@@ -3551,7 +3564,7 @@ function lpLbKey(e){
 }
 function lpCloseLightbox(){
   var lb=document.getElementById('lpLightbox');
-  if(lb){lb.classList.remove('open');document.body.style.overflow='';}
+  if(lb){lb.classList.remove('open');_lockBody(false);}
   document.removeEventListener('keydown',lpLbKey);
 }
 </script>
@@ -3560,12 +3573,12 @@ function lpCloseLightbox(){
 <div class="compare-bar" id="compareBar">
   <span class="compare-count" id="compareCount">0</span>
   <span>منتج محدد للمقارنة</span>
-  <button class="btn btn-compare" onclick="openCompareModal()">قارن</button>
-  <button class="btn btn-clear" onclick="clearCompare()">مسح</button>
+  <button type="button" class="btn btn-compare" onclick="openCompareModal()">قارن</button>
+  <button type="button" class="btn btn-clear" onclick="clearCompare()">مسح</button>
 </div>
 
 <!-- AI Chatbot -->
-<button class="chatbot-btn" id="chatbotBtn" onclick="toggleChatbot()">
+<button type="button" class="chatbot-btn" id="chatbotBtn" onclick="toggleChatbot()">
   💬
   <span class="unread-dot" id="chatUnread"></span>
 </button>
@@ -3576,33 +3589,33 @@ function lpCloseLightbox(){
       <h4>Smart Assistant</h4>
       <p data-i18n="chat_online">متصل الآن</p>
     </div>
-    <button class="chatbot-close" onclick="toggleChatbot()">✕</button>
+    <button type="button" class="chatbot-close" onclick="toggleChatbot()">✕</button>
   </div>
   <div class="chatbot-messages" id="chatMessages"></div>
   <div class="chat-quick-replies" id="chatQuickReplies"></div>
   <div class="chatbot-input">
     <input type="text" id="chatInput" placeholder="اكتب رسالتك هنا..." data-i18n-placeholder="chat_ph" onkeypress="if(event.key==='Enter')sendChatMsg()">
-    <button onclick="sendChatMsg()">➤</button>
+    <button type="button" onclick="sendChatMsg()">➤</button>
   </div>
 </div>
 
 <!-- Compare Modal -->
 <div class="compare-overlay" id="compareOverlay" onclick="if(event.target===this)closeCompareModal()">
 <div class="compare-modal">
-  <div class="compare-header"><h3>مقارنة المنتجات</h3><button class="modal-close-btn" onclick="closeCompareModal()">✕</button></div>
+  <div class="compare-header"><h3>مقارنة المنتجات</h3><button type="button" class="modal-close-btn" onclick="closeCompareModal()">✕</button></div>
   <div style="padding:16px;overflow-x:auto">
     <table class="compare-table" id="compareTable"></table>
   </div>
 </div>
 </div>
 
-<button class="back-to-top" onclick="scrollToTop()">↑</button>
+<button type="button" class="back-to-top" onclick="scrollToTop()">↑</button>
 
 
 <!-- Sticky Buy Bar -->
 <div class="sticky-buy-bar hidden" id="stickyBuyBar">
   <div class="sbb-price" id="sbbPrice"></div>
-  <button class="btn btn-primary" onclick="document.getElementById('pdForm').scrollIntoView({behavior:'smooth',block:'center'})" data-i18n="buy_now">اطلب الآن</button>
+  <button type="button" class="btn btn-primary" onclick="document.getElementById('pdForm').scrollIntoView({behavior:'smooth',block:'center'})" data-i18n="buy_now">اطلب الآن</button>
 </div>
 
 <nav class="mobile-nav">
