@@ -2367,31 +2367,36 @@ function getShippingCost() {
 }
 
 // === Phase 2.1: Promo Banners ===
+var DEFAULT_BANNERS = [
+  { img:'promo-hero.png', title:'تسوّق بذكاء', subtitle:'منتجات متنوعة بأفضل الأسعار', link:'' },
+  { img:'promo-sale.png', title:'عروض حصرية', subtitle:'خصومات تصل إلى 50%', link:'' },
+  { img:'promo-accessories.png', title:'إكسسوارات', subtitle:'أحدث الإكسسوارات التقنية', link:'' }
+];
 var heroSlides = [];
 var heroIdx = 0;
 var heroTimer = null;
+var heroFallbackTimer = null;
 
-function loadHeroBanners(settings) {
+function loadHeroBanners(settings, forceDefault) {
   try {
     heroSlides = [];
-    for (var i = 1; i <= 5; i++) {
-      var img = settings['banner' + i + '_img'];
-      // Ensure img is not just whitespace and looks like a valid path or URL or data URI
-      if (img && typeof img === 'string' && img.trim().length > 4) {
-        heroSlides.push({
-          img: img.trim(),
-          title: settings['banner' + i + '_title'] || '',
-          subtitle: settings['banner' + i + '_subtitle'] || '',
-          link: settings['banner' + i + '_link'] || ''
-        });
+    if (forceDefault) {
+      heroSlides = DEFAULT_BANNERS.slice();
+    } else {
+      for (var i = 1; i <= 5; i++) {
+        var img = settings['banner' + i + '_img'];
+        if (img && typeof img === 'string' && img.trim().length > 4) {
+          heroSlides.push({
+            img: img.trim(),
+            title: settings['banner' + i + '_title'] || '',
+            subtitle: settings['banner' + i + '_subtitle'] || '',
+            link: settings['banner' + i + '_link'] || ''
+          });
+        }
       }
-    }
-    if (heroSlides.length === 0) {
-      heroSlides = [
-        { img: 'promo-hero.png', title: 'تسوّق بذكاء', subtitle: 'منتجات متنوعة بأفضل الأسعار', link: '' },
-        { img: 'promo-sale.png', title: 'عروض حصرية', subtitle: 'خصومات تصل إلى 50%', link: '' },
-        { img: 'promo-accessories.png', title: 'إكسسوارات', subtitle: 'أحدث الإكسسوارات التقنية', link: '' }
-      ];
+      if (heroSlides.length === 0) {
+        heroSlides = DEFAULT_BANNERS.slice();
+      }
     }
     var banner = document.getElementById('heroSlider');
     if (!banner) return;
@@ -2400,7 +2405,25 @@ function loadHeroBanners(settings) {
     renderHeroDots();
     clearInterval(heroTimer);
     heroTimer = setInterval(function() { heroNav(1); }, 4000);
+    if (!forceDefault) {
+      clearTimeout(heroFallbackTimer);
+      heroFallbackTimer = setTimeout(function() { fallbackCheck(); }, 5000);
+    }
   } catch(e) { console.error('promo banners', e); }
+}
+
+function fallbackCheck() {
+  var banner = document.getElementById('heroSlider');
+  if (!banner) return;
+  var imgs = banner.querySelectorAll('.slide.active img');
+  if (imgs.length === 0) return;
+  var allFailed = true;
+  for (var i = 0; i < imgs.length; i++) {
+    if (imgs[i].naturalWidth > 0) { allFailed = false; break; }
+  }
+  if (allFailed) {
+    loadHeroBanners({}, true);
+  }
 }
 
 function renderHeroSlide(idx) {
