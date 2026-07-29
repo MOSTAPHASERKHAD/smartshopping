@@ -1708,7 +1708,7 @@ function init(){
     }
     if(d.phone){document.querySelectorAll('a[href*="wa.me"]').forEach(function(a){a.href='https://wa.me/'+d.phone})}
     var hasBanners=false;for(var i=1;i<=5;i++){if(d['banner'+i+'_img']){hasBanners=true;break;}}
-    if(hasBanners){loadHeroBanners(d);}else{loadAdminBanners();}
+    if(hasBanners&&!bannerForceDefault){loadHeroBanners(d);}else if(!bannerForceDefault){loadAdminBanners();}
     checkCookieConsent();
     setTimeout(checkLandingPage,500);
   });
@@ -2364,6 +2364,7 @@ var heroSlides = [];
 var heroIdx = 0;
 var heroTimer = null;
 var heroFallbackTimer = null;
+var bannerForceDefault = false;
 
 function loadHeroBanners(settings, forceDefault) {
   try {
@@ -2403,13 +2404,18 @@ function loadHeroBanners(settings, forceDefault) {
 function fallbackCheck() {
   var banner = document.getElementById('heroSlider');
   if (!banner) return;
-  var imgs = banner.querySelectorAll('.slide.active img');
-  if (imgs.length === 0) return;
+  var imgs = banner.querySelectorAll('img');
+  if (imgs.length === 0) {
+    bannerForceDefault = true;
+    loadHeroBanners({}, true);
+    return;
+  }
   var allFailed = true;
   for (var i = 0; i < imgs.length; i++) {
     if (imgs[i].naturalWidth > 0) { allFailed = false; break; }
   }
   if (allFailed) {
+    bannerForceDefault = true;
     loadHeroBanners({}, true);
   }
 }
@@ -2418,13 +2424,13 @@ function renderHeroSlide(idx) {
   heroIdx = idx;
   var banner = document.getElementById('heroSlider');
   if (!banner) return;
-  var existing = banner.querySelectorAll('.slide');
-  existing.forEach(function(s) { s.remove(); });
   var slide = heroSlides[idx];
   if (!slide) return;
+  var existing = banner.querySelectorAll('.slide');
+  existing.forEach(function(s) { s.remove(); });
   var el = document.createElement('div');
   el.className = 'slide active';
-  var html = '<img src="' + slide.img + '" alt="" onerror="this.style.display=\'none\';this.parentElement.style.background=\'linear-gradient(135deg,var(--accent),var(--accent2,#764ba2))\'">';
+  var html = '<img src="' + slide.img + '" alt="" onerror="var p=this.parentElement;if(p){var i=new Image();i.src=\'promo-hero.png\';this.src=i.src;this.onerror=null}">';
   if (slide.title) {
     html += '<div class="slide-text"><h3>' + slide.title + '</h3>';
     if (slide.subtitle) html += '<p>' + slide.subtitle + '</p>';
