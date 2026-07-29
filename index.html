@@ -776,6 +776,9 @@ document.head.appendChild(ld);
 <!-- Promo Banner -->
 <div id="section-hero" class="container" style="margin-top:16px;order:2">
   <div class="hero-slider" id="heroSlider" style="display:block">
+    <div class="slide active"><img src="promo-hero.png" alt=""><div class="slide-text"><h3>تسوّق بذكاء</h3><p>منتجات متنوعة بأفضل الأسعار</p></div></div>
+    <div class="slide"><img src="promo-sale.png" alt=""><div class="slide-text"><h3>عروض حصرية</h3><p>خصومات تصل إلى 50%</p></div></div>
+    <div class="slide"><img src="promo-accessories.png" alt=""><div class="slide-text"><h3>إكسسوارات</h3><p>أحدث الإكسسوارات التقنية</p></div></div>
     <div class="nav-arrow prev" onclick="heroNav(-1)">‹</div>
     <div class="nav-arrow next" onclick="heroNav(1)">›</div>
     <div class="dots" id="heroDots"></div>
@@ -1690,10 +1693,14 @@ function init(){
   loadCustomerSession();
   initViewMode();
   checkReferralParam();
-  loadHeroBanners({}, true);
+  heroSlides = DEFAULT_BANNERS.slice();
+  heroIdx = 0;
+  renderHeroDots();
+  clearInterval(heroTimer);
+  heroTimer = setInterval(function() { heroNav(1); }, 4000);
   apiCall('settings',{},function(d){
     if(!d||d.error) {
-      loadHeroBanners({}, true); // Fallback to default banners
+      return;
       return;
     }
     storeSettings=d;
