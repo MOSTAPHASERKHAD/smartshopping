@@ -2052,7 +2052,8 @@ function populateWilayas(){
 function renderOrderSummary(){
   var h='';var s=0;
   cart.forEach(function(c){var p=allProducts.find(function(x){return x.id===c.id});if(!p)return;var t=p.price*c.qty;s+=t;
-    h+='<div class="summary-line"><span>'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+' × '+c.qty+'</span><span>'+Number(t).toLocaleString()+' '+t('currency')+'</span></div>'});
+    h+='<div class="summary-line"><span>'+esc(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+' × '+c.qty+'</span><span>'+Number(t).toLocaleString()+' '+t('currency')+'</span></div>'});
+
   if (cartDiscount > 0) {
     h+='<div class="summary-line" style="color:var(--success)"><span>خصم ('+cartCouponCode+')</span><span>-'+Number(cartDiscount).toLocaleString()+' '+t('currency')+'</span></div>';
   }
@@ -2840,7 +2841,7 @@ document.addEventListener('DOMContentLoaded',function(){init()});
 
 // === PWA: Register Service Worker ===
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(function() {});
+  navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW registration',e)});
 }
 
 // === Live preview via postMessage (used by admin theme customizer) ===
@@ -3324,7 +3325,7 @@ function buildLandingPageHTML(p){
   // skeleton shimmer shown while loading
   html+='<div class="lp-img-skeleton" id="lpSkeleton"></div>';
   if(imgs[0]&&!imgs[0].startsWith('data:')){
-    html+='<img src="'+imgs[0]+'" alt="'+title+'" id="lpMainImgTag" style="opacity:0;transition:opacity .35s" onclick="lpOpenLightbox(0)" onload="lpImgLoaded(this)">';
+    html+='<img src="'+imgs[0]+'" alt="'+esc(title)+'" id="lpMainImgTag" style="opacity:0;transition:opacity .35s" onclick="lpOpenLightbox(0)" onload="lpImgLoaded(this)">';
   }else{
     html+='<div class="lp-placeholder-img" id="lpMainImgTag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>'+(lang==='ar'?'لا توجد صورة':'No image')+'</span></div>';
   }
@@ -3337,20 +3338,20 @@ function buildLandingPageHTML(p){
   if(imgs.length>1){
     html+='<div class="lp-thumbs">';
     imgs.forEach(function(src,i){
-      html+='<div class="lp-thumb'+(i===0?' active':'')+'" onclick="lpCarouselGo('+i+')"><img src="'+src+'" alt="" loading="lazy"></div>';
+      html+='<div class="lp-thumb'+(i===0?' active':'')+'" onclick="lpCarouselGo('+i+')"><img src="'+esc(src)+'" alt="" loading="lazy"></div>';
     });
     html+='</div>';
   }
   html+='</div>';
   html+='<div class="lp-info">';
   if(hasDiscount)html+='<div class="lp-badge">-'+discountPct+'%</div>';
-  html+='<h1 class="lp-title">'+title+'</h1>';
+  html+='<h1 class="lp-title">'+esc(title)+'</h1>';
   html+='<div class="lp-rating"><span class="lp-stars">'+stars+'</span><span class="lp-rating-text">'+rating+' ('+reviewCount+' '+(lang==='ar'?'تقييم':'reviews')+')</span></div>';
   html+='<div class="lp-price-box">';
   if(hasDiscount)html+='<span class="lp-old-price">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>';
   html+='<span class="lp-price">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>';
   html+='</div>';
-  if(desc)html+='<p class="lp-desc">'+desc+'</p>';
+  if(desc)html+='<p class="lp-desc">'+esc(desc)+'</p>';
   html+='<div class="lp-form-title">'+(lang==='ar'?'معلومات الطلب':'Order Information')+'</div>';
   html+='<form id="lpForm" onsubmit="submitLandingOrder(event,\''+p.id+'\')">';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'الاسم الكامل':'Full Name')+'</label><input type="text" id="lpName" required placeholder="'+(lang==='ar'?'اسمك الكامل':'Your full name')+'"></div>';
