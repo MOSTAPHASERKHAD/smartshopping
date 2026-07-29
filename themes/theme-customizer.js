@@ -73,6 +73,8 @@
     var iframe = document.createElement('iframe');
     iframe.id = 'sk-preview-frame';
     iframe.src = STORE_URL;
+    iframe.onerror = function(){ console.warn('Preview iframe load error'); };
+    iframe.onload = function(){ console.log('Preview iframe loaded'); };
     document.getElementById('sk-preview-pane').appendChild(iframe);
 
     // bind events
@@ -182,7 +184,7 @@
         return { id: t.id, visible: visibility[t.id] };
       })
     };
-    iframe.contentWindow.postMessage(msg, '*');
+    iframe.contentWindow.postMessage(msg, location.origin);
   }
 
   // ── Control handlers ──
