@@ -660,6 +660,25 @@ body.rtl .back-to-top{left:auto;right:24px}
   .lp-trust-item p{font-size:.6rem}
 }
 
+/* Floating Buy Now button */
+.lp-float-btn{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:999;
+  padding:14px 36px;border-radius:50px;
+  background:var(--accent,#1a1a2e);color:#fff;
+  font-size:1.05rem;font-weight:700;border:none;
+  box-shadow:0 4px 24px rgba(0,0,0,.3);
+  cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  transition:all .2s;
+  animation:lp-float-pulse 2.5s infinite ease-in-out;
+  text-decoration:none;font-family:var(--font);
+}
+.lp-float-btn:hover{transform:translateX(-50%) translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.35);}
+.lp-float-btn:active{transform:translateX(-50%) translateY(-1px);}
+@keyframes lp-float-pulse{0%,100%{box-shadow:0 4px 24px rgba(0,0,0,.3)}50%{box-shadow:0 4px 36px rgba(0,0,0,.4)}}
+@media(max-width:768px){
+  .lp-float-btn{bottom:0;left:0;right:0;transform:none;border-radius:0;padding:16px 20px;justify-content:center;font-size:1.1rem;animation:none;border-radius:0;}
+}
+
 /* ===== LANDING PAGE IMAGE ENHANCEMENTS ===== */
 /* Skeleton shimmer while image loads */
 @keyframes lp-shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
@@ -3401,6 +3420,7 @@ function buildLandingPageHTML(p){
   html+='</div>';
   html+='<div class="lp-footer">© 2026 Smart Shopping — '+(lang==='ar'?'جميع الحقوق محفوظة':'All rights reserved')+'</div>';
   html+='<div id="lpSuccessContainer"></div>';
+  html+='<button type="button" class="lp-float-btn" onclick="document.getElementById(\'lpForm\').scrollIntoView({behavior:\'smooth\',block:\'start\'})">🛒 '+(lang==='ar'?'اطلب الآن':'Buy Now')+'</button>';
   return html;
 }
 
@@ -3560,7 +3580,7 @@ function lpOpenLightbox(idx){
   }
   lpLbSetImg();
   lb.classList.add('open');
-  document.body.style.overflow='hidden';
+  _lockBody(true);
 }
 function lpLbSetImg(){
   var img=document.getElementById('lpLbImg');
