@@ -241,6 +241,7 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 /* Loading */
 .loading{text-align:center;padding:60px 0;grid-column:1/-1}
 .spinner{width:28px;height:28px;border:2.5px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+.btn-spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-left:8px;vertical-align:middle}
 
 /* Skeleton */
 .skeleton{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
@@ -386,11 +387,11 @@ body.rtl .compare-check{right:auto;left:8px}
 .compare-check.active{background:var(--sale);color:#fff;border-color:var(--sale)}
 
 /* AI Chatbot */
-.chatbot-btn{position:fixed;bottom:72px;right:24px;width:56px;height:56px;border:none;border-radius:50%;background:var(--sale);color:#fff;font-size:1.5rem;cursor:pointer;z-index:98;box-shadow:0 4px 16px rgba(233,69,96,.4);transition:all .3s;display:flex;align-items:center;justify-content:center}
+.chatbot-btn{position:fixed;bottom:72px;right:24px;width:56px;height:56px;border:none;border-radius:50%;background:var(--sale);color:#fff;font-size:1.5rem;cursor:pointer;z-index:101;box-shadow:0 4px 16px rgba(233,69,96,.4);transition:all .3s;display:flex;align-items:center;justify-content:center}
 body.rtl .chatbot-btn{right:auto;left:24px}
 .chatbot-btn:hover{transform:scale(1.1)}
 .chatbot-btn .unread-dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;background:#22c55e;border-radius:50%;border:2px solid #fff;display:none}
-.chatbot-window{position:fixed;bottom:138px;right:24px;width:380px;max-width:calc(100vw - 32px);max-height:520px;background:var(--card);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:99;display:none;flex-direction:column;overflow:hidden}
+.chatbot-window{position:fixed;bottom:138px;right:24px;width:380px;max-width:calc(100vw - 32px);max-height:520px;background:var(--card);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:102;display:none;flex-direction:column;overflow:hidden}
 body.rtl .chatbot-window{right:auto;left:24px}
 .chatbot-window.open{display:flex}
 .chatbot-header{background:var(--accent);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px}
@@ -777,9 +778,9 @@ document.head.appendChild(ld);
 <!-- Promo Banner -->
 <div id="section-hero" class="container" style="margin-top:16px">
   <div class="hero-slider" id="heroSlider" style="display:block">
-    <div class="slide active"><img src="promo-hero.png" alt=""><div class="slide-text"><h3>تسوّق بذكاء</h3><p>منتجات متنوعة بأفضل الأسعار</p></div></div>
-    <div class="slide"><img src="promo-sale.png" alt=""><div class="slide-text"><h3>عروض حصرية</h3><p>خصومات تصل إلى 50%</p></div></div>
-    <div class="slide"><img src="promo-accessories.png" alt=""><div class="slide-text"><h3>إكسسوارات</h3><p>أحدث الإكسسوارات التقنية</p></div></div>
+    <div class="slide active"><img src="promo-hero.png" alt="تسوّق بذكاء - Smart Shopping"><div class="slide-text"><h3>تسوّق بذكاء</h3><p>منتجات متنوعة بأفضل الأسعار</p></div></div>
+    <div class="slide"><img src="promo-sale.png" alt="عروض حصرية - خصومات تصل إلى 50%"><div class="slide-text"><h3>عروض حصرية</h3><p>خصومات تصل إلى 50%</p></div></div>
+    <div class="slide"><img src="promo-accessories.png" alt="إكسسوارات تقنية - Smart Shopping"><div class="slide-text"><h3>إكسسوارات</h3><p>أحدث الإكسسوارات التقنية</p></div></div>
     <div class="nav-arrow prev" onclick="heroNav(-1)">‹</div>
     <div class="nav-arrow next" onclick="heroNav(1)">›</div>
     <div class="dots" id="heroDots"></div>
@@ -864,10 +865,10 @@ document.head.appendChild(ld);
           <span>⚠️</span>
           <span data-i18n="delivery_note">سعر التوصيل يتم تأكيده بعد التواصل معك.</span>
         </div>
-        <button type="submit" class="btn btn-primary btn-block btn-lg" id="pdSubmit" data-i18n="submit_order">تأكيد الطلب</button>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="pdSubmit" data-i18n="submit_order"><span class="btn-text">تأكيد الطلب</span> <span class="btn-spinner" style="display:none"></span></button>
         <a href="#" onclick="orderViaWhatsApp(event)" class="btn btn-block btn-lg" style="margin-top:10px; background:#25d366; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
           <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.405 0 .022 5.372.022 11.99c0 2.115.553 4.183 1.605 6L.004 24l6.155-1.609a11.96 11.96 0 0 0 5.872 1.53h.005c6.626 0 12.008-5.372 12.008-11.99A11.986 11.986 0 0 0 12.031 0zM12.03 21.916a9.98 9.98 0 0 1-5.093-1.39l-.365-.216-3.785.991.996-3.69-.236-.375a9.965 9.965 0 0 1-1.523-5.344C1.986 6.47 6.472 1.986 12.03 1.986a9.97 9.97 0 0 1 7.076 2.929 9.986 9.986 0 0 1 2.924 7.075c-.001 5.523-4.486 10.006-10.046 10.006zm5.503-7.518c-.302-.15-1.786-.881-2.062-.982-.276-.1-.477-.15-.678.15-.201.3-.778.982-.954 1.182-.176.2-.352.226-.654.076-.302-.15-1.275-.47-2.428-1.5-.896-.803-1.503-1.794-1.68-2.096-.176-.301-.019-.464.132-.614.136-.135.302-.351.453-.526.15-.175.201-.3.301-.5.1-.2.05-.375-.025-.525-.075-.15-.678-1.635-.928-2.241-.242-.589-.488-.508-.678-.518-.176-.008-.377-.01-.578-.01-.2 0-.527.075-.803.375s-1.054 1.028-1.054 2.508 1.08 2.909 1.23 3.109c.15.2 2.118 3.232 5.132 4.536.717.31 1.277.495 1.713.633.72.23 1.376.197 1.895.12.58-.086 1.786-.73 2.038-1.434.25-.704.25-1.309.175-1.434-.075-.125-.276-.2-.578-.35z"/></svg>
-          <span style="font-weight:700">الطلب السريع عبر واتساب</span>
+          <span style="font-weight:700" data-i18n="whatsapp_fast">الطلب السريع عبر واتساب</span>
         </a>
       </form>
       <div id="pdSuccess" class="hidden pd-success"></div>
@@ -1166,10 +1167,10 @@ document.head.appendChild(ld);
         <span data-i18n="delivery_note">سعر التوصيل يتم تأكيده بعد التواصل.</span>
       </div>
       <div class="summary-box" id="orderSummary"></div>
-      <button type="submit" class="btn btn-primary btn-block btn-lg" id="submitBtn" data-i18n="submit_order">تأكيد الطلب</button>
+      <button type="submit" class="btn btn-primary btn-block btn-lg" id="submitBtn" data-i18n="submit_order"><span class="btn-text">تأكيد الطلب</span> <span class="btn-spinner" style="display:none"></span></button>
       <a href="#" onclick="orderViaWhatsApp(event)" class="btn btn-block btn-lg" style="margin-top:10px; background:#25d366; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
         <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.405 0 .022 5.372.022 11.99c0 2.115.553 4.183 1.605 6L.004 24l6.155-1.609a11.96 11.96 0 0 0 5.872 1.53h.005c6.626 0 12.008-5.372 12.008-11.99A11.986 11.986 0 0 0 12.031 0zM12.03 21.916a9.98 9.98 0 0 1-5.093-1.39l-.365-.216-3.785.991.996-3.69-.236-.375a9.965 9.965 0 0 1-1.523-5.344C1.986 6.47 6.472 1.986 12.03 1.986a9.97 9.97 0 0 1 7.076 2.929 9.986 9.986 0 0 1 2.924 7.075c-.001 5.523-4.486 10.006-10.046 10.006zm5.503-7.518c-.302-.15-1.786-.881-2.062-.982-.276-.1-.477-.15-.678.15-.201.3-.778.982-.954 1.182-.176.2-.352.226-.654.076-.302-.15-1.275-.47-2.428-1.5-.896-.803-1.503-1.794-1.68-2.096-.176-.301-.019-.464.132-.614.136-.135.302-.351.453-.526.15-.175.201-.3.301-.5.1-.2.05-.375-.025-.525-.075-.15-.678-1.635-.928-2.241-.242-.589-.488-.508-.678-.518-.176-.008-.377-.01-.578-.01-.2 0-.527.075-.803.375s-1.054 1.028-1.054 2.508 1.08 2.909 1.23 3.109c.15.2 2.118 3.232 5.132 4.536.717.31 1.277.495 1.713.633.72.23 1.376.197 1.895.12.58-.086 1.786-.73 2.038-1.434.25-.704.25-1.309.175-1.434-.075-.125-.276-.2-.578-.35z"/></svg>
-        <span style="font-weight:700">الطلب السريع عبر واتساب</span>
+        <span style="font-weight:700" data-i18n="whatsapp_fast">الطلب السريع عبر واتساب</span>
       </a>
     </form>
     <div id="orderSuccess" class="hidden"></div>
@@ -1326,6 +1327,7 @@ var I18N = {
     whatsapp_msg:"مرحبا، لدي طلب برقم",out_of_stock:"نفذ",currency:"د.ج",
     status_pending:"قيد الانتظار",status_confirmed:"تم التأكيد",status_shipped:"تم الشحن",status_delivered:"تم التوصيل",
     qorder_success:"تم إرسال طلبك!",back_products:"← العودة للمنتجات",
+    whatsapp_btn:"واتساب",whatsapp_fast:"الطلب السريع عبر واتساب",whatsapp_contact:"تواصل واتساب",
     form_address:"العنوان (الحي، الشارع، رقم المبنى)",order_info:"معلومات الطلب",
     cat_all:"الكل",sort_default:"الأحدث",sort_price_asc:"السعر: من الأقل",sort_price_desc:"السعر: من الأعلى",sort_name:"الاسم",
     buy_now:"شراء الآن",
@@ -1445,6 +1447,7 @@ var I18N = {
     whatsapp_msg:"Hello, I have order number",out_of_stock:"Sold out",currency:"DZD",
     status_pending:"Pending",status_confirmed:"Confirmed",status_shipped:"Shipped",status_delivered:"Delivered",
     qorder_success:"Your order has been submitted!",back_products:"← Back to products",
+    whatsapp_btn:"WhatsApp",whatsapp_fast:"Quick Order via WhatsApp",whatsapp_contact:"WhatsApp Us",
     form_address:"Address (neighborhood, street, building)",order_info:"Order Information",
     cat_all:"All",sort_default:"Newest",sort_price_asc:"Price: Low",sort_price_desc:"Price: High",sort_name:"Name",
     buy_now:"Buy Now",
@@ -1688,6 +1691,14 @@ function trackInitiateCheckout(total){
 function esc(s) {
   if (typeof s !== 'string' && typeof s !== 'number') s = String(s || '');
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function setLoading(id, loading) {
+  var btn = document.getElementById(id);
+  if (!btn) return;
+  btn.disabled = loading;
+  var sp = btn.querySelector('.btn-spinner');
+  if (sp) sp.style.display = loading ? 'inline-block' : 'none';
+  btn.querySelectorAll('.btn-text').forEach(function(el){el.style.display=loading?'none':'inline'});
 }
 function init(){
   if(window.ThemeEngine){
@@ -2061,7 +2072,7 @@ function submitOrder(e){
   }
   var wil=WILAYAS.find(function(x){return x.code===w});
   var items=JSON.stringify(cart.map(function(c){var x=allProducts.find(function(p){return p.id===c.id});return{id:c.id,title:x?(currentLang==='ar'?x.title_ar:x.title_en):'',price:x?x.price:0,qty:c.qty}}));
-  document.getElementById('submitBtn').disabled=true;
+  setLoading('submitBtn', true);
   try{if(cart.length){var prod=allProducts.find(function(x){return x.id===cart[0].id});trackAddToCart({id:cart[0].id,name:prod?prod.title_ar:'',price:prod?prod.price:0})}}catch(e){}
   var finalSub = sub - cartDiscount;
   if (finalSub < 0) finalSub = 0;
@@ -2070,7 +2081,7 @@ function submitOrder(e){
     delivery_type:d==='office'?'Office':'Home',items_json:items,subtotal:finalSub,note:note,
     coupon_code:cartCouponCode,discount:cartDiscount
   },function(data){
-    document.getElementById('submitBtn').disabled=false;
+    setLoading('submitBtn', false);
     if(!data||data.error||!data.ok){alert('Error: '+(data?data.error||'Unknown error':'Network error'));return}
     document.getElementById('checkoutForm').classList.add('hidden');
     var sc=document.getElementById('orderSuccess');sc.classList.remove('hidden');
@@ -2083,7 +2094,7 @@ function submitOrder(e){
       '<p style="color:var(--text2);font-size:.8rem">'+t('order_num')+':</p>'+
       '<div class="success-order">'+id+'</div>'+
       '<p style="color:var(--text2);font-size:.75rem;margin-top:6px">'+t('delivery_note')+'</p>'+
-      '<a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn">واتساب</a>'+
+      '<a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn">'+t('whatsapp_btn')+'</a>'+
     '</div>';
     cart=[];saveCart();renderCart();renderProducts();
     cartDiscount=0;cartCouponCode='';
@@ -2274,12 +2285,12 @@ function submitProductDetail(e){
   if(pdVariantSize)variantNote+=' | المقاس: '+pdVariantSize;
   if(pdVariantColor)variantNote+=' | اللون: '+pdVariantColor;
   var items=JSON.stringify([{id:pid,title:currentLang==='ar'?prod.title_ar:prod.title_en,price:finalPrice,qty:1,size:pdVariantSize||'',color:pdVariantColor||'',sku:getSelectedVariant(prod)?.sku||''}]);
-  document.getElementById('pdSubmit').disabled=true;
+  setLoading('pdSubmit', true);
   apiCall('order',{
     name:n,phone:ph,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
     delivery_type:d==='office'?'Office':'Home',items_json:items,subtotal:finalPrice,note:note+variantNote
   },function(data){
-    document.getElementById('pdSubmit').disabled=false;
+    setLoading('pdSubmit', false);
     if(!data||data.error||!data.ok){alert('Error: '+(data?data.error||'Unknown error':'Network error'));return}
     document.getElementById('pdForm').classList.add('hidden');
     var sc=document.getElementById('pdSuccess');sc.classList.remove('hidden');
@@ -2292,7 +2303,7 @@ function submitProductDetail(e){
       '<div class="pd-id">'+orderId+'</div>'+
       (variantNote?'<p style="color:var(--text2);font-size:.75rem;margin-top:4px">'+variantNote+'</p>':'')+
       '<p style="color:var(--text2);font-size:.75rem;margin-top:4px">'+t('delivery_note')+'</p>'+
-      '<a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn" style="display:inline-flex;margin-top:12px">واتساب</a>'+
+      '<a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn" style="display:inline-flex;margin-top:12px">'+t('whatsapp_btn')+'</a>'+
       '<br><button class="btn btn-outline btn-sm" style="margin-top:12px" onclick="hideProductDetail()" data-i18n="back_products">← العودة للمنتجات</button>'+
     '</div>';
     document.querySelector('.pd-success .btn-outline').textContent=t('back_products');
@@ -2453,7 +2464,7 @@ function renderHeroSlide(idx) {
   existing.forEach(function(s) { s.remove(); });
   var el = document.createElement('div');
   el.className = 'slide active';
-  var html = '<img src="' + esc(slide.img) + '" alt="" onerror="var p=this.parentElement;if(p){var i=new Image();i.src=\'promo-hero.png\';this.src=i.src;this.onerror=null}">';
+  var html = '<img src="' + esc(slide.img) + '" alt="' + esc(slide.title || 'Promo banner') + '" onerror="var p=this.parentElement;if(p){var i=new Image();i.src=\'promo-hero.png\';this.src=i.src;this.onerror=null}">';
   if (slide.title) {
     html += '<div class="slide-text"><h3>' + esc(slide.title) + '</h3>';
     if (slide.subtitle) html += '<p>' + esc(slide.subtitle) + '</p>';
