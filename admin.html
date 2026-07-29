@@ -1833,6 +1833,7 @@ function doLogout() {
   localStorage.removeItem(AUTH_KEY);
   document.getElementById('adminPanel').classList.add('hidden');
   document.getElementById('loginScreen').style.display = 'flex';
+  var pw=document.getElementById('loginPassword');if(pw)pw.value='';
 }
 
 function showAdminPanel() {

@@ -231,7 +231,6 @@
       // update theme images (logo, favicon) — wrapped to prevent breaking
       try { this._applyImages(theme); } catch (e) { console.warn('ThemeEngine: _applyImages error', e); }
       
-      this._loadThemeFonts(theme.tokens.fonts);
       if (theme.tokens.sections) {
         this._applySections(theme.tokens.sections);
       }
