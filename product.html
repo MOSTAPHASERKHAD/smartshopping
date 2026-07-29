@@ -236,6 +236,11 @@ footer{background:var(--accent);color:rgba(255,255,255,.6);padding:36px 0 28px;m
 </footer>
 
 <script>
+function esc(s) {
+  if (typeof s !== 'string' && typeof s !== 'number') s = String(s || '');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function ea(s) { return esc(s).replace(/&#39;/g,"'").replace(/&quot;/g,'"'); }
 var API_URL = 'https://script.google.com/macros/s/AKfycbxtnGWw22qtTHyC6xXXRWrjvydZBnMeanCRqOnytSYWC0VLF1zVG8Uq8FF2-mPHhpOZOQ/exec';
 var CUSTOMER_KEY = 'sk_customer';
 var currentProduct = null;
@@ -314,12 +319,12 @@ function renderProduct(p) {
   });
   var mainEl = document.getElementById('pdMainImage');
   if (imgs.length > 0) {
-    mainEl.innerHTML = '<img id="pdMainImg" src="' + imgs[0] + '" alt="" style="width:100%;height:100%;object-fit:cover">';
+    mainEl.innerHTML = '<img id="pdMainImg" src="' + esc(imgs[0]) + '" alt="" style="width:100%;height:100%;object-fit:cover">';
     window._pdImgs = imgs; window._pdImgIdx = 0;
     if (imgs.length > 1) {
       var th = '';
       for (var i = 0; i < imgs.length; i++) {
-        th += '<div class="pd-thumb' + (i === 0 ? ' active' : '') + '" onclick="selectImg(' + i + ')"><img src="' + imgs[i] + '" alt=""></div>';
+        th += '<div class="pd-thumb' + (i === 0 ? ' active' : '') + '" onclick="selectImg(' + i + ')"><img src="' + esc(imgs[i]) + '" alt=""></div>';
       }
       document.getElementById('pdThumbs').innerHTML = th;
     }
@@ -470,7 +475,7 @@ function loadReviews(pid) {
     var el = document.getElementById('reviewsList');
     if (!d || !d.reviews || !d.reviews.length) { el.innerHTML = '<p style="color:var(--text2);font-size:.82rem">لا توجد تقييمات بعد</p>'; return; }
     el.innerHTML = d.reviews.map(function(r) {
-      return '<div class="review-card"><div class="review-stars">' + '★'.repeat(r.rating) + '</div><div class="review-text">' + (r.text || '') + '</div><div class="review-author">' + (r.name || 'عميل') + (r.location ? ' — ' + r.location : '') + '</div></div>';
+      return '<div class="review-card"><div class="review-stars">' + '★'.repeat(r.rating) + '</div><div class="review-text">' + esc(r.text) + '</div><div class="review-author">' + esc(r.name || 'عميل') + (r.location ? ' — ' + esc(r.location) : '') + '</div></div>';
     }).join('');
   });
 }
@@ -482,8 +487,8 @@ function renderSuggested(pid, all) {
   var picked = others.slice(0, 4);
   var grid = document.getElementById('suggestedGrid');
   grid.innerHTML = picked.map(function(p) {
-    var img = p.image1 || '';
-    return '<div class="product-card" onclick="window.location.href=\'product.html?id=' + p.id + '\'"><div class="product-image-wrap"><img class="product-image" src="' + img + '" loading="lazy" alt=""></div><div class="product-body"><div class="product-title">' + (p.title_ar || p.title_en || '') + '</div><div class="product-price"><span class="price-current">' + Number(p.price).toLocaleString() + ' د.ج</span></div></div></div>';
+    var img = esc(p.image1 || '');
+    return '<div class="product-card" onclick="window.location.href=\'product.html?id=' + esc(p.id) + '\'"><div class="product-image-wrap"><img class="product-image" src="' + img + '" loading="lazy" alt="' + esc(p.title_ar || p.title_en || '') + '"></div><div class="product-body"><div class="product-title">' + esc(p.title_ar || p.title_en || '') + '</div><div class="product-price"><span class="price-current">' + Number(p.price).toLocaleString() + ' د.ج</span></div></div></div>';
   }).join('');
   document.getElementById('suggestedSection').style.display = 'block';
 }
