@@ -250,9 +250,8 @@
   };
 
   ThemeEngine.prototype._applySections = function(sections) {
-    // Reorder and toggle visibility of main page sections.
     var container = document.getElementById('mainContentWrapper');
-    if (!container) return; // Wait until DOM is ready
+    if (!container) return;
     
     var idMap = {
       'announcement': 'section-announcement',
@@ -265,14 +264,12 @@
       'footer': 'section-footer'
     };
     
-    // First, push unmanaged children to the end by default, or keep their natural order.
-    // Actually, setting order on the managed ones from 1 to N is fine, 
-    // but we need to ensure productDetailSection stays where it belongs.
-    // Best is to give all children a high order by default.
+    // Give all children high order by default
     Array.prototype.forEach.call(container.children, function(child) {
        child.style.order = 99;
     });
 
+    var processed = {};
     sections.forEach(function(sec, idx) {
       var domId = idMap[sec.id] || ('section-' + sec.id);
       var el = document.getElementById(domId);
@@ -283,8 +280,17 @@
           el.style.display = '';
         }
         el.style.order = idx + 1;
+        processed[sec.id] = true;
       }
     });
+
+    // ALWAYS ensure hero section is visible and properly ordered
+    // If hero wasn't in the theme's sections, place it after header (position 3)
+    var heroEl = document.getElementById('section-hero');
+    if (heroEl && !processed.hero) {
+      heroEl.style.display = '';
+      heroEl.style.order = 3;
+    }
   };
 
   ThemeEngine.prototype._effectiveMode = function () {
