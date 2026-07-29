@@ -488,6 +488,7 @@ body.rtl .chatbot-close{margin-right:0;margin-left:auto}
 
 /* Back to top */
 .back-to-top{position:fixed;bottom:24px;left:24px;width:44px;height:44px;border:none;border-radius:50%;background:var(--text);color:#fff;font-size:1.2rem;cursor:pointer;opacity:0;visibility:hidden;transition:all .3s;z-index:90;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.lp-hidden{display:none!important}
 body.rtl .back-to-top{left:auto;right:24px}
 .back-to-top.visible{opacity:1;visibility:visible}
 .back-to-top:hover{background:var(--sale);transform:translateY(-2px)}
@@ -3262,7 +3263,8 @@ var lpImgs=[];var lpIdx=0;var lpReviewData=[];
 function checkProductLanding(){
   var params=new URLSearchParams(window.location.search);
   var pid=params.get('product');
-  if(!pid||!allProducts.length)return;
+  if(!pid)return;
+  if(!allProducts.length){setTimeout(checkProductLanding,200);return;}
   var p=allProducts.find(function(x){return x.id===pid});
   if(!p)return;
   showProductLanding(p);
@@ -3275,9 +3277,9 @@ function showProductLanding(p){
   document.documentElement.lang=lang;
   document.documentElement.dir=lang==='ar'?'rtl':'ltr';
   ['header','#productDetailSection','#products','#track-section','.testimonials-section','.trust-bar','footer','.mobile-nav','.chatbot-btn','.chatbot-window','.compare-bar','.back-to-top','.cookie-banner','.sticky-buy-bar','#suggestedSection'].forEach(function(s){
-    try{var el=document.querySelector(s);if(el)el.style.display='none';}catch(e){}
+    try{var el=document.querySelector(s);if(el)el.classList.add('lp-hidden');}catch(e){}
   });
-  document.querySelectorAll('section').forEach(function(s){s.style.display='none';});
+  document.querySelectorAll('section').forEach(function(s){s.classList.add('lp-hidden');});
   var lp=document.createElement('div');
   lp.className='lp show';
   lp.id='lpContainer';
