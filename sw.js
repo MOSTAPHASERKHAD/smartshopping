@@ -1,18 +1,18 @@
 const CACHE_NAME = 'smartshopping-v31';
 const ASSETS = [
-  '/smartshopping/',
-  '/smartshopping/index.html',
-  '/smartshopping/admin.html',
-  '/smartshopping/manifest.json',
-  '/smartshopping/promo-hero.png',
-  '/smartshopping/promo-sale.png',
-  '/smartshopping/promo-accessories.png',
-  '/smartshopping/themes/theme-schema.js',
-  '/smartshopping/themes/theme-engine.js',
-  '/smartshopping/themes/default-themes.js',
-  '/smartshopping/themes/theme-importer.js',
-  '/smartshopping/themes/theme-editor.js',
-  '/smartshopping/themes/theme-customizer.js'
+  '/',
+  '/index.html',
+  '/admin.html',
+  '/manifest.json',
+  '/promo-hero.png',
+  '/promo-sale.png',
+  '/promo-accessories.png',
+  '/themes/theme-schema.js',
+  '/themes/theme-engine.js',
+  '/themes/default-themes.js',
+  '/themes/theme-importer.js',
+  '/themes/theme-editor.js',
+  '/themes/theme-customizer.js'
 ];
 
 self.addEventListener('install', e => {
@@ -43,7 +43,7 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match(e.request).then(r => {
       if (r) return r;
       if (e.request.mode === 'navigate' || (e.request.headers.get('accept') && e.request.headers.get('accept').includes('text/html'))) {
-        return caches.match('/smartshopping/index.html');
+        return caches.match('/index.html');
       }
       return new Response('', {status: 404, statusText: 'Not Found'});
     }))
