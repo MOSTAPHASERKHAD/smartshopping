@@ -559,7 +559,6 @@ body.rtl .back-to-top{left:auto;right:24px}
   .track-form{flex-direction:column}
   .track-form input{width:100%;text-align:center}
   .track-form .btn-primary{width:100%}
-  .pdetail-img{height:140px}
   .pdetail-layout{gap:0}
   .pdetail-info{padding:12px}
 }
@@ -2412,6 +2411,7 @@ var heroSlides = [];
 var heroIdx = 0;
 var heroTimer = null;
 var heroFallbackTimer = null;
+window.addEventListener('beforeunload', function(){ if(heroFallbackTimer) clearTimeout(heroFallbackTimer); });
 var bannerForceDefault = false;
 
 function loadHeroBanners(settings, forceDefault) {
@@ -3262,12 +3262,6 @@ function processChatInput(text) {
       { text: '📞 تواصل', value: 'contact' }
     ]);
   }, 600);
-}
-
-function showChatNotification() {
-  if (!chatOpen) {
-    document.getElementById('chatUnread').style.display = 'block';
-  }
 }
 
 // ===== PRODUCT LANDING PAGE =====
