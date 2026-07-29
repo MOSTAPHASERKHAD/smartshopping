@@ -780,20 +780,6 @@ document.head.appendChild(ld);
     <div class="dots" id="heroDots"></div>
   </div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded',function(){
-  if(typeof renderHeroSlide==='function' && heroSlides && heroSlides.length===0){
-    heroSlides=[
-      {img:'promo-hero.png',title:'تسوّق بذكاء',subtitle:'منتجات متنوعة بأفضل الأسعار',link:''},
-      {img:'promo-sale.png',title:'عروض حصرية',subtitle:'خصومات تصل إلى 50%',link:''},
-      {img:'promo-accessories.png',title:'إكسسوارات',subtitle:'أحدث الإكسسوارات التقنية',link:''}
-    ];
-    renderHeroSlide(0);renderHeroDots();
-    clearInterval(heroTimer);
-    heroTimer=setInterval(function(){heroNav(1);},4000);
-  }
-});
-</script>
 
 <!-- Theme Engine (advanced theming system) -->
 <script src="themes/theme-schema.js"></script>
@@ -1703,10 +1689,10 @@ function init(){
   loadCustomerSession();
   initViewMode();
   checkReferralParam();
-  loadHeroBanners({});
+  loadHeroBanners({}, true);
   apiCall('settings',{},function(d){
     if(!d||d.error) {
-      loadHeroBanners({}); // Fallback to default banners
+      loadHeroBanners({}, true); // Fallback to default banners
       return;
     }
     storeSettings=d;
@@ -1720,7 +1706,8 @@ function init(){
       }
     }
     if(d.phone){document.querySelectorAll('a[href*="wa.me"]').forEach(function(a){a.href='https://wa.me/'+d.phone})}
-    loadHeroBanners(d);
+    var hasBanners=false;for(var i=1;i<=5;i++){if(d['banner'+i+'_img']){hasBanners=true;break;}}
+    if(hasBanners){loadHeroBanners(d);}else{loadAdminBanners();}
     checkCookieConsent();
     setTimeout(checkLandingPage,500);
   });
@@ -2468,6 +2455,12 @@ function heroNav(dir) {
 function heroGo(idx) {
   heroIdx = idx;
   renderHeroSlide(idx);
+}
+
+function loadAdminBanners(){
+  apiCallAdmin('settings',{},function(d){
+    if(d&&!d.error){loadHeroBanners(d);}
+  });
 }
 
 // === Phase 2.2: Recently Viewed ===
