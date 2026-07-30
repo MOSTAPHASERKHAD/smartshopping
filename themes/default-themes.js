@@ -141,7 +141,18 @@
         success: '#10b981', warning: '#f59e0b', danger: '#e11d48', info: '#7c3aed', accent: '#a78bfa' },
       { fonts: { heading: "'Playfair Display',serif", body: "'Inter',sans-serif" },
         images: { logoText: 'Lavender', logoIcon: '💜', favicon: '💜',
-          bannerGradient: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a78bfa 100%)' } })
+          bannerGradient: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a78bfa 100%)' } }),
+
+    // 12. Shrine — minimalist dark/red inspired by Shrine theme
+    T('shrine', 'Shrine', 'Shrine Theme Pro',
+      { primary: '#121212', secondary: '#dd1d1d', background: '#ffffff', surface: '#ffffff',
+        text: '#121212', textMuted: '#6b6b6b', textSubtle: '#999999', border: '#e5e5e5',
+        success: '#22c55e', warning: '#f59e0b', danger: '#dd1d1d', info: '#dd1d1d', accent: '#dd1d1d' },
+      { fonts: { heading: "'Cairo',sans-serif", body: "'Almarai','Inter',sans-serif" },
+        radius: { sm: '6px', md: '10px', lg: '12px', xl: '16px', full: '9999px' },
+        images: { logoText: 'Smart Shopping', logoIcon: '🛒', favicon: '🛒',
+          bannerGradient: 'linear-gradient(54deg, #dd1d1d 14%, #690e0e 85%)' },
+        icons: { shape: 'round' } })
   ];
 
   global.SmartKioskThemes = themes;
