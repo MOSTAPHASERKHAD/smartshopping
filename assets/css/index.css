@@ -1,17 +1,17 @@
 
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  /* === Design System Tokens === */
+  /* === Design System Tokens (Shrine-inspired) === */
   /* Colors */
-  --ds-bg:#fafafa;
-  --ds-surface:#fff;
-  --ds-text-primary:#111;
+  --ds-bg:#f5f5f5;
+  --ds-surface:#ffffff;
+  --ds-text-primary:#121212;
   --ds-text-secondary:#6b6b6b;
-  --ds-text-muted:#999;
-  --ds-border:#e8e8e8;
-  --ds-border-strong:#ddd;
-  --ds-primary:#1a1a2e;
-  --ds-secondary:#e94560;
+  --ds-text-muted:#999999;
+  --ds-border:#e5e5e5;
+  --ds-border-strong:#d0d0d0;
+  --ds-primary:#121212;
+  --ds-secondary:#dd1d1d;
   --ds-success:#22c55e;
   --ds-danger:#ef4444;
   --ds-warning:#f59e0b;
@@ -49,9 +49,9 @@
   --text2:var(--ds-text-secondary);--text3:var(--ds-text-muted);
   --border:var(--ds-border);--border2:var(--ds-border-strong);
   --accent:var(--ds-primary);--sale:var(--ds-secondary);
-  --sale-hover:#d63050;--success:var(--ds-success);--danger:var(--ds-danger);
+  --sale-hover:#bb1818;--success:var(--ds-success);--danger:var(--ds-danger);
   --shadow:var(--ds-shadow-md);--radius:var(--ds-radius-lg);--max-w:1200px;
-  --font:'Almarai','Inter',sans-serif
+  --font:'Inter','Almarai',sans-serif
 }
 html{scroll-behavior:smooth;overflow-x:hidden}
 body{font-family:var(--font);background:linear-gradient(135deg,var(--bg),var(--surface, var(--card)));color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
