@@ -536,7 +536,7 @@ function apiPost(action, params, callback) {
 }
 
 function apiGet(action, params, callback, retries) {
-  var maxRetries = retries || 2;
+  var maxRetries = retries || 3;
   var attempt = 0;
   function tryCall() {
     var url = API_URL + '?action=' + action;
@@ -567,7 +567,7 @@ function apiGet(action, params, callback, retries) {
         try { document.head.removeChild(script); } catch(e) {}
         if (attempt < maxRetries) { attempt++; setTimeout(tryCall, 1000 * attempt); } else { callback({ error: 'Timeout' }); }
       }
-    }, 15000);
+    }, 30000);
   }
   tryCall();
 }
