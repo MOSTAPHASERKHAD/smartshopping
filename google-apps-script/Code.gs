@@ -199,7 +199,10 @@ function getSettings() {
   if (!sheet) return {};
   var data = sheet.getDataRange().getValues();
   var settings = {};
-  for (var i = 1; i < data.length; i++) { settings[data[i][0]] = data[i][1]; }
+  var secretKeys = { fb_capi_token: true, gemini_api_key: true, admin_password: true, admin_recovery: true };
+  for (var i = 1; i < data.length; i++) {
+    if (!secretKeys[data[i][0]]) { settings[data[i][0]] = data[i][1]; }
+  }
   return settings;
 }
 
@@ -241,13 +244,76 @@ function createOrder(params) {
   sheet.appendRow([
     orderId, createdAt, name, phone,
     params.wilaya_code || '', params.wilaya_ar || '', params.wilaya_en || '',
+    params.municipality || '',  // البلدية
     params.delivery_type || '', params.items_json || '[]',
-    params.subtotal || '0', 'سعر التوصيل يُحدد بعد التأكيد', 'pending', note
+    params.subtotal || '0', 'سعر التوصيل يُحدد بعد التأكيد', 'pending', note,
+    params.utm_source || '',    // مصدر الحملة الإعلانية
+    params.utm_medium || '',    // وسيلة الإعلان
+    params.utm_campaign || ''   // اسم الحملة
   ]);
+  var orderData = { orderId: orderId, phone: phone, subtotal: params.subtotal || '0' };
+  try { sendPurchaseToFacebook(orderData); } catch(e) { Logger.log('CAPI err: ' + e); }
   return { ok: true, order_id: orderId };
 }
 
+function getSettingsValue(key){
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Settings');
+  if (!sheet) return '';
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) { if (data[i][0] === key) return data[i][1]; }
+  return '';
+}
 
+function sendPurchaseToFacebook(orderData){
+  var pixelId = '1345051187578188';
+  var accessToken = getSettingsValue('fb_capi_token');
+  if (!accessToken) { Logger.log('CAPI: no token'); return; }
+  var now = new Date();
+  var timestamp = Math.floor(now.getTime() / 1000);
+  var phoneHash = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    orderData.phone,
+    Utilities.Charset.UTF_8
+  ).map(function(b) {
+    return ('0' + (b < 0 ? b + 256 : b).toString(16)).slice(-2);
+  }).join('');
+  var payload = {
+    data: [{
+      event_name: 'Purchase',
+      event_time: timestamp,
+      action_source: 'website',
+      user_data: {
+        ph: phoneHash,
+        client_ip_address: '',
+        client_user_agent: ''
+      },
+      custom_data: {
+        currency: 'DZD',
+        value: parseFloat(orderData.subtotal) || 0,
+        order_id: orderData.orderId,
+        content_type: 'product',
+        num_items: 1
+      }
+    }]
+  };
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  try {
+    var resp = UrlFetchApp.fetch(
+      'https://graph.facebook.com/v22.0/' + pixelId + '/events?access_token=' + encodeURIComponent(accessToken),
+      options
+    );
+    var result = JSON.parse(resp.getContentText());
+    Logger.log('CAPI response: ' + JSON.stringify(result));
+  } catch(e) {
+    Logger.log('CAPI error: ' + e.toString());
+  }
+}
 
 function generateOrderId() {
   var now = new Date();
@@ -547,9 +613,11 @@ function adminUpdateSettings(params) {
   var sheet = ss.getSheetByName('Settings');
   if (!sheet) return { error: 'Settings sheet not found' };
   var data = sheet.getDataRange().getValues();
+  var secretKeys = { fb_capi_token: true, gemini_api_key: true, admin_password: true, admin_recovery: true };
   var passwordChanged = false;
   for (var key in params) {
     if (key === 'action' || key === 'callback') continue;
+    if (secretKeys[key] && (params[key] === '' || params[key] === undefined || params[key] === null)) continue;
     var found = false;
     for (var i = 1; i < data.length; i++) {
       if (data[i][0] === key) { sheet.getRange(i + 1, 2).setValue(params[key]); found = true; break; }
@@ -693,12 +761,9 @@ function adminUploadImageGet(params) {
 }
 
 function verifyAdmin(params) {
-  var settings = getSettings();
-  var storedHash = settings.admin_password || '';
-  var providedHash = params.password || '';
-  // SECURITY: No hardcoded backdoor. Password must be set via Settings.
-  if (!storedHash) return { ok: false, error: 'لم يتم تعيين كلمة مرور. أدخل كلمة مرور في الإعدادات أولاً.', setupRequired: true };
-  if (providedHash === storedHash) return { ok: true };
+  var storedPassword = getSettingsValue('admin_password');
+  if (!storedPassword) return { ok: false, error: 'لم يتم تعيين كلمة مرور. أدخل كلمة مرور في الإعدادات أولاً.', setupRequired: true };
+  if (params.password === storedPassword) return { ok: true };
   return { ok: false, error: 'كلمة المرور غير صحيحة' };
 }
 
@@ -733,13 +798,11 @@ function generateRecoveryCode() {
 }
 
 function verifyRecovery(params) {
-  var settings = getSettings();
-  var storedHash = settings.admin_recovery || '';
+  var storedHash = getSettingsValue('admin_recovery');
   var providedHash = params.code ? hashString(params.code) : '';
   if (!storedHash) return { ok: false, error: 'لا يوجد رمز استرجاع. استخدم إعدادات Google Sheet.' };
   if (!providedHash) return { ok: false, error: 'أدخل رمز الاسترجاع' };
   if (providedHash === storedHash) {
-    // Invalidate recovery code after use (one-time use)
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName('Settings');
     if (sheet) {
