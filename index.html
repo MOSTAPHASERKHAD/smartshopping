@@ -24,14 +24,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
-// FORCE CACHE & SW CLEAR TO FIX STICKY ERRORS
+// Clear stale service workers without reload
 if(!sessionStorage.getItem('sw_cleared')){
   sessionStorage.setItem('sw_cleared','1');
   if('serviceWorker' in navigator){
     navigator.serviceWorker.getRegistrations().then(function(regs){
-      for(var i=0;i<regs.length;i++){regs[i].unregister();}
-      window.location.reload(true);
-    });
+      for(var i=0;i<regs.length;i++)regs[i].unregister();
+    }).catch(function(){});
   }
 }
 </script>
@@ -588,8 +587,7 @@ document.head.appendChild(ld);
 </div>
 
 <script>
-var _V='6.1.1';var _SV=localStorage.getItem('_v');
-if(_SV!==_V){localStorage.setItem('_v',_V);var _qs=new URLSearchParams(window.location.search);_qs.set('v',Date.now());location.replace(location.href.split('?')[0]+'?'+_qs.toString());throw'stop'}
+var _V='6.1.1';if(localStorage.getItem('_v')!==_V)localStorage.setItem('_v',_V);
 var API_URL = 'https://script.google.com/macros/s/AKfycbxtnGWw22qtTHyC6xXXRWrjvydZBnMeanCRqOnytSYWC0VLF1zVG8Uq8FF2-mPHhpOZOQ/exec';
 // Admin Apps Script (where themes are stored in the Themes sheet)
 var ADMIN_API_URL = 'https://script.google.com/macros/s/AKfycbxvwgvCKottVirFXa52KztABdtQhM_OrmL4uBopOzFigX0gZDpWDnEfmOUvajt3Vt3E9Q/exec';
@@ -1091,18 +1089,23 @@ function init(){
     checkCookieConsent();
     setTimeout(checkLandingPage,500);
   });
-  apiCall('catalog',{},function(d){
-    try{
-      if(!d||d.error||!d.products){document.getElementById('productsGrid').innerHTML='<p style="text-align:center;padding:40px;color:var(--text2);grid-column:1/-1">'+t('no_results')+'</p>';return}
-      allProducts=d.products;
-      var validIds={};allProducts.forEach(function(x){validIds[x.id]=true});
-      var before=cart.length;
-      cart=cart.filter(function(c){return validIds[c.id]});
-      if(cart.length!==before)localStorage.setItem(CART_KEY,JSON.stringify(cart));
-      buildCategories();renderProducts();
-      checkProductLanding();
-    }catch(e){console.error('catalog err',e)}
-  });
+  (function attemptCatalog(retries){
+    apiCall('catalog',{},function(d){
+      try{
+        if(!d||d.error||!d.products){
+          if(retries>0){setTimeout(function(){attemptCatalog(retries-1)},2000);return}
+          document.getElementById('productsGrid').innerHTML='<p style="text-align:center;padding:40px;color:var(--text2);grid-column:1/-1">'+t('no_results')+'</p>';return
+        }
+        allProducts=d.products;
+        var validIds={};allProducts.forEach(function(x){validIds[x.id]=true});
+        var before=cart.length;
+        cart=cart.filter(function(c){return validIds[c.id]});
+        if(cart.length!==before)localStorage.setItem(CART_KEY,JSON.stringify(cart));
+        buildCategories();renderProducts();
+        checkProductLanding();
+      }catch(e){console.error('catalog err',e)}
+    });
+  })(3);
   apiCall('testimonials',{},function(d){
     try{
       if(!d||d.error||!d.testimonials||!d.testimonials.length)return;
@@ -1235,15 +1238,15 @@ function renderProducts(){
         '<button type="button" class="compare-check'+(getCompare().indexOf(p.id)>-1?' active':'')+'" data-pid="'+pid+'" onclick="toggleCompare(\''+pid+'\',event)">✓</button>'+
       '</div>'+
       '<div class="product-body">'+
-        '<div class="product-title"><a href="#" onclick="window.location.href=\'product.html?id=\'+pid+\';return false">'+ttl+'</a></div>'+
+        '<div class="product-title"><a href="#" onclick="window.location.href=\'product.html?id='+pid+'\';return false">'+ttl+'</a></div>'+
         variantBadges+
         '<div class="product-price">'+
           '<span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>'+
           (disc?'<span class="price-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>':'')+
         '</div>'+
         '<div class="product-actions">'+
-          '<button type="button" class="btn-add buy-now" onclick="window.location.href=\'product.html?id=\'+pid+\'">'+t('buy_now')+'</button>'+
-        '</div>'+
+        '<button type="button" class="btn-add buy-now" onclick="window.location.href=\'product.html?id='+pid+'\'">'+t('buy_now')+'</button>'+
+
       '</div>'+
     '</div>';
   }).join('');
