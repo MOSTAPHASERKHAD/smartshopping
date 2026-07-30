@@ -1,22 +1,19 @@
 {
-  "name": "smartkiosk",
+  "name": "smart-kiosk",
   "version": "1.0.0",
-  "description": "متجر إلكتروني مجاني -類似 Shopify - الجزائر - الدفع عند الاستلام (COD)",
-  "main": "gen-icons.js",
+  "description": "Algerian E-commerce Smart Kiosk",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "dev": "node server.js",
+    "build:css": "node scripts/minify-css.js",
+    "build": "npm run build:css",
+    "minify": "node scripts/minify-css.js",
+    "clean": "node scripts/clean.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MOSTAPHASERKHAD/smartshopping.git"
+  "devDependencies": {
+    "clean-css-cli": "^5.6.3",
+    "html-minifier-terser": "^7.2.0",
+    "terser": "^5.31.0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/MOSTAPHASERKHAD/smartshopping/issues"
-  },
-  "homepage": "https://github.com/MOSTAPHASERKHAD/smartshopping#readme"
+  "keywords": ["ecommerce", "algeria", "pwa"],
+  "license": "MIT"
 }
