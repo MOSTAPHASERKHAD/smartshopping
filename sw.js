@@ -4,7 +4,6 @@ var ASSETS = [
   '/index.html',
   '/admin.html',
   '/manifest.json',
-  '/product.html',
   '/assets/css/index.css',
   '/assets/css/product.css',
   '/assets/css/admin.css',
