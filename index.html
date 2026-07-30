@@ -3522,14 +3522,12 @@ function buildLandingPageHTML(p){
   html+='<div class="lp-field"><label>'+(lang==='ar'?'الاسم الكامل':'Full Name')+'</label><input type="text" id="lpName" required placeholder="'+(lang==='ar'?'اسمك الكامل':'Your full name')+'"></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'رقم الهاتف':'Phone Number')+'</label><input type="tel" id="lpPhone" required placeholder="0555 XX XX XX"></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'الولاية':'Wilaya')+'</label><select id="lpWilaya" required><option value="">'+(lang==='ar'?'اختر الولاية':'Select Wilaya')+'</option></select></div>';
+  html+='<div class="lp-field"><label>'+(lang==='ar'?'البلدية':'Municipality')+'</label><input type="text" id="lpMunicipality" required placeholder="'+(lang==='ar'?'بلدية...':'Municipality...')+'"></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'نوع التوصيل':'Delivery Type')+'</label><div class="lp-delivery-type"><label><input type="radio" name="lpDelivery" value="home" checked><span>🏠 '+(lang==='ar'?'المنزل':'Home')+'</span></label><label><input type="radio" name="lpDelivery" value="office"><span>🏢 '+(lang==='ar'?'المكتب':'Office')+'</span></label></div></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'العنوان (الحي، الشارع، رقم المبنى)':'Address')+'</label><input type="text" id="lpAddress" required placeholder="'+(lang==='ar'?'حي السلام، شارع 5، رقم 12':'Neighborhood, street, building')+'"></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'ملاحظة (اختياري)':'Note (optional)')+'</label><textarea id="lpNote" rows="2" placeholder="'+(lang==='ar'?'أي ملاحظات إضافية':'Any additional notes')+'"></textarea></div>';
   html+='<div class="lp-note"><span>⚠️</span><span>'+(lang==='ar'?'سعر التوصيل يتم تأكيده بعد التواصل معك.':'Delivery cost confirmed after contact.')+'</span></div>';
   html+='<button type="submit" class="lp-submit" id="lpSubmitBtn">🛒 '+(lang==='ar'?'تأكيد الطلب':'Place Order')+'</button>';
-  html+='<a href="#" onclick="orderViaWhatsApp(event)" class="lp-submit" style="margin-top:10px; background:#25d366; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">';
-  html+='<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.405 0 .022 5.372.022 11.99c0 2.115.553 4.183 1.605 6L.004 24l6.155-1.609a11.96 11.96 0 0 0 5.872 1.53h.005c6.626 0 12.008-5.372 12.008-11.99A11.986 11.986 0 0 0 12.031 0zM12.03 21.916a9.98 9.98 0 0 1-5.093-1.39l-.365-.216-3.785.991.996-3.69-.236-.375a9.965 9.965 0 0 1-1.523-5.344C1.986 6.47 6.472 1.986 12.03 1.986a9.97 9.97 0 0 1 7.076 2.929 9.986 9.986 0 0 1 2.924 7.075c-.001 5.523-4.486 10.006-10.046 10.006z"/></svg>';
-  html+='<span style="font-weight:700">'+(lang==='ar'?'الطلب السريع عبر واتساب':'Quick Order via WhatsApp')+'</span></a>';
   html+='</form>';
   html+='<a href="https://wa.me/'+wa+'?text='+waMsg+'" target="_blank" class="lp-wa-btn">💬 '+(lang==='ar'?'تواصل واتساب':'WhatsApp Us')+'</a>';
   html+='</div>';
@@ -3581,10 +3579,11 @@ function submitLandingOrder(e,productId){
   var n=document.getElementById('lpName').value.trim();
   var p=document.getElementById('lpPhone').value.trim();
   var w=document.getElementById('lpWilaya').value;
+  var m=document.getElementById('lpMunicipality').value.trim();
   var d=document.querySelector('input[name="lpDelivery"]:checked').value;
   var addr=document.getElementById('lpAddress').value.trim();
   var note=document.getElementById('lpNote').value.trim();
-  if(!n||!p||!w||!addr)return;
+  if(!n||!p||!w||!m||!addr)return;
   var product=allProducts.find(function(x){return x.id===productId});
   if(!product)return;
   var btn=document.getElementById('lpSubmitBtn');
@@ -3594,7 +3593,7 @@ function submitLandingOrder(e,productId){
   var items=JSON.stringify([{id:product.id,title:currentLang==='ar'?product.title_ar:product.title_en,price:product.price,qty:1}]);
   apiCall('order',{
     name:n,phone:p,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
-    delivery_type:d==='office'?'Office':'Home',items_json:items,subtotal:product.price,note:note,
+    municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,subtotal:product.price,note:note,
     coupon_code:'',discount:0
   },function(data){
     if(!data||data.error||!data.ok){
