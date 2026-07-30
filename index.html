@@ -2658,6 +2658,7 @@ function checkProductLanding(){
 }
 
 function showProductLanding(p){
+  if(document.getElementById('lpContainer')) return;
   document.body.classList.add('rtl');
   document.body.style.background='#fff';
   var lang=currentLang==='ar'?'ar':'en';
