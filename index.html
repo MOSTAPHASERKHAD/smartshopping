@@ -37,6 +37,8 @@ if(!sessionStorage.getItem('sw_cleared')){
 <meta name="apple-mobile-web-app-title" content="Smart Shopping">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://i.ibb.co">
+<link rel="preload" href="promo-hero.png" as="image">
 <link rel="stylesheet" href="assets/css/index.css">
 <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <!-- Tracking Pixels moved to body below -->
@@ -942,6 +944,8 @@ function apiCall(action,params,callback){
   if(params){for(var k in params){url+='&'+encodeURIComponent(k)+'='+encodeURIComponent(params[k])}}
   fetch(url).then(function(r){return r.json()}).then(function(d){callback(d)}).catch(function(){callback({error:'Network error'})});
 }
+function cacheGet(key,ttl){try{var c=JSON.parse(localStorage.getItem('ac_'+key));if(c&&Date.now()-c.ts<ttl)return c.data}catch(e){}return null}
+function cacheSet(key,data){try{localStorage.setItem('ac_'+key,JSON.stringify({ts:Date.now(),data:data}))}catch(e){}}
 
 // === Load default theme from admin Themes sheet (Google Sheets) ===
 function loadServerTheme(){
@@ -1070,9 +1074,15 @@ function init(){
     heroIdx = (heroIdx + 1) % s.length;
     if (s[heroIdx]) s[heroIdx].classList.add('active');
   }, 4000);
+  var cachedSettings=cacheGet('settings',600000);
+  if(cachedSettings){storeSettings=cachedSettings;applySettings(cachedSettings)}
   apiCall('settings',{},function(d){
-    if(!d||d.error) { storeSettings=storeSettings||{}; loadHeroBanners({},true); checkCookieConsent(); return; }
-    storeSettings=d;
+    if(!d||d.error){if(!storeSettings){storeSettings={};loadHeroBanners({},true);checkCookieConsent()}return}
+    cacheSet('settings',d);
+    if(storeSettings===d)return;
+    storeSettings=d;applySettings(d);
+  });
+  function applySettings(d){
     if(d.gemini_api_key){chatAIEnabled=true;try{delete d.gemini_api_key}catch(e){}}
     var n=currentLang==='ar'?d.store_name_ar:d.store_name_en;
     if(n){
@@ -1088,14 +1098,23 @@ function init(){
     if(hasBanners&&!bannerForceDefault){loadHeroBanners(d);}else if(!bannerForceDefault){loadAdminBanners();}
     checkCookieConsent();
     setTimeout(checkLandingPage,500);
-  });
+  }
+  var cachedCatalog=cacheGet('catalog',300000);
+  if(cachedCatalog&&cachedCatalog.products){
+    allProducts=cachedCatalog.products;
+    var v={};allProducts.forEach(function(x){v[x.id]=true});
+    cart=cart.filter(function(c){return v[c.id]});
+    buildCategories();renderProducts();checkProductLanding();
+  }
   (function attemptCatalog(retries){
     apiCall('catalog',{},function(d){
       try{
         if(!d||d.error||!d.products){
           if(retries>0){setTimeout(function(){attemptCatalog(retries-1)},2000);return}
-          document.getElementById('productsGrid').innerHTML='<p style="text-align:center;padding:40px;color:var(--text2);grid-column:1/-1">'+t('no_results')+'</p>';return
+          if(!allProducts.length)document.getElementById('productsGrid').innerHTML='<p style="text-align:center;padding:40px;color:var(--text2);grid-column:1/-1">'+t('no_results')+'</p>';return
         }
+        cacheSet('catalog',d);
+        if(d.products===allProducts)return;
         allProducts=d.products;
         var validIds={};allProducts.forEach(function(x){validIds[x.id]=true});
         var before=cart.length;
@@ -1106,20 +1125,26 @@ function init(){
       }catch(e){console.error('catalog err',e)}
     });
   })(3);
+  var cachedTestimonials=cacheGet('testimonials',600000);
+  if(cachedTestimonials&&cachedTestimonials.length)renderTestimonials(cachedTestimonials);
   apiCall('testimonials',{},function(d){
     try{
       if(!d||d.error||!d.testimonials||!d.testimonials.length)return;
-      var section=document.getElementById('testimonialsSection');
-      var grid=document.getElementById('testimonialsGrid');
-      if(!section||!grid)return;
-      section.style.display='block';
-      grid.innerHTML=d.testimonials.map(function(ti){
-        var stars='';for(var i=0;i<(ti.rating||5);i++)stars+='★';
-        var initial=escapeHtml((ti.name||'?')[0]);
-        return '<div class="testimonial-card"><div class="testimonial-stars">'+stars+'</div><div class="testimonial-text">"'+escapeHtml(ti.text||'')+'"</div><div class="testimonial-author"><div class="testimonial-avatar">'+initial+'</div><div><div class="testimonial-name">'+escapeHtml(ti.name||'')+'</div><div class="testimonial-loc">'+escapeHtml(ti.location||'')+'</div></div></div></div>';
-      }).join('');
+      cacheSet('testimonials',d.testimonials);
+      renderTestimonials(d.testimonials);
     }catch(e){console.error('testimonials err',e)}
   });
+  function renderTestimonials(list){
+    var section=document.getElementById('testimonialsSection');
+    var grid=document.getElementById('testimonialsGrid');
+    if(!section||!grid)return;
+    section.style.display='block';
+    grid.innerHTML=list.map(function(ti){
+      var stars='';for(var i=0;i<(ti.rating||5);i++)stars+='★';
+      var initial=escapeHtml((ti.name||'?')[0]);
+      return '<div class="testimonial-card"><div class="testimonial-stars">'+stars+'</div><div class="testimonial-text">"'+escapeHtml(ti.text||'')+'"</div><div class="testimonial-author"><div class="testimonial-avatar">'+initial+'</div><div><div class="testimonial-name">'+escapeHtml(ti.name||'')+'</div><div class="testimonial-loc">'+escapeHtml(ti.location||'')+'</div></div></div></div>';
+    }).join('');
+  }
 }
 
 function showPage(name){
