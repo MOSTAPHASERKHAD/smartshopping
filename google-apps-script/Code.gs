@@ -266,9 +266,9 @@ function getSettingsValue(key){
 }
 
 function sendPurchaseToFacebook(orderData){
-  var pixelId = '1345051187578188';
+  var pixelId = getSettingsValue('pixel_id');
   var accessToken = getSettingsValue('fb_capi_token');
-  if (!accessToken) { Logger.log('CAPI: no token'); return; }
+  if (!pixelId || !accessToken) { Logger.log('CAPI: no pixel or token'); return; }
   var now = new Date();
   var timestamp = Math.floor(now.getTime() / 1000);
   var phoneHash = Utilities.computeDigest(
@@ -1338,7 +1338,8 @@ function aiChat(params) {
     }
   }
 
-  return { reply: 'All AI models unavailable. Contact us on WhatsApp: +213557543177' };
+  var wa = getSettingsValue('phone') || getSettingsValue('whatsapp') || '213557543177';
+  return { reply: 'All AI models unavailable. Contact us on WhatsApp: +' + wa };
 }
 
 function getAvailableModels(apiKey) {
