@@ -2826,10 +2826,10 @@ function buildLandingPageHTML(p){
   html+='</form>';
   html+='<a href="https://wa.me/'+wa+'?text='+waMsg+'" target="_blank" class="lp-wa-btn">💬 '+(lang==='ar'?'تواصل واتساب':'WhatsApp Us')+'</a>';
   html+='</div>';
-
-  // Footer + success container + float btn
-  html+='<div class="lp-footer">© 2026 Smart Shopping — '+(lang==='ar'?'جميع الحقوق محفوظة':'All rights reserved')+'</div>';
   html+='<div id="lpSuccessContainer"></div>';
+
+  // Footer + float btn
+  html+='<div class="lp-footer">© 2026 Smart Shopping — '+(lang==='ar'?'جميع الحقوق محفوظة':'All rights reserved')+'</div>';
   html+='<button type="button" class="lp-float-btn" onclick="document.getElementById(\'lpFormSection\').scrollIntoView({behavior:\'smooth\',block:\'start\'})">🛒 '+(lang==='ar'?'اطلب الآن':'Buy Now')+'</button>';
   return html;
 }
@@ -2906,6 +2906,10 @@ function submitLandingOrder(e,productId){
     var container=document.getElementById('lpSuccessContainer');
     var lpGrid=document.querySelector('.lp-grid');
     if(lpGrid)lpGrid.style.display='none';
+    var formSec=document.getElementById('lpFormSection');
+    if(formSec)formSec.style.display='none';
+    btn.disabled=false;
+    btn.textContent='🛒 '+(currentLang==='ar'?'تأكيد الطلب':'Place Order');
     if(container){
       container.innerHTML='<div class="lp-success fade-in">'+
         '<div class="lp-success-icon">✓</div>'+
@@ -2918,6 +2922,7 @@ function submitLandingOrder(e,productId){
         '<a href="'+trackUrl+'" class="lp-shop-link">🛒 '+(currentLang==='ar'?'تتبع طلبك':'Track Order')+'</a>'+
         '</div></div>';
       container.style.display='block';
+      try{container.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){}
     }
     try{trackPurchase(orderId,product.price)}catch(e){console.warn('trackPurchase',e)}
     try{localStorage.setItem(CUSTOMER_KEY,JSON.stringify({name:n,phone:p,address:addr}))}catch(e){console.warn('saveCustomer',e)}
