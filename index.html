@@ -1465,7 +1465,7 @@ function submitOrder(e){
     document.getElementById('checkoutForm').classList.add('hidden');
     var sc=document.getElementById('orderSuccess');sc.classList.remove('hidden');
     var id=data.order_id;var wa=storeSettings.phone||'213557543177';
-    var trackUrl='https://smartshopping.click/';
+    var trackUrl=storeSettings.store_url||'https://smartshopping.click/';
     var msg=encodeURIComponent(t('whatsapp_msg')+' '+id+'\n\nتتبع طلبك: '+trackUrl);
     sc.innerHTML='<div class="success-wrap fade-in">'+
       '<div class="success-icon">✓</div>'+
@@ -2230,7 +2230,9 @@ if ('serviceWorker' in navigator) {
 
 // === Live preview via postMessage (used by admin theme customizer) ===
 function _onThemePreview(e){
-  if (e.origin !== window.location.origin && e.origin !== 'https://smartshopping.click') return;
+  var allowed = window.location.origin;
+  var storeUrl = (storeSettings.store_url || 'https://smartshopping.click').replace(/\/+$/,'');
+  if (e.origin !== allowed && e.origin !== storeUrl) return;
   if (!e.data || e.data.type !== 'theme-preview') return;
   if (!window.ThemeEngine) return;
   var d = e.data;
@@ -2617,7 +2619,8 @@ function processChatInput(text) {
       return;
     }
     if (lower.match(/(تواصل|هاتف|واتساب|contact|whatsapp)/)) {
-      addBotMsg('📞 واتساب: <a href="https://wa.me/213557543177" target="_blank" style="color:var(--sale)">+213557543177</a>');
+      var waNum=storeSettings.phone||'213557543177';
+      addBotMsg('📞 واتساب: <a href="https://wa.me/'+waNum+'" target="_blank" style="color:var(--sale)">+'+waNum+'</a>');
       return;
     }
     if (lower.match(/(مرحبا|هلا|سلام|أهلا|hello|hi)/)) {
@@ -2898,7 +2901,7 @@ function submitLandingOrder(e,productId){
     }
     var orderId=data.order_id;
     var wa=storeSettings.phone||'213557543177';
-    var trackUrl='https://smartshopping.click/';
+    var trackUrl=storeSettings.store_url||'https://smartshopping.click/';
     var waMsg=encodeURIComponent((currentLang==='ar'?'مرحباً، لدي طلب برقم ':'Hello, my order number is ')+orderId+'\n\n'+(currentLang==='ar'?'تتبع طلبك: ':'Track your order: ')+trackUrl);
     var container=document.getElementById('lpSuccessContainer');
     var lpGrid=document.querySelector('.lp-grid');
@@ -2957,7 +2960,8 @@ function orderViaWhatsApp(e){
     pName = document.title;
   }
   var text = "مرحباً، أريد الاستفسار أو طلب: " + pName + "\n\nالرابط: " + window.location.href;
-  var waUrl = "https://wa.me/213557543177?text=" + encodeURIComponent(text);
+  var waNum=storeSettings.phone||'213557543177';
+  var waUrl = "https://wa.me/" + waNum + "?text=" + encodeURIComponent(text);
   window.open(waUrl, '_blank');
 }
 
