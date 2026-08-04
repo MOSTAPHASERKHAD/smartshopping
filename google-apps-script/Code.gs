@@ -232,6 +232,8 @@ function trackOrder(orderId) {
 }
 
 function createOrder(params) {
+  params = params || {};
+  if (!params.name || !params.phone) return { error: 'Missing required fields (name, phone)' };
   var name = (params.name || '').replace(/[<>"'&]/g, '').substring(0, 200);
   var phone = (params.phone || '').replace(/[^0-9+]/g, '').substring(0, 20);
   var note = (params.note || '').replace(/[<>"'&]/g, '').substring(0, 500);
@@ -309,9 +311,9 @@ function sendPurchaseToFacebook(orderData){
       options
     );
     var result = JSON.parse(resp.getContentText());
-    Logger.log('CAPI response: ' + JSON.stringify(result));
+    Logger.log('CAPI response [pixel ' + pixelId + ']: ' + JSON.stringify(result));
   } catch(e) {
-    Logger.log('CAPI error: ' + e.toString());
+    Logger.log('CAPI error [pixel ' + pixelId + ']: ' + e.toString());
   }
 }
 
