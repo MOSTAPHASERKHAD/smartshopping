@@ -6,21 +6,172 @@ function testAuth() {
   Logger.log('Authorization successful!');
 }
 
-// ── Rate Limiter (60 requests per minute per IP) ──
-function _checkRateLimit() {
-  var ip = 'unknown';
-  try { ip = PropertiesService.getScriptProperties().getProperty('last_ip') || 'unknown'; } catch(e) {}
-  var key = 'rl_' + ip;
-  var props = PropertiesService.getUserProperties();
-  var count = parseInt(props.getProperty(key) || '0');
-  var lastTime = parseInt(props.getProperty(key + '_t') || '0');
-  var now = Date.now();
-  if (now - lastTime > 60000) { count = 0; }
-  if (count >= 60) {
+// ── Admin session tokens (issued on login, 24h TTL) ──
+var ADMIN_TOKEN_KEY = 'admin_token';
+var ADMIN_TOKEN_KEY_EXP = 'admin_token_exp';
+var ADMIN_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+function _issueAdminToken() {
+  var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty(ADMIN_TOKEN_KEY, token);
+  props.setProperty(ADMIN_TOKEN_KEY_EXP, String(Date.now() + ADMIN_TOKEN_TTL_MS));
+  return token;
+}
+
+function _isValidAdminToken(token) {
+  if (!token) return false;
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty(ADMIN_TOKEN_KEY) !== token) return false;
+  var exp = parseInt(props.getProperty(ADMIN_TOKEN_KEY_EXP) || '0');
+  if (Date.now() > exp) {
+    props.deleteProperty(ADMIN_TOKEN_KEY);
+    props.deleteProperty(ADMIN_TOKEN_KEY_EXP);
     return false;
   }
-  props.setProperty(key, String(count + 1));
-  props.setProperty(key + '_t', String(now));
+  return true;
+}
+
+function _isSetupMode() {
+  return !getSettingsValue('admin_password');
+}
+
+// Actions that require a valid admin token.
+// NOTE: these stay public on purpose (used by the public storefront):
+//  - admin_list_themes: theme display data is non-sensitive; storefront loads it for rendering
+//  - upload_image: customers upload review photos
+//  - customer_orders / track: customers view their own orders
+var ADMIN_REQUIRED = {
+  'admin_list': 1, 'admin_orders': 1, 'admin_settings': 1,
+  'admin_add_product': 1, 'admin_edit_product': 1, 'admin_delete_product': 1,
+  'admin_update_order': 1, 'admin_update_settings': 1, 'admin_delete_order': 1,
+  'admin_list_testimonials': 1, 'admin_add_testimonial': 1,
+  'admin_edit_testimonial': 1, 'admin_delete_testimonial': 1, 'admin_upload_image': 1,
+  'admin_list_coupons': 1, 'admin_add_coupon': 1, 'admin_edit_coupon': 1,
+  'admin_delete_coupon': 1, 'admin_list_reviews': 1, 'admin_delete_review': 1,
+  'admin_list_pages': 1, 'admin_save_page': 1, 'admin_list_customers': 1,
+  'admin_list_subscribers': 1, 'admin_save_theme': 1,
+  'admin_delete_theme': 1, 'admin_set_default_theme': 1, 'generate_recovery': 1,
+  'capi_test': 1
+};
+
+function _adminGate(action, params) {
+  if (!ADMIN_REQUIRED[action]) return true;
+  if (action === 'admin_update_settings' && _isSetupMode()) return true;
+  return _isValidAdminToken(params.token);
+}
+
+// JSONP callback must be a bare JS identifier path; anything else is dropped.
+// Admin actions never answer in JSONP even if a callback is supplied.
+function _safeCallback(params, action) {
+  if (ADMIN_REQUIRED[action]) return '';
+  var cb = String(params.callback || '').trim();
+  return (/^[A-Za-z0-9_.]+$/.test(cb)) ? cb : '';
+}
+
+// ── Per-phone spam guard for order creation (60s between orders from same phone) ──
+function _orderSpamGuard(phone) {
+  if (!phone) return true;
+  var props = PropertiesService.getScriptProperties();
+  var key = 'order_last_' + phone;
+  var last = parseInt(props.getProperty(key) || '0');
+  var now = Date.now();
+  if (now - last < 60000) return false;
+  props.setProperty(key, String(now));
+  return true;
+}
+
+// ── Login brute-force throttle (admin login / recovery): after N failures, block 60s ──
+var LOGIN_MAX_FAILS = 5;
+var LOGIN_BLOCK_MS = 60 * 1000;
+
+function _loginBlocked() {
+  var props = PropertiesService.getScriptProperties();
+  var until = parseInt(props.getProperty('login_blocked_until') || '0');
+  return Date.now() < until;
+}
+
+function _loginRecordFailure() {
+  var props = PropertiesService.getScriptProperties();
+  var fails = parseInt(props.getProperty('login_fails') || '0') + 1;
+  if (fails >= LOGIN_MAX_FAILS) {
+    props.setProperty('login_blocked_until', String(Date.now() + LOGIN_BLOCK_MS));
+    props.setProperty('login_fails', '0');
+  } else {
+    props.setProperty('login_fails', String(fails));
+  }
+}
+
+function _loginReset() {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('login_fails', '0');
+  props.deleteProperty('login_blocked_until');
+}
+
+// ── Image upload hardening: allowlist, size + magic-byte validation, rate limit ──
+var UPLOAD_ALLOWED_MIME = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+var UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
+var UPLOAD_RATE_LIMIT = 300;
+
+function _uploadRateOk() {
+  var props = PropertiesService.getScriptProperties();
+  var hour = Math.floor(Date.now() / 3600000);
+  if (props.getProperty('upload_hour') !== String(hour)) {
+    props.setProperty('upload_hour', String(hour));
+    props.setProperty('upload_count', '1');
+    return true;
+  }
+  var count = parseInt(props.getProperty('upload_count') || '0');
+  if (count >= UPLOAD_RATE_LIMIT) return false;
+  props.setProperty('upload_count', String(count + 1));
+  return true;
+}
+
+function _validateImageBlob(blob) {
+  var bytes = blob.getBytes();
+  if (!bytes || bytes.length === 0) return { error: 'Empty file' };
+  if (bytes.length > UPLOAD_MAX_BYTES) return { error: 'File too large (max 3MB)' };
+  var mime = (blob.getContentType() || '').toLowerCase();
+  var ext = UPLOAD_ALLOWED_MIME[mime];
+  if (!ext) return { error: 'Unsupported image type' };
+  function match(prefix) { for (var i = 0; i < prefix.length; i++) { if (bytes[i] !== prefix[i]) return false; } return true; }
+  var ok = false;
+  if (mime === 'image/jpeg') ok = match([0xFF, 0xD8, 0xFF]);
+  else if (mime === 'image/png') ok = match([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+  else if (mime === 'image/gif') ok = match([0x47, 0x49, 0x46, 0x38]);
+  else if (mime === 'image/webp') ok = match([0x52, 0x49, 0x46, 0x46]) && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+  if (!ok) return { error: 'File is not a valid image' };
+  return { ok: true, blob: blob, ext: ext };
+}
+
+function _createVerifiedUpload(base64, mimeType) {
+  if (!_uploadRateOk()) return { error: 'Upload limit reached, try again later' };
+  var blob;
+  try {
+    blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType || 'image/jpeg', 'upload');
+  } catch (e) { return { error: 'Invalid image data' }; }
+  var v = _validateImageBlob(blob);
+  if (v.error) return { error: v.error };
+  var folder = DriveApp.getFolderById(getOrCreateFolderId());
+  var file = folder.createFile(v.blob.setName('sk_' + Utilities.getUuid().replace(/-/g, '') + '.' + v.ext));
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return { ok: true, url: 'https://drive.google.com/uc?id=' + file.getId() + '&export=view' };
+}
+
+// ── AI chat rate limit (protects the owner's Gemini quota from abuse) ──
+var AI_RATE_MAX = 30;
+
+function _aiRateOk() {
+  var props = PropertiesService.getScriptProperties();
+  var hour = Math.floor(Date.now() / 3600000);
+  if (props.getProperty('ai_hour') !== String(hour)) {
+    props.setProperty('ai_hour', String(hour));
+    props.setProperty('ai_count', '1');
+    return true;
+  }
+  var count = parseInt(props.getProperty('ai_count') || '0');
+  if (count >= AI_RATE_MAX) return false;
+  props.setProperty('ai_count', String(count + 1));
   return true;
 }
 
@@ -33,20 +184,20 @@ function _sanitize(value, maxLen) {
 }
 
 function doGet(e) {
-  if (!_checkRateLimit()) return ContentService.createTextOutput(
-    JSON.stringify({ error: 'Too many requests. Try again in a minute.' })
-  ).setMimeType(ContentService.MimeType.JSON);
-
   var params = e.parameter;
   var action = params.action || '';
-  var callback = params.callback || '';
+  var callback = _safeCallback(params, action);
   var result;
 
-  switch (action) {
-    case 'catalog': result = getCatalog(); break;
+  if (!_adminGate(action, params)) {
+    result = { error: 'غير مصرح: انتهت الجلسة. سجل الدخول من جديد.' };
+  } else {
+    switch (action) {
+      case 'catalog': result = getCatalog(); break;
     case 'capi_test': result = capiTest(); break;
     case 'settings': result = getSettings(); break;
     case 'track': result = trackOrder(params.order_id || ''); break;
+    case 'customer_orders': result = customerOrders(params.phone || ''); break;
     case 'order': result = createOrder(params); break;
     case 'capi_send': result = capiSendPurchase(params); break;
     case 'admin_list': result = adminListProducts(); break;
@@ -91,6 +242,7 @@ function doGet(e) {
     case 'admin_delete_theme': result = adminDeleteTheme(params); break;
     case 'admin_set_default_theme': result = adminSetDefaultTheme(params); break;
     default: result = { error: 'Unknown action' };
+    }
   }
 
   var json = JSON.stringify(result);
@@ -102,18 +254,17 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  if (!_checkRateLimit()) return ContentService.createTextOutput(
-    JSON.stringify({ error: 'Too many requests. Try again in a minute.' })
-  ).setMimeType(ContentService.MimeType.JSON);
-
   var params;
   try { params = JSON.parse(e.postData.contents); } catch(ex) { params = e.parameter || {}; }
   var action = params.action || '';
-  var callback = params.callback || '';
+  var callback = _safeCallback(params, action);
   var result;
 
-  switch (action) {
-    case 'order': result = createOrder(params); break;
+  if (!_adminGate(action, params)) {
+    result = { error: 'غير مصرح: انتهت الجلسة. سجل الدخول من جديد.' };
+  } else {
+    switch (action) {
+      case 'order': result = createOrder(params); break;
     case 'capi_send': result = capiSendPurchase(params); break;
     case 'admin_add_product': result = adminAddProduct(params); break;
     case 'admin_edit_product': result = adminEditProduct(params); break;
@@ -151,15 +302,10 @@ function doPost(e) {
     case 'admin_delete_theme': result = adminDeleteTheme(params); break;
     case 'admin_set_default_theme': result = adminSetDefaultTheme(params); break;
     default: result = { error: 'Unknown action' };
+    }
   }
 
   var json = JSON.stringify(result);
-  if (action === 'admin_upload_image') {
-    var safeJson = json.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\x3c');
-    return ContentService.createTextOutput(
-      '<script>try{window.top.postMessage(' + safeJson + ',"*");}catch(e){document.title="ERROR";}</script>'
-    ).setMimeType(ContentService.MimeType.HTML);
-  }
   if (callback) {
     return ContentService.createTextOutput(callback + '(' + json + ');')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
@@ -229,23 +375,78 @@ function trackOrder(orderId) {
   if (!sheet) return { error: 'Orders sheet not found' };
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
+  var idx = {};
+  for (var h = 0; h < headers.length; h++) { idx[String(headers[h]).toLowerCase().trim()] = h; }
+  var statusCol = idx['status'] >= 0 ? idx['status'] : idx['shipping_note'];
+  var idCol = idx['order_id'];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (idCol >= 0 && row[idCol] === orderId) {
+      // Public response contains NO PII (name/phone/address/notes/utm stay private).
+      var order = {
+        order_id: row[idCol],
+        created_at: (idx['created_at'] >= 0) ? row[idx['created_at']] : '',
+        status: (statusCol >= 0) ? row[statusCol] : '',
+        wilaya_ar: (idx['wilaya_ar'] >= 0) ? row[idx['wilaya_ar']] : '',
+        wilaya_en: (idx['wilaya_en'] >= 0) ? row[idx['wilaya_en']] : '',
+        delivery_type: (idx['delivery_type'] >= 0) ? row[idx['delivery_type']] : '',
+        items_json: (idx['items_json'] >= 0) ? row[idx['items_json']] : '[]',
+        subtotal: (idx['subtotal'] >= 0) ? row[idx['subtotal']] : 0
+      };
+      return { found: true, order: order };
+    }
+  }
+  return { found: false, error: 'Order not found' };
+}
+
+// Public endpoint: customers see only their own orders (matched by phone)
+function customerOrders(phone) {
+  if (!phone) return { error: 'Missing phone' };
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Orders');
+  if (!sheet) return { orders: [] };
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var phoneCol = headers.indexOf('phone');
   var statusCol = -1;
   for (var k = 0; k < headers.length; k++) {
     var h = headers[k].toString().toLowerCase().trim();
     if (h === 'status') { statusCol = k; break; }
     if (h === 'shipping_note') { statusCol = k; }
   }
+  var orders = [];
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
-    var idIndex = headers.indexOf('order_id');
-    if (row[idIndex] === orderId) {
-      var order = {};
-      for (var j = 0; j < headers.length; j++) { order[headers[j]] = row[j]; }
+    var rowPhone = String(phoneCol >= 0 ? row[phoneCol] : '').replace(/[^0-9+]/g, '');
+    var searchPhone = String(phone).replace(/[^0-9+]/g, '');
+    if (rowPhone === searchPhone) {
+      var order = { order_id: row[0], created_at: row[1] };
       if (statusCol >= 0) { order.status = row[statusCol]; }
-      return { found: true, order: order };
+      orders.push(order);
     }
   }
-  return { found: false, error: 'Order not found' };
+  orders.reverse();
+  return { orders: orders };
+}
+
+// Rebuild an order's items_json with every string field sanitized (kills stored XSS).
+function _sanitizeOrderItems(itemsJson) {
+  var items = [];
+  try { items = JSON.parse(itemsJson || '[]'); } catch(e) { items = []; }
+  if (!Array.isArray(items)) items = [];
+  var cleaned = [];
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    if (!it || typeof it !== 'object') continue;
+    var c = {};
+    for (var k in it) {
+      if (k === 'title' || k === 'name') c[k] = _sanitize(it[k], 300);
+      else if (typeof it[k] === 'string') c[k] = _sanitize(it[k], 500);
+      else c[k] = it[k];
+    }
+    cleaned.push(c);
+  }
+  return JSON.stringify(cleaned);
 }
 
 function createOrder(params) {
@@ -254,6 +455,18 @@ function createOrder(params) {
   var name = (params.name || '').replace(/[<>"'&]/g, '').substring(0, 200);
   var phone = (params.phone || '').replace(/[^0-9+]/g, '').substring(0, 20);
   var note = (params.note || '').replace(/[<>"'&]/g, '').substring(0, 500);
+  // All remaining fields are sanitized too — otherwise a public order could
+  // inject HTML that later renders in the admin panel or the public track view.
+  var wilayaAr = _sanitize(params.wilaya_ar, 100);
+  var wilayaEn = _sanitize(params.wilaya_en, 100);
+  var municipality = _sanitize(params.municipality, 200);
+  var deliveryType = _sanitize(params.delivery_type, 20);
+  var subtotal = String(params.subtotal || '0').replace(/[^0-9.]/g, '').substring(0, 20) || '0';
+  var utmSource = _sanitize(params.utm_source, 100);
+  var utmMedium = _sanitize(params.utm_medium, 100);
+  var utmCampaign = _sanitize(params.utm_campaign, 100);
+  var itemsJson = _sanitizeOrderItems(params.items_json);
+  if (!_orderSpamGuard(phone)) return { error: 'يرجى الانتظار قليلاً قبل إرسال طلب آخر' };
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Orders');
   if (!sheet) return { error: 'Orders sheet not found' };
@@ -262,29 +475,66 @@ function createOrder(params) {
   var createdAt = Utilities.formatDate(now, 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
   sheet.appendRow([
     orderId, createdAt, name, phone,
-    params.wilaya_code || '', params.wilaya_ar || '', params.wilaya_en || '',
-    params.municipality || '',  // البلدية
-    params.delivery_type || '', params.items_json || '[]',
-    params.subtotal || '0', 'سعر التوصيل يُحدد بعد التأكيد', 'pending', note,
-    params.utm_source || '',    // مصدر الحملة الإعلانية
-    params.utm_medium || '',    // وسيلة الإعلان
-    params.utm_campaign || ''   // اسم الحملة
+    _sanitize(params.wilaya_code, 20), wilayaAr, wilayaEn,
+    municipality,  // البلدية
+    deliveryType, itemsJson,
+    subtotal, 'سعر التوصيل يُحدد بعد التأكيد', 'pending', note,
+    utmSource,    // مصدر الحملة الإعلانية
+    utmMedium,    // وسيلة الإعلان
+    utmCampaign   // اسم الحملة
   ]);
+  // Count coupon usage only when an order is actually placed with it
+  // (validation alone must not burn the coupon's usage limit).
+  if (params.coupon_code) {
+    var coupon = _findCoupon(params.coupon_code, subtotal);
+    if (coupon.valid && coupon.used_count_col > 0) {
+      try {
+        var cs = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Coupons');
+        if (cs) {
+          var usedNow = parseInt(cs.getRange(coupon.row, coupon.used_count_col).getValue()) || 0;
+          cs.getRange(coupon.row, coupon.used_count_col).setValue(usedNow + 1);
+        }
+      } catch (e) { Logger.log('coupon increment error: ' + e); }
+    }
+  }
   return { ok: true, order_id: orderId };
+}
+
+// Look up a stored order by id (authoritative phone/subtotal for CAPI events).
+function _getOrderRow(orderId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Orders');
+  if (!sheet) return null;
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var idx = {};
+  for (var h = 0; h < headers.length; h++) { idx[String(headers[h]).toLowerCase().trim()] = h; }
+  var idCol = idx['order_id'];
+  if (idCol < 0) return null;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][idCol] === orderId) {
+      return {
+        phone: idx['phone'] >= 0 ? String(data[i][idx['phone']]) : '',
+        subtotal: idx['subtotal'] >= 0 ? String(data[i][idx['subtotal']]) : '0'
+      };
+    }
+  }
+  return null;
 }
 
 function capiSendPurchase(params) {
   params = params || {};
   var orderId = (params.order_id || '').substring(0, 60);
-  var phone = (params.phone || '').replace(/[^0-9+]/g, '').substring(0, 20);
-  var subtotal = String(params.subtotal || '0').substring(0, 20);
   if (!orderId) return { error: 'Missing order_id' };
   var enabled = getSettingsValue('capi_enabled');
   if (enabled === 'false' || enabled === '0') return { ok: true, sent: false, reason: 'capi_disabled' };
   var pixelId = getSettingsValue('pixel_id');
   var token = getSettingsValue('fb_capi_token');
   if (!pixelId || !token) return { ok: true, sent: false, reason: 'missing_config' };
-  var orderData = { orderId: orderId, phone: phone, subtotal: subtotal };
+  // Use authoritative order data from the sheet — never trust client-supplied totals.
+  var order = _getOrderRow(orderId);
+  if (!order) return { ok: true, sent: false, reason: 'order_not_found' };
+  var orderData = { orderId: orderId, phone: order.phone, subtotal: order.subtotal };
   try { sendPurchaseToFacebook(orderData); } catch(e) { Logger.log('CAPI err: ' + e); }
   return { ok: true, sent: true };
 }
@@ -400,10 +650,72 @@ function fixOrdersHeaders() {
   return { ok: true, message: 'تم إصلاح عناوين جدول Orders إلى 17 عموداً صحيحاً.' };
 }
 
+// One-time data repair (run from Apps Script editor after deploying):
+//  - clears the empty-key row in Settings (key '')
+//  - fixes legacy order rows whose columns were shifted by one
+//    (municipality holds the delivery type, delivery_type holds items_json, etc.)
+function repairData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var results = [];
+
+  var setSheet = ss.getSheetByName('Settings');
+  if (setSheet) {
+    var setData = setSheet.getDataRange().getValues();
+    var removed = 0;
+    for (var i = setData.length - 1; i >= 1; i--) {
+      if (!setData[i][0] || String(setData[i][0]).trim() === '') {
+        setSheet.deleteRow(i + 1);
+        removed++;
+      }
+    }
+    results.push('Settings: removed ' + removed + ' empty-key row(s)');
+  }
+
+  var ordSheet = ss.getSheetByName('Orders');
+  if (ordSheet) {
+    var headers = ordSheet.getRange(1, 1, 1, ordSheet.getLastColumn()).getValues()[0];
+    var idx = {};
+    for (var h = 0; h < headers.length; h++) { idx[String(headers[h]).toLowerCase().trim()] = h; }
+    var munCol = idx['municipality'], deliveryCol = idx['delivery_type'], itemsCol = idx['items_json'],
+        subCol = idx['subtotal'], shipCol = idx['shipping_note'], statusCol = idx['status'],
+        notesCol = idx['notes'], orderIdCol = idx['order_id'];
+    var data = ordSheet.getDataRange().getValues();
+    var repaired = 0;
+    for (var r = 1; r < data.length; r++) {
+      var row = data[r];
+      var munVal = munCol >= 0 ? String(row[munCol]) : '';
+      var delVal = deliveryCol >= 0 ? String(row[deliveryCol]) : '';
+      if (/^(Home|Office)$/i.test(munVal) && delVal.indexOf('[') === 0) {
+        // Columns shifted by one: true values sit one column left.
+        //   delivery_type = munVal (Office/Home)
+        //   items_json    = delVal (the JSON array)
+        //   subtotal      = current items_json value
+        //   status        = current shipping_note value
+        //   notes         = current status value
+        if (munCol >= 0) ordSheet.getRange(r + 1, munCol + 1).setValue('');
+        if (deliveryCol >= 0) ordSheet.getRange(r + 1, deliveryCol + 1).setValue(munVal);
+        if (itemsCol >= 0) ordSheet.getRange(r + 1, itemsCol + 1).setValue(delVal);
+        if (subCol >= 0 && itemsCol >= 0) ordSheet.getRange(r + 1, subCol + 1).setValue(row[itemsCol]);
+        if (shipCol >= 0) ordSheet.getRange(r + 1, shipCol + 1).setValue('سعر التوصيل يُحدد بعد التأكيد');
+        if (statusCol >= 0 && shipCol >= 0) ordSheet.getRange(r + 1, statusCol + 1).setValue(row[shipCol]);
+        if (notesCol >= 0 && statusCol >= 0) ordSheet.getRange(r + 1, notesCol + 1).setValue(row[statusCol]);
+        var orderId = orderIdCol >= 0 ? row[orderIdCol] : ('row ' + (r + 1));
+        results.push('Orders row ' + (r + 1) + ' (' + orderId + '): repaired shifted columns');
+        repaired++;
+      }
+    }
+    results.push('Orders: repaired ' + repaired + ' shifted row(s)');
+  }
+
+  try { CacheService.getScriptCache().remove('catalog'); CacheService.getScriptCache().remove('settings'); } catch(e) {}
+  return { ok: true, results: results };
+}
+
 function generateOrderId() {
   var now = new Date();
   var datePart = Utilities.formatDate(now, 'Africa/Algiers', 'yyyyMMdd');
-  var randomPart = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  // 8 hex chars from a v4 UUID (cryptographically random) -> 4 billion+ combos, not enumerable.
+  var randomPart = Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
   return 'SK-' + datePart + '-' + randomPart;
 }
 
@@ -706,7 +1018,7 @@ function adminUpdateSettings(params) {
   var secretKeys = { fb_capi_token: true, gemini_api_key: true, admin_password: true, admin_recovery: true };
   var passwordChanged = false;
   for (var key in params) {
-    if (key === 'action' || key === 'callback') continue;
+    if (key === 'action' || key === 'callback' || key === 'token') continue;
     if (secretKeys[key] && (params[key] === '' || params[key] === undefined || params[key] === null)) continue;
     var found = false;
     for (var i = 1; i < data.length; i++) {
@@ -811,18 +1123,8 @@ function adminDeleteTestimonial(params) {
 }
 
 function adminUploadImage(params) {
-  var base64 = params.imageData;
-  var fileName = params.fileName || 'image.jpg';
-  var mimeType = params.mimeType || 'image/jpeg';
-  var num = params.num || '1';
-  if (!base64) return { error: 'No image data' };
-
-  var blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, fileName);
-  var folder = DriveApp.getFolderById(getOrCreateFolderId());
-  var file = folder.createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  var url = 'https://drive.google.com/uc?id=' + file.getId() + '&export=view';
-  return { ok: true, url: url, _num: num };
+  var v = _createVerifiedUpload(params.imageData, params.mimeType);
+  return { ok: !!v.ok, url: v.url || '', _num: params.num || '1', error: v.error || '' };
 }
 
 function getOrCreateFolderId() {
@@ -835,27 +1137,19 @@ function getOrCreateFolderId() {
 }
 
 function adminUploadImageGet(params) {
-  var base64 = params.base64;
-  var fileName = params.fileName || 'image.jpg';
-  var num = params.num || '1';
-  if (!base64) return { error: 'No image data' };
-
-  try {
-    var blob = Utilities.newBlob(Utilities.base64Decode(base64), 'image/jpeg', fileName);
-    var folder = DriveApp.getFolderById(getOrCreateFolderId());
-    var file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    var url = 'https://drive.google.com/uc?id=' + file.getId() + '&export=view';
-    return { url: url, _num: num };
-  } catch(ex) {
-    return { error: ex.toString() };
-  }
+  var v = _createVerifiedUpload(params.base64, params.mimeType);
+  return { ok: !!v.ok, url: v.url || '', _num: params.num || '1', error: v.error || '' };
 }
 
 function verifyAdmin(params) {
   var storedPassword = getSettingsValue('admin_password');
   if (!storedPassword) return { ok: false, error: 'لم يتم تعيين كلمة مرور. أدخل كلمة مرور في الإعدادات أولاً.', setupRequired: true };
-  if (params.password === storedPassword) return { ok: true };
+  if (_loginBlocked()) return { ok: false, error: 'محاولات كثيرة خاطئة. انتظر دقيقة وحاول مرة أخرى.' };
+  if (params.password === storedPassword) {
+    _loginReset();
+    return { ok: true, token: _issueAdminToken() };
+  }
+  _loginRecordFailure();
   return { ok: false, error: 'كلمة المرور غير صحيحة' };
 }
 
@@ -894,22 +1188,28 @@ function verifyRecovery(params) {
   var providedHash = params.code ? hashString(params.code) : '';
   if (!storedHash) return { ok: false, error: 'لا يوجد رمز استرجاع. استخدم إعدادات Google Sheet.' };
   if (!providedHash) return { ok: false, error: 'أدخل رمز الاسترجاع' };
+  if (_loginBlocked()) return { ok: false, error: 'محاولات كثيرة خاطئة. انتظر دقيقة وحاول مرة أخرى.' };
   if (providedHash === storedHash) {
+    _loginReset();
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName('Settings');
     if (sheet) {
       var data = sheet.getDataRange().getValues();
       for (var i = 1; i < data.length; i++) {
-        if (data[i][0] === 'admin_recovery') { sheet.getRange(i + 1, 2).setValue(''); break; }
+        if (data[i][0] === 'admin_recovery') { sheet.getRange(i + 1, 2).setValue(''); }
+        if (data[i][0] === 'admin_password') { sheet.getRange(i + 1, 2).setValue(''); }
       }
     }
+    try { CacheService.getScriptCache().remove('settings'); } catch(e) {}
     return { ok: true };
   }
+  _loginRecordFailure();
   return { ok: false, error: 'رمز الاسترجاع غير صحيح' };
 }
 
-function validateCoupon(params) {
-  var code = (params.coupon_code || '').toUpperCase().trim();
+// Read-only coupon lookup shared by validation and order placement.
+function _findCoupon(code, subtotal) {
+  code = (code || '').toUpperCase().trim();
   if (!code) return { valid: false, error: 'Enter a coupon code' };
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Coupons');
@@ -933,15 +1233,20 @@ function validateCoupon(params) {
       var usedCount = parseInt(coupon.used_count) || 0;
       if (usedCount >= maxUses) return { valid: false, error: 'Coupon usage limit reached' };
       var minOrder = parseInt(coupon.min_order) || 0;
-      var subtotal = parseInt(params.subtotal) || 0;
-      if (subtotal < minOrder) return { valid: false, error: 'Minimum order for this coupon is ' + minOrder + ' DZD' };
+      var sub = parseInt(subtotal) || 0;
+      if (sub < minOrder) return { valid: false, error: 'Minimum order for this coupon is ' + minOrder + ' DZD' };
       var percent = parseFloat(coupon.percent) || 0;
-      var discount = Math.round(subtotal * percent / 100);
-      sheet.getRange(i + 1, headers.indexOf('used_count') + 1).setValue(usedCount + 1);
-      return { valid: true, percent: percent, discount: discount, code: code };
+      var discount = Math.round(sub * percent / 100);
+      return { valid: true, row: i + 1, used_count_col: headers.indexOf('used_count') + 1, percent: percent, discount: discount, code: code };
     }
   }
   return { valid: false, error: 'Invalid coupon code' };
+}
+
+function validateCoupon(params) {
+  var result = _findCoupon(params.coupon_code, params.subtotal);
+  if (!result.valid) return { valid: false, error: result.error };
+  return { valid: true, percent: result.percent, discount: result.discount, code: result.code };
 }
 
 function adminListCoupons() {
@@ -1126,9 +1431,43 @@ function adminSavePage(params) {
 }
 
 // === Customers ===
+var CUSTOMER_PW_P1 = 'p1:';
+
+// Site-wide pepper stored in ScriptProperties (generated once on first use).
+function getPepper() {
+  var props = PropertiesService.getScriptProperties();
+  var p = props.getProperty('customer_pepper');
+  if (p) return p;
+  p = Utilities.getUuid();
+  props.setProperty('customer_pepper', p);
+  return p;
+}
+
+// Versioned hash for NEW accounts / migrated hashes: SHA-256(pass:phone:pepper)
 function _hashCustomerPassword(password, phone) {
-  // Hash with SHA-256 + phone as salt for per-customer uniqueness
+  return CUSTOMER_PW_P1 + hashString(password + ':' + phone + ':' + getPepper());
+}
+
+// Legacy (pre-pepper) scheme kept only for verifying existing accounts:
+// SHA-256(pass:phone) with no version prefix.
+function _hashCustomerPasswordLegacy(password, phone) {
   return hashString(password + ':' + phone);
+}
+
+// Verify a stored hash produced under either scheme.
+function _verifyCustomerPassword(password, phone, stored) {
+  var s = String(stored);
+  if (s.indexOf(CUSTOMER_PW_P1) === 0) {
+    return s === _hashCustomerPassword(password, phone);
+  }
+  return s === _hashCustomerPasswordLegacy(password, phone);
+}
+
+// Upgrade a legacy hash in place after a successful legacy login. Returns the
+// new hash to write, or '' if the stored hash is already current.
+function _migrateCustomerPassword(password, phone, stored) {
+  if (String(stored).indexOf(CUSTOMER_PW_P1) === 0) return '';
+  return _hashCustomerPassword(password, phone);
 }
 
 function customerRegister(params) {
@@ -1163,11 +1502,12 @@ function customerLogin(params) {
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) return { ok: false, error: 'Account not found' };
   var headers = data[0];
-  var hashedInput = _hashCustomerPassword(password, phone);
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     if (row[0] === phone) {
-      if (row[1] === hashedInput) {
+      if (_verifyCustomerPassword(password, phone, row[1])) {
+        var upgraded = _migrateCustomerPassword(password, phone, row[1]);
+        if (upgraded) sheet.getRange(i + 1, 2).setValue(upgraded);
         var customer = {};
         for (var j = 0; j < headers.length; j++) { customer[headers[j]] = row[j]; }
         delete customer.password;
@@ -1181,7 +1521,8 @@ function customerLogin(params) {
 
 function customerProfile(params) {
   var phone = (params.phone || '').replace(/\s/g, '').trim();
-  if (!phone) return { ok: false, error: 'Phone required' };
+  var password = params.password || '';
+  if (!phone || !password) return { ok: false, error: 'Phone and password required' };
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Customers');
   if (!sheet) return { ok: false, error: 'No accounts' };
@@ -1189,6 +1530,9 @@ function customerProfile(params) {
   var headers = data[0];
   for (var i = 1; i < data.length; i++) {
     if (data[i][0] === phone) {
+      if (!_verifyCustomerPassword(password, phone, data[i][1])) return { ok: false, error: 'Wrong password' };
+      var upgraded = _migrateCustomerPassword(password, phone, data[i][1]);
+      if (upgraded) sheet.getRange(i + 1, 2).setValue(upgraded);
       var customer = {};
       for (var j = 0; j < headers.length; j++) { customer[headers[j]] = data[i][j]; }
       delete customer.password;
@@ -1358,8 +1702,9 @@ function adminSetDefaultTheme(params) {
 function aiChat(params) {
   var message = params.message || '';
   if (!message) return { reply: 'Please send a message.' };
-  // Sanitize: limit message length
   message = message.substring(0, 500);
+
+  if (!_aiRateOk()) return { reply: 'The assistant is busy right now. Please try again in a few minutes.' };
 
   var settings = getSettings();
   var apiKey = settings.gemini_api_key || '';

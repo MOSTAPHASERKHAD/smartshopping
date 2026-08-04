@@ -6,13 +6,25 @@ const MIME = {'.html':'text/html','.js':'text/javascript','.css':'text/css','.js
 
 // Allowed static files (whitelist approach for security)
 const ALLOWED = new Set([
-  '/index.html', '/admin.html', '/style.css', '/script.js', '/sw.js',
-  '/manifest.json', '/sitemap.xml', '/robots.txt',
-  '/favicon.ico', '/icon-192.png', '/icon-512.png',
-  '/logo.png', '/logo1.png',
-  '/promo-hero.webp', '/promo1.webp', '/promo-sale.webp', '/promo-accessories.webp',
+  // App entry points + SW
+  '/index.html', '/admin.html', '/sw.js', '/manifest.json',
+  '/sitemap.xml', '/robots.txt',
+  // Icons & logos
+  '/icon.svg', '/icon-512.svg', '/icon-192.svg',
+  '/icon-192.png', '/icon-512.png', '/logo.png', '/logo1.png',
+  // Promo banners
+  '/promo-hero.webp', '/promo-sale.webp', '/promo-accessories.webp',
+  // Stylesheets
+  '/assets/css/index.css', '/assets/css/index.min.css',
+  '/assets/css/product.css', '/assets/css/product.min.css',
+  '/assets/css/admin.css', '/assets/css/admin.min.css',
+  // Theme engine & themes
   '/themes/theme-schema.js', '/themes/theme-engine.js', '/themes/default-themes.js',
-  '/themes/theme-importer.js', '/themes/theme-editor.js', '/themes/theme-customizer.js'
+  '/themes/theme-importer.js', '/themes/theme-editor.js', '/themes/theme-customizer.js',
+  // Product images
+  '/assets/img/enzo_3_jpg.png', '/assets/img/enzo_21.png', '/assets/img/enzo_20.png',
+  '/assets/img/enzo_1_jpg.png', '/assets/img/enzo_19.png', '/assets/img/enzo_18.png',
+  '/assets/img/enzo_17.png', '/assets/img/enzo_15.png', '/assets/img/enzo_12.png'
 ]);
 
 http.createServer((req, res) => {
