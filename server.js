@@ -10,7 +10,7 @@ const ALLOWED = new Set([
   '/manifest.json', '/sitemap.xml', '/robots.txt',
   '/favicon.ico', '/icon-192.png', '/icon-512.png',
   '/logo.png', '/logo1.png',
-  '/promo-hero.png', '/promo1.png', '/promo-sale.png', '/promo-accessories.png',
+  '/promo-hero.webp', '/promo1.webp', '/promo-sale.webp', '/promo-accessories.webp',
   '/themes/theme-schema.js', '/themes/theme-engine.js', '/themes/default-themes.js',
   '/themes/theme-importer.js', '/themes/theme-editor.js', '/themes/theme-customizer.js'
 ]);
