@@ -29,15 +29,26 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
-// Clear stale service workers without reload
-if(!sessionStorage.getItem('sw_cleared')){
-  sessionStorage.setItem('sw_cleared','1');
-  if('serviceWorker' in navigator){
+// === Versioned SW Cache Buster ===
+// If SW version changes, clear ALL caches and reload to serve fresh content
+(function(){
+  var REQUIRED_VER = 'v32';
+  var stored = localStorage.getItem('sk_sw_ver');
+  if(stored === REQUIRED_VER) return; // already up to date
+  if(!('serviceWorker' in navigator)) { localStorage.setItem('sk_sw_ver', REQUIRED_VER); return; }
+  // Unregister all SWs and clear all caches, then reload once
+  Promise.all([
     navigator.serviceWorker.getRegistrations().then(function(regs){
-      for(var i=0;i<regs.length;i++)regs[i].unregister();
-    }).catch(function(){});
-  }
-}
+      return Promise.all(regs.map(function(r){ return r.unregister(); }));
+    }),
+    (window.caches ? caches.keys().then(function(keys){
+      return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+    }) : Promise.resolve())
+  ]).then(function(){
+    localStorage.setItem('sk_sw_ver', REQUIRED_VER);
+    if(stored !== null){ window.location.reload(true); } // reload only if not first visit
+  }).catch(function(){ localStorage.setItem('sk_sw_ver', REQUIRED_VER); });
+})();
 </script>
 <meta name="apple-mobile-web-app-title" content="Smart Shopping">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -70,7 +81,7 @@ document.head.appendChild(ld);
     <input type="text" id="searchInput" data-i18n-placeholder="search" placeholder="ابحث عن منتج..." oninput="filterProducts()">
   </div>
   <div id="headerCatBar" class="header-cat-bar"></div>
-  <select class="sort-select" id="sortSelectMobile" onchange="filterProducts()" style="display:none"></select>
+
   <div class="header-view-btns">
     <button type="button" id="viewGrid" onclick="setViewMode('grid')" title="Grid">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -1333,8 +1344,6 @@ function buildCategories(){
       '<option value="name">'+t('sort_name')+'</option>';
     html+='<select class="sort-select" id="sortSelect" onchange="filterProducts()">'+sortOpts+'</select>';
     bar.innerHTML=html;
-    var mobSort=document.getElementById('sortSelectMobile');
-    if(mobSort){mobSort.innerHTML=sortOpts;mobSort.style.display='inline-block';}
   }catch(e){console.error('buildCategories err',e)}
 }
 
