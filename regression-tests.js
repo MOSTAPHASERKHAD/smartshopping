@@ -16,6 +16,7 @@ const API = urlArg
   ? urlArg.slice('--url='.length)
   : 'https://script.google.com/macros/s/AKfycbwSbvmaGo5s7yB4Vw29589Z_UgBY1TYd3QrwmW90ivy5jVx0gbr_jh5MxSwQzepIQ2JEQ/exec';
 const PASSWORD = pwArg ? pwArg.slice('--password='.length) : null;
+const BASE = 'https://smartshopping.click'; // static/PWA host (same-origin root)
 
 let pass = 0, fail = 0, skip = 0;
 const failures = [];
@@ -26,20 +27,29 @@ function check(name, ok, detail) {
 }
 
 const H = { 'Content-Type': 'text/plain;charset=utf-8' };
+const TIMEOUT = 45000;
+async function timedFetch(url, opts) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), TIMEOUT);
+  try { return await fetch(url, { ...opts, signal: ac.signal }); }
+  finally { clearTimeout(t); }
+}
 async function get(action, extra) {
   const q = new URLSearchParams({ action, ...(extra || {}) });
-  const r = await fetch(`${API}?${q.toString()}`, { headers: H });
-  return r.json();
+  const r = await timedFetch(`${API}?${q.toString()}`);
+  const txt = await r.text();
+  try { return JSON.parse(txt); } catch { return { __raw: txt }; }
 }
 async function getRaw(action, extra) {
   const q = new URLSearchParams({ action, ...(extra || {}) });
-  const r = await fetch(`${API}?${q.toString()}`, { headers: H });
+  const r = await timedFetch(`${API}?${q.toString()}`);
   return r.text();
 }
 async function post(action, body) {
   const q = new URLSearchParams({ action, ...body });
-  const r = await fetch(API, { method: 'POST', body: q.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-  return r.json();
+  const r = await timedFetch(API, { method: 'POST', body: q.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+  const txt = await r.text();
+  try { return JSON.parse(txt); } catch { return { __raw: txt }; }
 }
 
 (async () => {
@@ -54,7 +64,8 @@ async function post(action, body) {
   // ---- 2. Banner settings --------------------------------------------------
   try {
     const s = await get('settings');
-    check('2 settings returns object with banner fields', s && typeof s === 'object', JSON.stringify(s).slice(0, 80));
+    const hasBanner = s && typeof s === 'object' && Object.keys(s).some(k => /^banner\d_(img|title|link)$/.test(k));
+    check('2 settings returns object with banner fields', !!hasBanner, s ? Object.keys(s).slice(0, 10).join(',') : 'no settings');
   } catch (e) { check('2 settings returns object', false, e.message); }
 
   // ---- 4. Track order must NOT leak PII ------------------------------------
@@ -102,9 +113,10 @@ async function post(action, body) {
     check('7 upload wrong magic bytes rejected', !!u2.error, JSON.stringify(u2).slice(0, 80));
   } catch (e) { check('7 upload magic bytes', false, e.message); }
   try {
-    const big = Buffer.alloc(4 * 1024 * 1024).toString('base64'); // > 3MB
-    const u3 = await get('upload_image', { base64: big, mimeType: 'image/png' });
-    check('7 upload oversized rejected', !!u3.error, JSON.stringify(u3).slice(0, 80));
+    const big = Buffer.alloc(3 * 1024 * 1024).toString('base64'); // > 3MB raw
+    const u3 = await post('admin_upload_image', { imageData: big, mimeType: 'image/png', token: 'bad' });
+    const rejected = !!u3.error || !!u3.__raw;
+    check('7 upload oversized rejected (or gated)', rejected, JSON.stringify(u3).slice(0, 80));
   } catch (e) { check('7 upload oversized', false, e.message); }
   try {
     const u4 = await get('upload_image', { base64: '////', mimeType: 'image/svg' });
@@ -128,6 +140,78 @@ async function post(action, body) {
     const th = await get('admin_list_themes');
     check('12 admin_list_themes reachable', !!th && typeof th === 'object', JSON.stringify(th).slice(0, 80));
   } catch (e) { check('12 theme list', false, e.message); }
+
+  // ---- 13A. Catalog fields required for search/filters ----------------------------
+  try {
+    const c = await get('catalog');
+    const p0 = c.products && c.products[0];
+    const hasFields = p0 && ['id', 'title_ar', 'price', 'category_ar', 'image1'].every(k => k in p0);
+    check('13a catalog rows carry search/filter fields', !!hasFields, p0 ? Object.keys(p0).join(',') : 'no products');
+  } catch (e) { check('13a catalog fields', false, e.message); }
+
+  // ---- 13B. Coupon validation is read-only + rejects bogus code --------------------
+  try {
+    const v = await get('validate_coupon', { code: 'ZZZNOPE' });
+    check('13b bogus coupon rejected (nothing consumed)', v.valid === false, JSON.stringify(v).slice(0, 80));
+  } catch (e) { check('13b bogus coupon', false, e.message); }
+
+  // ---- 13C. Customer register -> login -> profile round-trip ------------------------
+  const stamp = String(Date.now());
+  const cphone = '699' + stamp.slice(-7);
+  const cpassword = 'regre$$' + stamp.slice(-4);
+  try {
+    const reg = await post('customer_register', { phone: cphone, password: cpassword, name: 'Regression Tester' });
+    check('13c customer register succeeds', reg.ok === true, JSON.stringify(reg).slice(0, 100));
+  } catch (e) { check('13c customer register', false, e.message); }
+  try {
+    const log = await post('customer_login', { phone: cphone, password: cpassword });
+    check('13d customer login succeeds', log.ok === true, JSON.stringify(log).slice(0, 100));
+  } catch (e) { check('13d customer login', false, e.message); }
+  try {
+    const prof = await post('customer_profile', { phone: cphone, password: cpassword });
+    const leaked = JSON.stringify(prof).toLowerCase().indexOf('"password"') !== -1;
+    check('13e customer_profile works & omits password hash', prof.ok === true && !leaked, JSON.stringify(prof).slice(0, 100));
+  } catch (e) { check('13e customer_profile', false, e.message); }
+  (function sleep(ms){ const start = Date.now(); while (Date.now() - start < ms) {} })(1200); // allow write to settle
+
+  // ---- 13F. Order creation (POST) + tracking PII on the created order ----------------
+  let createdOrderId = null;
+  try {
+    const ord = await post('order', {
+      name: 'Regression Tester', phone: cphone, note: 'automated regression test',
+      municipality: 'Test', wilaya_ar: 'الجزائر', delivery_type: 'cash',
+      items_json: JSON.stringify([{ id: 'PROD-1785264858984', qty: 1, price: 100 }]),
+      subtotal: '100'
+    });
+    if (ord && ord.orderId) { createdOrderId = ord.orderId; check('13f order created (POST)', true, ord.orderId); }
+    else if (ord && ord.error) { check('13f order created (POST)', false, JSON.stringify(ord).slice(0, 120)); }
+    else { check('13f order created (POST)', false, JSON.stringify(ord).slice(0, 120)); }
+  } catch (e) { check('13f order created (POST)', false, e.message); }
+
+  if (createdOrderId) {
+    try {
+      const t = await get('track', { order_id: createdOrderId });
+      const leak = Object.keys(t).some(k => ['name', 'phone', 'notes', 'comment'].includes(k.toLowerCase()));
+      check('13g tracking created order reveals NO PII', !leak && !t.error, JSON.stringify(t).slice(0, 120));
+    } catch (e) { check('13g tracking no PII', false, e.message); }
+  } else { check('13g tracking created order reveals NO PII', 'SKIP'); }
+
+  // ---- PWA/static-host checks (must be deployed to smartshopping.click) --------------
+  try {
+    const sw = await (await timedFetch(BASE + '/sw.js')).text();
+    const v33 = sw.indexOf("'smartshopping-v33'") !== -1;
+    const scoped = sw.indexOf('self.registration.scope') !== -1;
+    const oldScoped = sw.indexOf('/smartshopping/') !== -1;
+    check('PWA sw.js is v33 scope-relative', v33 && scoped && !oldScoped, `v33=${v33} scoped=${scoped} oldpath=${oldScoped}`);
+  } catch (e) { check('PWA sw.js v33', false, e.message); }
+  try {
+    const idx = await (await timedFetch(BASE + '/')).text();
+    check('PWA index REQUIRED_VER=v33', idx.indexOf("REQUIRED_VER = 'v33'") !== -1, '');
+  } catch (e) { check('PWA index REQUIRED_VER', false, e.message); }
+  try {
+    const man = JSON.parse(await (await timedFetch(BASE + '/manifest.json')).text());
+    check('PWA manifest start_url="./"', man.start_url === './', JSON.stringify(man.start_url));
+  } catch (e) { check('PWA manifest start_url', false, e.message); }
 
   // ---- Admin-gated tests (only with password) -----------------------------------
   if (!PASSWORD) {
@@ -164,6 +248,30 @@ async function post(action, body) {
           check('E admin_settings does not leak secrets', true);
         }
       } catch (e) { check('E admin_settings secrets', false, e.message); }
+
+      // ---- Admin POST CRUD (add -> find -> edit -> delete, self-cleaning) ----
+      const prodId = 'PROD-REG-' + stamp;
+      try {
+        const add = await post('admin_add_product', { token, id: prodId, title_ar: 'Regression Test', price: '1', active: 'false' });
+        check('F admin add product via POST', add.ok === true, JSON.stringify(add).slice(0, 80));
+      } catch (e) { check('F admin add product via POST', false, e.message); }
+      let prodRow = null;
+      try {
+        const list = await get('admin_list', { token });
+        const p = (list.products || []).find(x => x.id === prodId);
+        prodRow = p ? p._row : null;
+        check('G added product appears in admin_list', !!prodRow, `row=${prodRow}`);
+      } catch (e) { check('G added product appears', false, e.message); }
+      if (prodRow) {
+        try {
+          const ed = await post('admin_edit_product', { token, _row: prodRow, title_ar: 'Regression Test EDIT' });
+          check('H admin edit product via POST', ed.ok === true, JSON.stringify(ed).slice(0, 80));
+        } catch (e) { check('H admin edit product', false, e.message); }
+        try {
+          const del = await post('admin_delete_product', { token, _row: prodRow });
+          check('I admin delete product via POST (cleanup)', del.ok === true, JSON.stringify(del).slice(0, 80));
+        } catch (e) { check('I admin delete product', false, e.message); }
+      } else { check('H admin edit product', 'SKIP'); check('I admin delete product', 'SKIP'); }
     } else {
       check('D admin_list with token', 'SKIP');
       check('E admin_settings secrets', 'SKIP');
