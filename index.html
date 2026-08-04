@@ -32,7 +32,7 @@
 // === Versioned SW Cache Buster ===
 // If SW version changes, clear ALL caches and reload to serve fresh content
 (function(){
-  var REQUIRED_VER = 'v32';
+  var REQUIRED_VER = 'v33';
   var stored = localStorage.getItem('sk_sw_ver');
   if(stored === REQUIRED_VER) return; // already up to date
   if(!('serviceWorker' in navigator)) { localStorage.setItem('sk_sw_ver', REQUIRED_VER); return; }

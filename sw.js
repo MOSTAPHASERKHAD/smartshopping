@@ -1,25 +1,38 @@
-var CACHE_NAME = 'smartshopping-v32';
-var ASSETS = [
-  '/smartshopping/',
-  '/smartshopping/index.html',
-  '/smartshopping/admin.html',
-  '/smartshopping/manifest.json',
-  '/smartshopping/assets/css/index.css',
-  '/smartshopping/assets/css/product.css',
-  '/smartshopping/assets/css/admin.css',
-  '/smartshopping/promo-hero.webp',
-  '/smartshopping/promo-sale.webp',
-  '/smartshopping/promo-accessories.webp',
-  '/smartshopping/themes/theme-schema.js',
-  '/smartshopping/themes/theme-engine.js',
-  '/smartshopping/themes/default-themes.js',
-  '/smartshopping/themes/theme-importer.js',
-  '/smartshopping/themes/theme-editor.js',
-  '/smartshopping/themes/theme-customizer.js'
-];
+var CACHE_NAME = 'smartshopping-v33';
+
+// Build asset list relative to the SW scope so the app works from the
+// domain root or from a subdirectory (e.g. /smartshopping/).
+function buildAssets() {
+  var BASE = self.registration.scope;
+  return [
+    BASE + 'index.html',
+    BASE + 'admin.html',
+    BASE + 'manifest.json',
+    BASE + 'assets/css/index.css',
+    BASE + 'assets/css/product.css',
+    BASE + 'assets/css/admin.css',
+    BASE + 'promo-hero.webp',
+    BASE + 'promo-sale.webp',
+    BASE + 'promo-accessories.webp',
+    BASE + 'themes/theme-schema.js',
+    BASE + 'themes/theme-engine.js',
+    BASE + 'themes/default-themes.js',
+    BASE + 'themes/theme-importer.js',
+    BASE + 'themes/theme-editor.js',
+    BASE + 'themes/theme-customizer.js'
+  ];
+}
 
 self.addEventListener('install', function(e) {
-  e.waitUntil(caches.open(CACHE_NAME).then(function(c) { return c.addAll(ASSETS); }));
+  // Resilient precache: each asset is fetched independently so a single
+  // missing file cannot fail the whole install and strand old caches.
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(function(c) {
+      return Promise.all(buildAssets().map(function(u) {
+        return c.add(u).catch(function() { /* skip unavailable file */ });
+      }));
+    })
+  );
   self.skipWaiting();
 });
 
@@ -36,7 +49,8 @@ self.addEventListener('activate', function(e) {
 // Network-first for HTML pages — always serve fresh content
 self.addEventListener('fetch', function(e) {
   var url = e.request.url;
-  if (url.includes('script.google.com')) return;
+  if (url.indexOf(self.registration.scope) !== 0) return;
+  if (url.indexOf('script.google.com') !== -1) return;
   if (e.request.method !== 'GET') return;
 
   // Cache-first for images, CSS, theme JS
@@ -67,8 +81,8 @@ self.addEventListener('fetch', function(e) {
     }).catch(function() {
       return caches.match(e.request).then(function(r) {
         if (r) return r;
-        if (e.request.mode === 'navigate' || (e.request.headers.get('accept') && e.request.headers.get('accept').includes('text/html'))) {
-          return caches.match('/smartshopping/index.html');
+        if (e.request.mode === 'navigate' || (e.request.headers.get('accept') && e.request.headers.get('accept').indexOf('text/html') !== -1)) {
+          return caches.match(self.registration.scope + 'index.html');
         }
         return new Response('', {status: 404, statusText: 'Not Found'});
       });
