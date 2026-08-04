@@ -1099,17 +1099,7 @@ function init(){
   loadCustomerSession();
   initViewMode();
   checkReferralParam();
-  heroSlides = DEFAULT_BANNERS.slice();
-  heroIdx = 0;
-  renderHeroDots();
-  clearInterval(heroTimer);
-  heroTimer = setInterval(function() {
-    var s = document.querySelectorAll('#heroSlider .slide');
-    if (!s.length) { heroNav(1); return; }
-    s.forEach(function(el){el.classList.remove('active')});
-    heroIdx = (heroIdx + 1) % s.length;
-    if (s[heroIdx]) s[heroIdx].classList.add('active');
-  }, 4000);
+  loadHeroBanners({}, true);
   var cachedSettings=cacheGet('settings',3600000);
   if(cachedSettings){storeSettings=cachedSettings;applySettings(cachedSettings)}
   apiCall('settings',{},function(d){
