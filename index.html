@@ -20,6 +20,9 @@
 <meta name="twitter:description" content="منتجات متنوعة بأفضل الأسعار — الدفع عند الاستلام">
 <link rel="canonical" href="https://smartshopping.click/">
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="dns-prefetch" href="https://script.google.com">
+<link rel="dns-prefetch" href="https://i.ibb.co">
 <meta name="theme-color" content="#1a1a2e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -114,6 +117,8 @@ document.head.appendChild(ld);
     <h2 data-i18n="products_title">المنتجات</h2>
   </div>
   <div id="productsGrid" class="products-grid">
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
+    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
     <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
     <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
     <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-text"></div><div class="skeleton-text short skeleton-text price"></div></div>
@@ -1092,7 +1097,9 @@ function init(){
     heroIdx = (heroIdx + 1) % s.length;
     if (s[heroIdx]) s[heroIdx].classList.add('active');
   }, 4000);
-  var cachedSettings=cacheGet('settings',600000);
+  // Warmup GAS cold start - trigger server wake-up early
+  try{fetch(API_URL+'?action=catalog&_w='+Date.now()).then(function(r){return r.json()}).catch(function(){})}catch(e){}
+  var cachedSettings=cacheGet('settings',3600000);
   if(cachedSettings){storeSettings=cachedSettings;applySettings(cachedSettings)}
   apiCall('settings',{},function(d){
     if(!d||d.error){if(!storeSettings){storeSettings={};loadHeroBanners({},true);checkCookieConsent()}return}
@@ -1117,7 +1124,7 @@ function init(){
     checkCookieConsent();
     setTimeout(checkLandingPage,500);
   }
-  var cachedCatalog=cacheGet('catalog',300000);
+  var cachedCatalog=cacheGet('catalog',86400000);
   if(cachedCatalog&&cachedCatalog.products){
     allProducts=cachedCatalog.products;
     var v={};allProducts.forEach(function(x){v[x.id]=true});
@@ -1143,7 +1150,7 @@ function init(){
       }catch(e){console.error('catalog err',e)}
     });
   })(3);
-  var cachedTestimonials=cacheGet('testimonials',600000);
+  var cachedTestimonials=cacheGet('testimonials',86400000);
   if(cachedTestimonials&&cachedTestimonials.length)renderTestimonials(cachedTestimonials);
   apiCall('testimonials',{},function(d){
     try{
@@ -1841,7 +1848,7 @@ function loadHeroBanners(settings, forceDefault) {
     heroTimer = setInterval(function() { heroNav(1); }, 4000);
     if (!forceDefault) {
       clearTimeout(heroFallbackTimer);
-      heroFallbackTimer = setTimeout(function() { fallbackCheck(); }, 5000);
+      heroFallbackTimer = setTimeout(function() { fallbackCheck(); }, 15000);
     }
   } catch(e) { console.error('promo banners', e); }
 }
