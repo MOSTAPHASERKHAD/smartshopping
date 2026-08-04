@@ -48,6 +48,7 @@ function doGet(e) {
     case 'settings': result = getSettings(); break;
     case 'track': result = trackOrder(params.order_id || ''); break;
     case 'order': result = createOrder(params); break;
+    case 'capi_send': result = capiSendPurchase(params); break;
     case 'admin_list': result = adminListProducts(); break;
     case 'admin_orders': result = adminListOrders(); break;
     case 'admin_settings': result = getSettings(); break;
@@ -113,6 +114,7 @@ function doPost(e) {
 
   switch (action) {
     case 'order': result = createOrder(params); break;
+    case 'capi_send': result = capiSendPurchase(params); break;
     case 'admin_add_product': result = adminAddProduct(params); break;
     case 'admin_edit_product': result = adminEditProduct(params); break;
     case 'admin_delete_product': result = adminDeleteProduct(params); break;
@@ -255,9 +257,18 @@ function createOrder(params) {
     params.utm_medium || '',    // وسيلة الإعلان
     params.utm_campaign || ''   // اسم الحملة
   ]);
-  var orderData = { orderId: orderId, phone: phone, subtotal: params.subtotal || '0' };
-  try { sendPurchaseToFacebook(orderData); } catch(e) { Logger.log('CAPI err: ' + e); }
   return { ok: true, order_id: orderId };
+}
+
+function capiSendPurchase(params) {
+  params = params || {};
+  var orderId = (params.order_id || '').substring(0, 60);
+  var phone = (params.phone || '').replace(/[^0-9+]/g, '').substring(0, 20);
+  var subtotal = String(params.subtotal || '0').substring(0, 20);
+  if (!orderId) return { error: 'Missing order_id' };
+  var orderData = { orderId: orderId, phone: phone, subtotal: subtotal };
+  try { sendPurchaseToFacebook(orderData); } catch(e) { Logger.log('CAPI err: ' + e); }
+  return { ok: true };
 }
 
 function getSettingsValue(key){
@@ -287,6 +298,7 @@ function sendPurchaseToFacebook(orderData){
       event_name: 'Purchase',
       event_time: timestamp,
       action_source: 'website',
+      event_id: orderData.orderId,
       user_data: {
         ph: phoneHash,
         client_ip_address: '',
