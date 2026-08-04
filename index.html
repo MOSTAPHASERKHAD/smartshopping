@@ -23,6 +23,8 @@
 <link rel="preconnect" href="https://script.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://script.google.com">
 <link rel="dns-prefetch" href="https://i.ibb.co">
+<link rel="preload" as="fetch" href="https://script.google.com/macros/s/AKfycbwSbvmaGo5s7yB4Vw29589Z_UgBY1TYd3QrwmW90ivy5jVx0gbr_jh5MxSwQzepIQ2JEQ/exec?action=catalog" crossorigin>
+<script>fetch('https://script.google.com/macros/s/AKfycbwSbvmaGo5s7yB4Vw29589Z_UgBY1TYd3QrwmW90ivy5jVx0gbr_jh5MxSwQzepIQ2JEQ/exec?action=catalog&_w='+Date.now()).catch(function(){})</script>
 <meta name="theme-color" content="#1a1a2e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1097,8 +1099,6 @@ function init(){
     heroIdx = (heroIdx + 1) % s.length;
     if (s[heroIdx]) s[heroIdx].classList.add('active');
   }, 4000);
-  // Warmup GAS cold start - trigger server wake-up early
-  try{fetch(API_URL+'?action=catalog&_w='+Date.now()).then(function(r){return r.json()}).catch(function(){})}catch(e){}
   var cachedSettings=cacheGet('settings',3600000);
   if(cachedSettings){storeSettings=cachedSettings;applySettings(cachedSettings)}
   apiCall('settings',{},function(d){
