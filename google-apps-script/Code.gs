@@ -6,21 +6,69 @@ function testAuth() {
   Logger.log('Authorization successful!');
 }
 
-// ── Rate Limiter (60 requests per minute per IP) ──
-function _checkRateLimit() {
-  var ip = 'unknown';
-  try { ip = PropertiesService.getScriptProperties().getProperty('last_ip') || 'unknown'; } catch(e) {}
-  var key = 'rl_' + ip;
-  var props = PropertiesService.getUserProperties();
-  var count = parseInt(props.getProperty(key) || '0');
-  var lastTime = parseInt(props.getProperty(key + '_t') || '0');
-  var now = Date.now();
-  if (now - lastTime > 60000) { count = 0; }
-  if (count >= 60) {
+// ── Admin session tokens (issued on login, 24h TTL) ──
+var ADMIN_TOKEN_KEY = 'admin_token';
+var ADMIN_TOKEN_KEY_EXP = 'admin_token_exp';
+var ADMIN_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+function _issueAdminToken() {
+  var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty(ADMIN_TOKEN_KEY, token);
+  props.setProperty(ADMIN_TOKEN_KEY_EXP, String(Date.now() + ADMIN_TOKEN_TTL_MS));
+  return token;
+}
+
+function _isValidAdminToken(token) {
+  if (!token) return false;
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty(ADMIN_TOKEN_KEY) !== token) return false;
+  var exp = parseInt(props.getProperty(ADMIN_TOKEN_KEY_EXP) || '0');
+  if (Date.now() > exp) {
+    props.deleteProperty(ADMIN_TOKEN_KEY);
+    props.deleteProperty(ADMIN_TOKEN_KEY_EXP);
     return false;
   }
-  props.setProperty(key, String(count + 1));
-  props.setProperty(key + '_t', String(now));
+  return true;
+}
+
+function _isSetupMode() {
+  return !getSettingsValue('admin_password');
+}
+
+// Actions that require a valid admin token.
+// NOTE: these stay public on purpose (used by the public storefront):
+//  - admin_list_themes: theme display data is non-sensitive; storefront loads it for rendering
+//  - upload_image: customers upload review photos
+//  - customer_orders / track: customers view their own orders
+var ADMIN_REQUIRED = {
+  'admin_list': 1, 'admin_orders': 1, 'admin_settings': 1,
+  'admin_add_product': 1, 'admin_edit_product': 1, 'admin_delete_product': 1,
+  'admin_update_order': 1, 'admin_update_settings': 1, 'admin_delete_order': 1,
+  'admin_list_testimonials': 1, 'admin_add_testimonial': 1,
+  'admin_edit_testimonial': 1, 'admin_delete_testimonial': 1, 'admin_upload_image': 1,
+  'admin_list_coupons': 1, 'admin_add_coupon': 1, 'admin_edit_coupon': 1,
+  'admin_delete_coupon': 1, 'admin_list_reviews': 1, 'admin_delete_review': 1,
+  'admin_list_pages': 1, 'admin_save_page': 1, 'admin_list_customers': 1,
+  'admin_list_subscribers': 1, 'admin_save_theme': 1,
+  'admin_delete_theme': 1, 'admin_set_default_theme': 1, 'generate_recovery': 1
+};
+
+function _adminGate(action, params) {
+  if (!ADMIN_REQUIRED[action]) return true;
+  if (action === 'admin_update_settings' && _isSetupMode()) return true;
+  return _isValidAdminToken(params.token);
+}
+
+// ── Per-phone spam guard for order creation (60s between orders from same phone) ──
+function _orderSpamGuard(phone) {
+  if (!phone) return true;
+  var props = PropertiesService.getScriptProperties();
+  var key = 'order_last_' + phone;
+  var last = parseInt(props.getProperty(key) || '0');
+  var now = Date.now();
+  if (now - last < 60000) return false;
+  props.setProperty(key, String(now));
   return true;
 }
 
@@ -33,20 +81,20 @@ function _sanitize(value, maxLen) {
 }
 
 function doGet(e) {
-  if (!_checkRateLimit()) return ContentService.createTextOutput(
-    JSON.stringify({ error: 'Too many requests. Try again in a minute.' })
-  ).setMimeType(ContentService.MimeType.JSON);
-
   var params = e.parameter;
   var action = params.action || '';
   var callback = params.callback || '';
   var result;
 
-  switch (action) {
-    case 'catalog': result = getCatalog(); break;
+  if (!_adminGate(action, params)) {
+    result = { error: 'غير مصرح: انتهت الجلسة. سجل الدخول من جديد.' };
+  } else {
+    switch (action) {
+      case 'catalog': result = getCatalog(); break;
     case 'capi_test': result = capiTest(); break;
     case 'settings': result = getSettings(); break;
     case 'track': result = trackOrder(params.order_id || ''); break;
+    case 'customer_orders': result = customerOrders(params.phone || ''); break;
     case 'order': result = createOrder(params); break;
     case 'capi_send': result = capiSendPurchase(params); break;
     case 'admin_list': result = adminListProducts(); break;
@@ -91,6 +139,7 @@ function doGet(e) {
     case 'admin_delete_theme': result = adminDeleteTheme(params); break;
     case 'admin_set_default_theme': result = adminSetDefaultTheme(params); break;
     default: result = { error: 'Unknown action' };
+    }
   }
 
   var json = JSON.stringify(result);
@@ -102,18 +151,17 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  if (!_checkRateLimit()) return ContentService.createTextOutput(
-    JSON.stringify({ error: 'Too many requests. Try again in a minute.' })
-  ).setMimeType(ContentService.MimeType.JSON);
-
   var params;
   try { params = JSON.parse(e.postData.contents); } catch(ex) { params = e.parameter || {}; }
   var action = params.action || '';
   var callback = params.callback || '';
   var result;
 
-  switch (action) {
-    case 'order': result = createOrder(params); break;
+  if (!_adminGate(action, params)) {
+    result = { error: 'غير مصرح: انتهت الجلسة. سجل الدخول من جديد.' };
+  } else {
+    switch (action) {
+      case 'order': result = createOrder(params); break;
     case 'capi_send': result = capiSendPurchase(params); break;
     case 'admin_add_product': result = adminAddProduct(params); break;
     case 'admin_edit_product': result = adminEditProduct(params); break;
@@ -151,6 +199,7 @@ function doPost(e) {
     case 'admin_delete_theme': result = adminDeleteTheme(params); break;
     case 'admin_set_default_theme': result = adminSetDefaultTheme(params); break;
     default: result = { error: 'Unknown action' };
+    }
   }
 
   var json = JSON.stringify(result);
@@ -248,12 +297,43 @@ function trackOrder(orderId) {
   return { found: false, error: 'Order not found' };
 }
 
+// Public endpoint: customers see only their own orders (matched by phone)
+function customerOrders(phone) {
+  if (!phone) return { error: 'Missing phone' };
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Orders');
+  if (!sheet) return { orders: [] };
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var phoneCol = headers.indexOf('phone');
+  var statusCol = -1;
+  for (var k = 0; k < headers.length; k++) {
+    var h = headers[k].toString().toLowerCase().trim();
+    if (h === 'status') { statusCol = k; break; }
+    if (h === 'shipping_note') { statusCol = k; }
+  }
+  var orders = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var rowPhone = String(phoneCol >= 0 ? row[phoneCol] : '').replace(/[^0-9+]/g, '');
+    var searchPhone = String(phone).replace(/[^0-9+]/g, '');
+    if (rowPhone === searchPhone) {
+      var order = { order_id: row[0], created_at: row[1] };
+      if (statusCol >= 0) { order.status = row[statusCol]; }
+      orders.push(order);
+    }
+  }
+  orders.reverse();
+  return { orders: orders };
+}
+
 function createOrder(params) {
   params = params || {};
   if (!params.name || !params.phone) return { error: 'Missing required fields (name, phone)' };
   var name = (params.name || '').replace(/[<>"'&]/g, '').substring(0, 200);
   var phone = (params.phone || '').replace(/[^0-9+]/g, '').substring(0, 20);
   var note = (params.note || '').replace(/[<>"'&]/g, '').substring(0, 500);
+  if (!_orderSpamGuard(phone)) return { error: 'يرجى الانتظار قليلاً قبل إرسال طلب آخر' };
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Orders');
   if (!sheet) return { error: 'Orders sheet not found' };
@@ -398,6 +478,67 @@ function fixOrdersHeaders() {
   sheet.getRange(1, 1, 1, canonical.length).setValues([canonical]);
   Logger.log('Orders headers fixed to: ' + canonical.join(', '));
   return { ok: true, message: 'تم إصلاح عناوين جدول Orders إلى 17 عموداً صحيحاً.' };
+}
+
+// One-time data repair (run from Apps Script editor after deploying):
+//  - clears the empty-key row in Settings (key '')
+//  - fixes legacy order rows whose columns were shifted by one
+//    (municipality holds the delivery type, delivery_type holds items_json, etc.)
+function repairData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var results = [];
+
+  var setSheet = ss.getSheetByName('Settings');
+  if (setSheet) {
+    var setData = setSheet.getDataRange().getValues();
+    var removed = 0;
+    for (var i = setData.length - 1; i >= 1; i--) {
+      if (!setData[i][0] || String(setData[i][0]).trim() === '') {
+        setSheet.deleteRow(i + 1);
+        removed++;
+      }
+    }
+    results.push('Settings: removed ' + removed + ' empty-key row(s)');
+  }
+
+  var ordSheet = ss.getSheetByName('Orders');
+  if (ordSheet) {
+    var headers = ordSheet.getRange(1, 1, 1, ordSheet.getLastColumn()).getValues()[0];
+    var idx = {};
+    for (var h = 0; h < headers.length; h++) { idx[String(headers[h]).toLowerCase().trim()] = h; }
+    var munCol = idx['municipality'], deliveryCol = idx['delivery_type'], itemsCol = idx['items_json'],
+        subCol = idx['subtotal'], shipCol = idx['shipping_note'], statusCol = idx['status'],
+        notesCol = idx['notes'], orderIdCol = idx['order_id'];
+    var data = ordSheet.getDataRange().getValues();
+    var repaired = 0;
+    for (var r = 1; r < data.length; r++) {
+      var row = data[r];
+      var munVal = munCol >= 0 ? String(row[munCol]) : '';
+      var delVal = deliveryCol >= 0 ? String(row[deliveryCol]) : '';
+      if (/^(Home|Office)$/i.test(munVal) && delVal.indexOf('[') === 0) {
+        // Columns shifted by one: true values sit one column left.
+        //   delivery_type = munVal (Office/Home)
+        //   items_json    = delVal (the JSON array)
+        //   subtotal      = current items_json value
+        //   status        = current shipping_note value
+        //   notes         = current status value
+        if (munCol >= 0) ordSheet.getRange(r + 1, munCol + 1).setValue('');
+        if (deliveryCol >= 0) ordSheet.getRange(r + 1, deliveryCol + 1).setValue(munVal);
+        if (itemsCol >= 0) ordSheet.getRange(r + 1, itemsCol + 1).setValue(delVal);
+        if (subCol >= 0 && itemsCol >= 0) ordSheet.getRange(r + 1, subCol + 1).setValue(row[itemsCol]);
+        if (shipCol >= 0) ordSheet.getRange(r + 1, shipCol + 1).setValue('سعر التوصيل يُحدد بعد التأكيد');
+        if (statusCol >= 0 && shipCol >= 0) ordSheet.getRange(r + 1, statusCol + 1).setValue(row[shipCol]);
+        if (notesCol >= 0 && statusCol >= 0) ordSheet.getRange(r + 1, notesCol + 1).setValue(row[statusCol]);
+        var orderId = orderIdCol >= 0 ? row[orderIdCol] : ('row ' + (r + 1));
+        results.push('Orders row ' + (r + 1) + ' (' + orderId + '): repaired shifted columns');
+        repaired++;
+      }
+    }
+    results.push('Orders: repaired ' + repaired + ' shifted row(s)');
+  }
+
+  try { CacheService.getScriptCache().remove('catalog'); CacheService.getScriptCache().remove('settings'); } catch(e) {}
+  return { ok: true, results: results };
 }
 
 function generateOrderId() {
@@ -855,7 +996,9 @@ function adminUploadImageGet(params) {
 function verifyAdmin(params) {
   var storedPassword = getSettingsValue('admin_password');
   if (!storedPassword) return { ok: false, error: 'لم يتم تعيين كلمة مرور. أدخل كلمة مرور في الإعدادات أولاً.', setupRequired: true };
-  if (params.password === storedPassword) return { ok: true };
+  if (params.password === storedPassword) {
+    return { ok: true, token: _issueAdminToken() };
+  }
   return { ok: false, error: 'كلمة المرور غير صحيحة' };
 }
 
@@ -900,9 +1043,11 @@ function verifyRecovery(params) {
     if (sheet) {
       var data = sheet.getDataRange().getValues();
       for (var i = 1; i < data.length; i++) {
-        if (data[i][0] === 'admin_recovery') { sheet.getRange(i + 1, 2).setValue(''); break; }
+        if (data[i][0] === 'admin_recovery') { sheet.getRange(i + 1, 2).setValue(''); }
+        if (data[i][0] === 'admin_password') { sheet.getRange(i + 1, 2).setValue(''); }
       }
     }
+    try { CacheService.getScriptCache().remove('settings'); } catch(e) {}
     return { ok: true };
   }
   return { ok: false, error: 'رمز الاسترجاع غير صحيح' };
