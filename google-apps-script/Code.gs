@@ -61,6 +61,14 @@ function _adminGate(action, params) {
   return _isValidAdminToken(params.token);
 }
 
+// JSONP callback must be a bare JS identifier path; anything else is dropped.
+// Admin actions never answer in JSONP even if a callback is supplied.
+function _safeCallback(params, action) {
+  if (ADMIN_REQUIRED[action]) return '';
+  var cb = String(params.callback || '').trim();
+  return (/^[A-Za-z0-9_.]+$/.test(cb)) ? cb : '';
+}
+
 // ── Per-phone spam guard for order creation (60s between orders from same phone) ──
 function _orderSpamGuard(phone) {
   if (!phone) return true;
@@ -178,7 +186,7 @@ function _sanitize(value, maxLen) {
 function doGet(e) {
   var params = e.parameter;
   var action = params.action || '';
-  var callback = params.callback || '';
+  var callback = _safeCallback(params, action);
   var result;
 
   if (!_adminGate(action, params)) {
@@ -249,7 +257,7 @@ function doPost(e) {
   var params;
   try { params = JSON.parse(e.postData.contents); } catch(ex) { params = e.parameter || {}; }
   var action = params.action || '';
-  var callback = params.callback || '';
+  var callback = _safeCallback(params, action);
   var result;
 
   if (!_adminGate(action, params)) {
@@ -1423,9 +1431,43 @@ function adminSavePage(params) {
 }
 
 // === Customers ===
+var CUSTOMER_PW_P1 = 'p1:';
+
+// Site-wide pepper stored in ScriptProperties (generated once on first use).
+function getPepper() {
+  var props = PropertiesService.getScriptProperties();
+  var p = props.getProperty('customer_pepper');
+  if (p) return p;
+  p = Utilities.getUuid();
+  props.setProperty('customer_pepper', p);
+  return p;
+}
+
+// Versioned hash for NEW accounts / migrated hashes: SHA-256(pass:phone:pepper)
 function _hashCustomerPassword(password, phone) {
-  // Hash with SHA-256 + phone as salt for per-customer uniqueness
+  return CUSTOMER_PW_P1 + hashString(password + ':' + phone + ':' + getPepper());
+}
+
+// Legacy (pre-pepper) scheme kept only for verifying existing accounts:
+// SHA-256(pass:phone) with no version prefix.
+function _hashCustomerPasswordLegacy(password, phone) {
   return hashString(password + ':' + phone);
+}
+
+// Verify a stored hash produced under either scheme.
+function _verifyCustomerPassword(password, phone, stored) {
+  var s = String(stored);
+  if (s.indexOf(CUSTOMER_PW_P1) === 0) {
+    return s === _hashCustomerPassword(password, phone);
+  }
+  return s === _hashCustomerPasswordLegacy(password, phone);
+}
+
+// Upgrade a legacy hash in place after a successful legacy login. Returns the
+// new hash to write, or '' if the stored hash is already current.
+function _migrateCustomerPassword(password, phone, stored) {
+  if (String(stored).indexOf(CUSTOMER_PW_P1) === 0) return '';
+  return _hashCustomerPassword(password, phone);
 }
 
 function customerRegister(params) {
@@ -1460,11 +1502,12 @@ function customerLogin(params) {
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) return { ok: false, error: 'Account not found' };
   var headers = data[0];
-  var hashedInput = _hashCustomerPassword(password, phone);
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     if (row[0] === phone) {
-      if (row[1] === hashedInput) {
+      if (_verifyCustomerPassword(password, phone, row[1])) {
+        var upgraded = _migrateCustomerPassword(password, phone, row[1]);
+        if (upgraded) sheet.getRange(i + 1, 2).setValue(upgraded);
         var customer = {};
         for (var j = 0; j < headers.length; j++) { customer[headers[j]] = row[j]; }
         delete customer.password;
@@ -1485,10 +1528,11 @@ function customerProfile(params) {
   if (!sheet) return { ok: false, error: 'No accounts' };
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
-  var hashedInput = _hashCustomerPassword(password, phone);
   for (var i = 1; i < data.length; i++) {
     if (data[i][0] === phone) {
-      if (data[i][1] !== hashedInput) return { ok: false, error: 'Wrong password' };
+      if (!_verifyCustomerPassword(password, phone, data[i][1])) return { ok: false, error: 'Wrong password' };
+      var upgraded = _migrateCustomerPassword(password, phone, data[i][1]);
+      if (upgraded) sheet.getRange(i + 1, 2).setValue(upgraded);
       var customer = {};
       for (var j = 0; j < headers.length; j++) { customer[headers[j]] = data[i][j]; }
       delete customer.password;
