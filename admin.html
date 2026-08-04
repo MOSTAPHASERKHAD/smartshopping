@@ -541,49 +541,49 @@ function esc(s) {
 }
 
 // ===== API =====
-function apiPost(action, params, callback) {
-  apiGet(action, params, callback);
+// All admin operations go through POST + fetch. The admin token travels in the
+// request BODY (never in a URL), and app is sent as application/x-www-form-urlencoded
+// so the request is CORS-simple (no preflight) and Apps Script parses it into e.parameter.
+function apiPost(action, params, callback, retries) {
+  apiGet(action, params, callback, retries);
 }
 
 function apiGet(action, params, callback, retries) {
   var maxRetries = retries || 3;
   var attempt = 0;
   function tryCall() {
-    var url = API_URL + '?action=' + action;
-    if (params) { for (var k in params) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); } }
+    var body = { action: action };
+    if (params) { for (var k in params) { body[k] = params[k]; } }
     var token = getAuthToken();
-    if (token) { url += '&token=' + encodeURIComponent(token); }
-    var cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000) + '_' + attempt;
-    url += '&callback=' + cbName;
+    if (token) { body.token = token; }
+    var form = [];
+    for (var key in body) { form.push(encodeURIComponent(key) + '=' + encodeURIComponent(body[key] === undefined || body[key] === null ? '' : String(body[key]))); }
     var called = false;
-    window[cbName] = function(data) {
+    var ctrl = ('AbortController' in window) ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function() { try { ctrl.abort(); } catch(e) {} }, 30000) : null;
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: form.join('&'),
+      signal: ctrl ? ctrl.signal : undefined
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
       if (called) return;
       called = true;
-      delete window[cbName];
-      try { document.head.removeChild(script); } catch(e) {}
+      if (timer) clearTimeout(timer);
       if (data && data.error && /غير مصرح|انتهت الجلسة/.test(data.error) && action !== 'verify_admin') {
         doLogout();
         return;
       }
       callback(data);
-    };
-    var script = document.createElement('script');
-    script.src = url;
-    script.onerror = function() {
+    })
+    .catch(function() {
       if (called) return;
       called = true;
-      delete window[cbName];
+      if (timer) clearTimeout(timer);
       if (attempt < maxRetries) { attempt++; setTimeout(tryCall, 1000 * attempt); } else { callback({ error: 'Network error' }); }
-    };
-    document.head.appendChild(script);
-    setTimeout(function() {
-      if (!called) {
-        called = true;
-        delete window[cbName];
-        try { document.head.removeChild(script); } catch(e) {}
-        if (attempt < maxRetries) { attempt++; setTimeout(tryCall, 1000 * attempt); } else { callback({ error: 'Timeout' }); }
-      }
-    }, 30000);
+    });
   }
   tryCall();
 }
@@ -688,22 +688,15 @@ function saveCoupon(e) {
   };
   if (row) data._row = row;
   var action = row ? 'admin_edit_coupon' : 'admin_add_coupon';
-  var url = appendToken(API_URL + '?action=' + action);
-  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
-  var cb = 'cb_' + Date.now(); window[cb] = function() { delete window[cb]; };
-  url += '&callback=' + cb;
-  var s = document.createElement('script'); s.src = url;
-  s.onload = function() { closeCouponModal(); loadCoupons(); toast(row ? 'تم تعديل الكوبون' : 'تم إضافة الكوبون'); };
-  document.head.appendChild(s);
+  apiPost(action, data, function() {
+    closeCouponModal(); loadCoupons(); toast(row ? 'تم تعديل الكوبون' : 'تم إضافة الكوبون');
+  });
 }
 function deleteCoupon(row) {
   if (!confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
-  var url = appendToken(API_URL + '?action=admin_delete_coupon&_row=' + row);
-  var cb = 'cb_' + Date.now(); window[cb] = function() { delete window[cb]; };
-  url += '&callback=' + cb;
-  var s = document.createElement('script'); s.src = url;
-  s.onload = function() { loadCoupons(); toast('تم حذف الكوبون'); };
-  document.head.appendChild(s);
+  apiPost('admin_delete_coupon', { _row: row }, function() {
+    loadCoupons(); toast('تم حذف الكوبون');
+  });
 }
 
 // ===== DASHBOARD =====
@@ -831,18 +824,11 @@ function toggleSelectAll(cb) {
 function deleteOrder(row, name) {
   if (!confirm('هل تريد حذف طلب "' + name + '"؟')) return;
   toast('جاري الحذف...');
-  var cbName = 'cb_del_' + Date.now();
-  window[cbName] = function(res) {
-    delete window[cbName];
-    console.log('Delete response:', res);
+  apiPost('admin_delete_order', { _row: row }, function(res) {
     if (res && res.error) { toast('خطأ: ' + res.error); return; }
     toast('تم الحذف بنجاح');
     setTimeout(loadOrders, 1500);
-  };
-  var s = document.createElement('script');
-  s.src = appendToken(API_URL + '?action=admin_delete_order&_row=' + encodeURIComponent(row) + '&callback=' + cbName);
-  s.onerror = function() { delete window[cbName]; toast('خطأ في الشبكة - تأكد من تحديث Apps Script'); };
-  document.head.appendChild(s);
+  });
 }
 
 function deleteSelectedOrders() {
@@ -853,19 +839,13 @@ function deleteSelectedOrders() {
   checked.forEach(function(c) { rows.push(c.value); });
   var done = 0, failed = 0;
   rows.forEach(function(row) {
-    var cbName = 'cb_del_' + Date.now() + '_' + row;
-    window[cbName] = function(res) {
-      delete window[cbName];
+    apiPost('admin_delete_order', { _row: row }, function(res) {
       if (res && res.ok) done++; else failed++;
       if (done + failed === rows.length) {
         toast('تم حذف ' + done + ' طلب' + (failed ? ' — فشل ' + failed : ''));
         setTimeout(loadOrders, 2000);
       }
-    };
-    var s = document.createElement('script');
-    s.src = appendToken(API_URL + '?action=admin_delete_order&_row=' + encodeURIComponent(row) + '&callback=' + cbName);
-    s.onerror = function() { delete window[cbName]; failed++; if (done + failed === rows.length) { toast('خطأ في الشبكة'); setTimeout(loadOrders, 2000); } };
-    document.head.appendChild(s);
+    });
   });
 }
 
@@ -1023,22 +1003,13 @@ function saveProduct(e) {
     if (row) data._row = row;
     else data.id = 'PROD-' + Date.now();
 
-    var cbName = 'save_' + Date.now();
-    var url = appendToken(API_URL + '?action=' + endpoint + '&callback=' + cbName);
-    for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent('' + data[k]); }
-
-    window[cbName] = function() {
-      delete window[cbName];
+    apiPost(endpoint, data, function() {
       closeProductModal();
       toast(row ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح');
       submitBtn.disabled = false;
       submitBtn.textContent = 'حفظ';
       setTimeout(loadProducts, 2000);
-    };
-    var s = document.createElement('script');
-    s.src = url;
-    s.onerror = function() { delete window[cbName]; closeProductModal(); toast('تم الحفظ'); submitBtn.disabled = false; submitBtn.textContent = 'حفظ'; setTimeout(loadProducts, 2000); };
-    document.head.appendChild(s);
+    });
   }
 
   var filesToUpload = [];
@@ -1079,17 +1050,11 @@ function saveProduct(e) {
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         var base64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
-        var cb = 'upl_' + Date.now();
-        window[cb] = function(r) {
-          delete window[cb];
+        apiPost('admin_upload_image', { imageData: base64, fileName: f.file.name, mimeType: 'image/jpeg', num: f.num }, function(r) {
           if (r && r.url) { urls[f.num] = r.url; toast('تم رفع الصورة ' + f.num); }
           else { toast('خطأ في الصورة ' + f.num + (r && r.error ? ': ' + r.error : '')); }
           processNext();
-        };
-        var s = document.createElement('script');
-        s.src = API_URL + '?action=upload_image&num=' + f.num + '&fileName=' + encodeURIComponent(f.file.name) + '&base64=' + encodeURIComponent(base64) + '&token=' + encodeURIComponent(getAuthToken()) + '&callback=' + cb;
-        s.onerror = function() { delete window[cb]; toast('خطأ في رفع الصورة ' + f.num); processNext(); };
-        document.head.appendChild(s);
+        });
       };
       img.src = ev.target.result;
     };
@@ -1114,13 +1079,9 @@ function copyLandingLink(productId) {
 
 function deleteProduct(row, name) {
   if (!confirm('هل تريد حذف "' + name + '"؟')) return;
-  var url = API_URL + '?action=admin_delete_product&_row=' + row + '&token=' + encodeURIComponent(getAuthToken()) + '&callback=cb_del_' + Date.now();
-  var cbName = url.split('callback=')[1];
-  window[cbName] = function() { delete window[cbName]; };
-  var script = document.createElement('script');
-  script.src = url;
-  script.onload = function() { toast('تم الحذف'); setTimeout(loadProducts, 2000); };
-  document.head.appendChild(script);
+  apiPost('admin_delete_product', { _row: row }, function() {
+    toast('تم الحذف'); setTimeout(loadProducts, 2000);
+  });
 }
 
 // ===== ORDERS =====
@@ -1181,14 +1142,7 @@ function renderOrders() {
 }
 
 function updateOrderStatus(row, status) {
-  var cbName = 'cb_ord_' + Date.now();
-  var url = appendToken(API_URL + '?action=admin_update_order&_row=' + encodeURIComponent(row) + '&status=' + encodeURIComponent(status) + '&callback=' + cbName);
-  var done = false;
-  window[cbName] = function(data) {
-    if (done) return;
-    done = true;
-    document.head.removeChild(script);
-    delete window[cbName];
+  apiPost('admin_update_order', { _row: row, status: status }, function(data) {
     if (data && data.ok) {
       var o = allOrders.find(function(x) { return x._row === row; });
       if (o) { o.status = status; o._statusLocal = true; }
@@ -1207,26 +1161,7 @@ function updateOrderStatus(row, status) {
       toast('خطأ في تحديث الحالة: ' + ((data && data.error) || 'خطأ غير معروف'));
       loadOrders();
     }
-  };
-  var script = document.createElement('script');
-  script.src = url;
-  script.onerror = function() {
-    if (done) return;
-    done = true;
-    delete window[cbName];
-    toast('خطأ في الشبكة');
-    loadOrders();
-  };
-  document.head.appendChild(script);
-  setTimeout(function() {
-    if (!done) {
-      done = true;
-      delete window[cbName];
-      try { document.head.removeChild(script); } catch(e) {}
-      toast('انتهت المهلة - جاري إعادة التحميل');
-      loadOrders();
-    }
-  }, 15000);
+  });
 }
 
 function viewOrder(row) {
@@ -1323,21 +1258,13 @@ async function saveSettings() {
   if (passValue) {
     data.admin_password = await hashPasswordAsync(passValue);
   }
-  var url = API_URL + '?action=admin_update_settings&token=' + encodeURIComponent(getAuthToken());
-  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
-  var cbName = 'settings_' + Date.now();
-  url += '&callback=' + cbName;
-  window[cbName] = function(res) {
-    delete window[cbName];
+  apiPost('admin_update_settings', data, function(res) {
     if (passChanged && res && res.recovery_code) {
       document.getElementById('recoveryCodeDisplay').textContent = res.recovery_code;
       document.getElementById('recoveryModal').style.display = 'flex';
     }
-  };
-  var script = document.createElement('script');
-  script.src = url;
-  script.onload = function() { toast('تم حفظ الإعدادات'); };
-  document.head.appendChild(script);
+    toast('تم حفظ الإعدادات');
+  });
 }
 
 // ===== TESTIMONIALS =====
@@ -1410,24 +1337,16 @@ function saveTestimonial(e) {
   };
   var endpoint = row ? 'admin_edit_testimonial' : 'admin_add_testimonial';
   if (row) data._row = row;
-  var cbName = 'test_save_' + Date.now();
-  var url = appendToken(API_URL + '?action=' + endpoint + '&callback=' + cbName);
-  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent('' + data[k]); }
-  window[cbName] = function() { delete window[cbName]; closeTestimonialModal(); toast(row ? 'تم التعديل' : 'تمت الإضافة'); setTimeout(loadTestimonials, 2000); };
-  var s = document.createElement('script');
-  s.src = url;
-  s.onerror = function() { delete window[cbName]; toast('خطأ'); };
-  document.head.appendChild(s);
+  apiPost(endpoint, data, function() {
+    closeTestimonialModal(); toast(row ? 'تم التعديل' : 'تمت الإضافة'); setTimeout(loadTestimonials, 2000);
+  });
 }
 
 function deleteTestimonial(row, name) {
   if (!confirm('هل تريد حذف شهادة "' + name + '"؟')) return;
-  var cbName = 'cb_delt_' + Date.now();
-  window[cbName] = function(res) { delete window[cbName]; toast('تم الحذف'); setTimeout(loadTestimonials, 2000); };
-  var s = document.createElement('script');
-  s.src = appendToken(API_URL + '?action=admin_delete_testimonial&_row=' + encodeURIComponent(row) + '&callback=' + cbName);
-  s.onerror = function() { delete window[cbName]; toast('خطأ'); };
-  document.head.appendChild(s);
+  apiPost('admin_delete_testimonial', { _row: row }, function() {
+    toast('تم الحذف'); setTimeout(loadTestimonials, 2000);
+  });
 }
 
 // ===== REVIEWS =====
@@ -1464,12 +1383,9 @@ function loadReviews() {
 
 function deleteReview(row) {
   if (!confirm('حذف هذا التقييم؟')) return;
-  var cbName = 'cb_' + Date.now();
-  var s = document.createElement('script');
-  s.src = appendToken(API_URL + '?action=admin_delete_review&_row=' + encodeURIComponent(row) + '&callback=' + cbName);
-  window[cbName] = function() { delete window[cbName]; loadReviews(); toast('تم الحذف'); };
-  s.onerror = function() { delete window[cbName]; toast('خطأ'); };
-  document.head.appendChild(s);
+  apiPost('admin_delete_review', { _row: row }, function() {
+    loadReviews(); toast('تم الحذف');
+  });
 }
 
 // ===== BANNERS =====
@@ -1515,14 +1431,9 @@ function saveBanners() {
     data['banner' + i + '_subtitle'] = (document.getElementById('banner' + i + '_subtitle') || {}).value || '';
     data['banner' + i + '_link'] = (document.getElementById('banner' + i + '_link') || {}).value || '';
   }
-  var cbName = 'bn_' + Date.now();
-  var url = appendToken(API_URL + '?action=admin_update_settings&callback=' + cbName);
-  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
-  window[cbName] = function() { delete window[cbName]; toast('✅ تم حفظ البانرات'); };
-  var script = document.createElement('script');
-  script.src = url;
-  script.onerror = function() { toast('❌ خطأ في الحفظ'); };
-  document.head.appendChild(script);
+  apiPost('admin_update_settings', data, function() {
+    toast('✅ تم حفظ البانرات');
+  });
 }
 
 // ===== NEWSLETTER =====
@@ -1572,14 +1483,9 @@ function savePages() {
     landing_body_ar: (document.getElementById('pg_landing_body_ar')||{}).value || '',
     landing_products: (document.getElementById('pg_landing_products')||{}).value || ''
   };
-  var url = appendToken(API_URL + '?action=admin_update_settings&callback=pg_' + Date.now());
-  for (var k in data) { url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }
-  var cbName = url.split('callback=')[1];
-  window[cbName] = function() { delete window[cbName]; toast('تم حفظ الصفحات'); };
-  var script = document.createElement('script');
-  script.src = url;
-  script.onerror = function() { toast('خطأ'); };
-  document.head.appendChild(script);
+  apiPost('admin_update_settings', data, function() {
+    toast('تم حفظ الصفحات');
+  });
 }
 
 // ===== INIT =====
@@ -1637,12 +1543,6 @@ function getAuthToken() {
     var auth = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
     return (auth && auth.token) ? auth.token : '';
   } catch(e) { return ''; }
-}
-
-function appendToken(url) {
-  var token = getAuthToken();
-  if (token) url += (url.indexOf('?') === -1 ? '?' : '&') + 'token=' + encodeURIComponent(token);
-  return url;
 }
 
 function checkAuth() {
@@ -1707,9 +1607,7 @@ function doSetup() {
   btn.disabled = true; btn.textContent = 'جاري الحفظ...';
   document.getElementById('setupError').style.display = 'none';
   hashPasswordAsync(pass).then(function(passHash) {
-    var url = API_URL + '?action=admin_update_settings&admin_password=' + encodeURIComponent(passHash) + '&callback=setup_cb';
-    window.setup_cb = function(res) {
-      delete window.setup_cb;
+    apiPost('admin_update_settings', { admin_password: passHash }, function(res) {
       btn.disabled = false; btn.textContent = '🔐 حفظ كلمة المرور';
       if (res && res.recovery_code) {
         document.getElementById('recoveryCodeDisplay').textContent = res.recovery_code;
@@ -1718,10 +1616,7 @@ function doSetup() {
       showLoginScreen();
       document.getElementById('loginError').textContent = '✅ تم إنشاء كلمة المرور. سجل الدخول الآن.';
       document.getElementById('loginError').style.display = 'block';
-    };
-    var s = document.createElement('script');
-    s.src = url;
-    document.head.appendChild(s);
+    });
   });
 }
 
