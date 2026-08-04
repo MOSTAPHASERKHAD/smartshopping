@@ -1010,7 +1010,7 @@ function adminUpdateSettings(params) {
   var secretKeys = { fb_capi_token: true, gemini_api_key: true, admin_password: true, admin_recovery: true };
   var passwordChanged = false;
   for (var key in params) {
-    if (key === 'action' || key === 'callback') continue;
+    if (key === 'action' || key === 'callback' || key === 'token') continue;
     if (secretKeys[key] && (params[key] === '' || params[key] === undefined || params[key] === null)) continue;
     var found = false;
     for (var i = 1; i < data.length; i++) {
