@@ -942,7 +942,12 @@ function initDarkMode(){
 function apiCall(action,params,callback){
   var url=API_URL+'?action='+action;
   if(params){for(var k in params){url+='&'+encodeURIComponent(k)+'='+encodeURIComponent(params[k])}}
-  fetch(url).then(function(r){return r.json()}).then(function(d){callback(d)}).catch(function(){callback({error:'Network error'})});
+  var ctrl=('AbortController' in window)?new AbortController():null;
+  var timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},45000):null;
+  fetch(url,ctrl?{signal:ctrl.signal}:undefined)
+    .then(function(r){return r.json()})
+    .then(function(d){if(timer)clearTimeout(timer);callback(d)})
+    .catch(function(){if(timer)clearTimeout(timer);callback({error:'Network error'})});
 }
 function cacheGet(key,ttl){try{var c=JSON.parse(localStorage.getItem('ac_'+key));if(c&&Date.now()-c.ts<ttl)return c.data}catch(e){}return null}
 function cacheSet(key,data){try{localStorage.setItem('ac_'+key,JSON.stringify({ts:Date.now(),data:data}))}catch(e){}}
@@ -1000,9 +1005,9 @@ function loadTrackingPixels(s){
   }
 }
 
-function trackEvent(event,params){
+function trackEvent(event,params,opts){
   try{
-    if(window.fbq)window.fbq('track',event,params);
+    if(window.fbq)window.fbq('track',event,params,opts);
     if(window.gtag)gtag('event',event,params);
     if(window.snaptr)window.snaptr('track',event,params);
     if(window.ttq)window.ttq.track&&window.ttq.track(event,params);
@@ -1020,7 +1025,7 @@ function trackAddToCart(product){
 function trackPurchase(orderId,total){
   var tq=1;
   try{tq=cart.reduce(function(s,c){return s+c.qty},0);if(!tq)tq=1;}catch(e){}
-  trackEvent('Purchase',{content_name:'Order',content_ids:[orderId],value:total,currency:'DZD',num_items:tq});
+  trackEvent('Purchase',{content_name:'Order',content_ids:[orderId],value:total,currency:'DZD',num_items:tq},{eventID:orderId});
 }
 function trackInitiateCheckout(total){
   trackEvent('InitiateCheckout',{value:total,currency:'DZD'});
@@ -1479,6 +1484,7 @@ function submitOrder(e){
     cartDiscount=0;cartCouponCode='';
     var dr=document.getElementById('discountResult');if(dr)dr.style.display='none';
     try{trackPurchase(data.order_id,sub)}catch(e){console.warn('trackPurchase',e)}
+    try{apiCall('capi_send',{order_id:data.order_id,phone:p,subtotal:sub},function(){})}catch(e){console.warn('capi_send',e)}
   });
 }
 
@@ -2925,6 +2931,7 @@ function submitLandingOrder(e,productId){
       try{container.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){}
     }
     try{trackPurchase(orderId,product.price)}catch(e){console.warn('trackPurchase',e)}
+    try{apiCall('capi_send',{order_id:orderId,phone:p,subtotal:product.price},function(){})}catch(e){console.warn('capi_send',e)}
     try{localStorage.setItem(CUSTOMER_KEY,JSON.stringify({name:n,phone:p,address:addr}))}catch(e){console.warn('saveCustomer',e)}
   });
 }
