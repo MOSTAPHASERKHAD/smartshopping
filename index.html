@@ -1510,10 +1510,10 @@ function trackOrder(){
     if(!data||data.error||!data.found){document.getElementById('trackResult').innerHTML='<div class="track-result"><p style="color:#dc3545;font-weight:600">'+t('track_not_found')+'</p></div>';return}
     var o=data.order;var sk='status_'+(o.status||'pending');
     var it=[];try{it=JSON.parse(o.items_json||'[]')}catch(e){}
-    var il=it.map(function(i){return i.title+' × '+i.qty}).join(', ');
+    var il=it.map(function(i){return esc(i.title)+' × '+i.qty}).join(', ');
     document.getElementById('trackResult').innerHTML='<div class="track-result fade-in">'+
       '<h4>'+t('track_status')+': <span class="track-status '+(o.status||'pending')+'">'+t(sk)+'</span></h4>'+
-      '<div class="track-info"><strong>'+t('track_wilaya')+':</strong> '+(currentLang==='ar'?o.wilaya_ar:o.wilaya_en)+'</div>'+
+      '<div class="track-info"><strong>'+t('track_wilaya')+':</strong> '+esc(currentLang==='ar'?o.wilaya_ar:o.wilaya_en)+'</div>'+
       '<div class="track-info"><strong>'+t('track_delivery')+':</strong> '+(currentLang==='ar'?(o.delivery_type==='Office'?'المكتب':'المنزل'):(o.delivery_type==='Office'?'Office':'Home'))+'</div>'+
       (il?'<div class="track-info"><strong>'+t('track_items')+':</strong> '+il+'</div>':'')+
       '<div class="track-info"><strong>'+t('track_total')+':</strong> '+Number(o.subtotal||0).toLocaleString()+' '+t('currency')+'</div>'+
