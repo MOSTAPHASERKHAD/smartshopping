@@ -32,7 +32,7 @@
 // === Versioned SW Cache Buster ===
 // If SW version changes, clear ALL caches and reload to serve fresh content
 (function(){
-  var REQUIRED_VER = 'v32';
+  var REQUIRED_VER = 'v33';
   var stored = localStorage.getItem('sk_sw_ver');
   if(stored === REQUIRED_VER) return; // already up to date
   if(!('serviceWorker' in navigator)) { localStorage.setItem('sk_sw_ver', REQUIRED_VER); return; }
@@ -201,7 +201,7 @@ document.head.appendChild(ld);
         </div>
         <div class="pd-note">
           <span>⚠️</span>
-          <span data-i18n="delivery_note">سعر التوصيل يتم تأكيده بعد التواصل معك.</span>
+          <span data-i18n="delivery_note">تكلفة التوصيل (حسب الولاية ونوع التوصيل) تُحدَّد بعد التأكيد معك هاتفياً.</span>
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="pdSubmit" data-i18n="submit_order"><span class="btn-text">تأكيد الطلب</span> <span class="btn-spinner" style="display:none"></span></button>
         <a href="#" onclick="orderViaWhatsApp(event)" class="btn btn-block btn-lg" style="margin-top:10px; background:#25d366; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
@@ -271,7 +271,7 @@ document.head.appendChild(ld);
 </div>
 </section>
 
-<section class="testimonials-section" id="testimonialsSection">
+<section class="testimonials-section" id="testimonialsSection" style="display:none">
 <div class="container">
   <h2 data-i18n="testimonials_title">ماذا يقول عملاؤنا</h2>
   <div class="testimonials-grid" id="testimonialsGrid"></div>
@@ -513,7 +513,7 @@ document.head.appendChild(ld);
       </div>
       <div class="delivery-note">
         <span>⚠️</span>
-        <span data-i18n="delivery_note">سعر التوصيل يتم تأكيده بعد التواصل.</span>
+        <span data-i18n="delivery_note">تكلفة التوصيل (حسب الولاية ونوع التوصيل) تُحدَّد بعد التأكيد معك هاتفياً.</span>
       </div>
       <div class="summary-box" id="orderSummary"></div>
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="submitBtn" data-i18n="submit_order"><span class="btn-text">تأكيد الطلب</span> <span class="btn-spinner" style="display:none"></span></button>
@@ -665,7 +665,7 @@ var I18N = {
     form_wilaya:"الولاية",form_wilaya_select:"اختر الولاية",
     form_municipality:"البلدية",form_municipality_ph:"بلدية...",
     form_delivery:"التوصيل",form_home:"المنزل",form_office:"المكتب",
-    form_note:"ملاحظة",delivery_note:"سعر التوصيل يتم تأكيده بعد التواصل.",
+    form_note:"ملاحظة",delivery_note:"تكلفة التوصيل (حسب الولاية ونوع التوصيل) تُحدَّد بعد التأكيد معك هاتفياً.",
     submit_order:"تأكيد الطلب",order_success:"تم إرسال طلبك بنجاح!",
     order_num:"رقم طلبك",track_ph:"أدخل رقم الطلب",track_btn:"تتبع",
     track_not_found:"الطلب غير موجود",track_status:"حالة الطلب",
@@ -705,7 +705,7 @@ var I18N = {
     account_my_orders:"طلباتي",
     account_no_orders:"لا توجد طلبات بعد",
     shipping_cost:"الشحن",
-    shipping_tbd:"يُحدد بعد التواصل",
+    shipping_tbd:"يُحدَّد بعد التأكيد هاتفياً",
     newsletter_title:"النشرة البريدية",
     newsletter_ph:"بريدك الإلكتروني",
     newsletter_btn:"اشترك",
@@ -786,7 +786,7 @@ var I18N = {
     form_wilaya:"Wilaya",form_wilaya_select:"Select Wilaya",
     form_municipality:"Municipality",form_municipality_ph:"Municipality...",
     form_delivery:"Delivery",form_home:"Home",form_office:"Office",
-    form_note:"Note",delivery_note:"Delivery cost confirmed after contact.",
+    form_note:"Note",delivery_note:"Delivery cost (by state & type) is confirmed with you by phone after order.",
     submit_order:"Confirm Order",order_success:"Order submitted successfully!",
     order_num:"Your Order Number",track_ph:"Enter order number",track_btn:"Track",
     track_not_found:"Order not found",track_status:"Order Status",
@@ -826,7 +826,7 @@ var I18N = {
     account_my_orders:"My Orders",
     account_no_orders:"No orders yet",
     shipping_cost:"Shipping",
-    shipping_tbd:"Confirmed after contact",
+    shipping_tbd:"Confirmed by phone",
     newsletter_title:"Newsletter",
     newsletter_ph:"Your email",
     newsletter_btn:"Subscribe",
@@ -1510,10 +1510,10 @@ function trackOrder(){
     if(!data||data.error||!data.found){document.getElementById('trackResult').innerHTML='<div class="track-result"><p style="color:#dc3545;font-weight:600">'+t('track_not_found')+'</p></div>';return}
     var o=data.order;var sk='status_'+(o.status||'pending');
     var it=[];try{it=JSON.parse(o.items_json||'[]')}catch(e){}
-    var il=it.map(function(i){return i.title+' × '+i.qty}).join(', ');
+    var il=it.map(function(i){return esc(i.title)+' × '+i.qty}).join(', ');
     document.getElementById('trackResult').innerHTML='<div class="track-result fade-in">'+
       '<h4>'+t('track_status')+': <span class="track-status '+(o.status||'pending')+'">'+t(sk)+'</span></h4>'+
-      '<div class="track-info"><strong>'+t('track_wilaya')+':</strong> '+(currentLang==='ar'?o.wilaya_ar:o.wilaya_en)+'</div>'+
+      '<div class="track-info"><strong>'+t('track_wilaya')+':</strong> '+esc(currentLang==='ar'?o.wilaya_ar:o.wilaya_en)+'</div>'+
       '<div class="track-info"><strong>'+t('track_delivery')+':</strong> '+(currentLang==='ar'?(o.delivery_type==='Office'?'المكتب':'المنزل'):(o.delivery_type==='Office'?'Office':'Home'))+'</div>'+
       (il?'<div class="track-info"><strong>'+t('track_items')+':</strong> '+il+'</div>':'')+
       '<div class="track-info"><strong>'+t('track_total')+':</strong> '+Number(o.subtotal||0).toLocaleString()+' '+t('currency')+'</div>'+
@@ -2229,9 +2229,9 @@ function loadCustomerOrders() {
   var section = document.getElementById('accountOrdersSection');
   if (!list || !section) return;
   section.style.display = 'block';
-  apiCall('admin_orders', { phone: currentCustomer.phone }, function(data) {
+  apiCall('customer_orders', { phone: currentCustomer.phone }, function(data) {
     if (!data || !data.orders) { list.innerHTML = '<p style="color:var(--text2);font-size:.82rem">' + t('account_no_orders') + '</p>'; return; }
-    var myOrders = data.orders.filter(function(o) { return o.phone === currentCustomer.phone; });
+    var myOrders = data.orders;
     if (!myOrders.length) { list.innerHTML = '<p style="color:var(--text2);font-size:.82rem">' + t('account_no_orders') + '</p>'; return; }
     myOrders = myOrders.slice(0, 10);
     list.innerHTML = myOrders.map(function(o) {
@@ -2842,7 +2842,7 @@ function buildLandingPageHTML(p){
   html+='<div class="lp-field"><label>'+(lang==='ar'?'نوع التوصيل':'Delivery Type')+'</label><div class="lp-delivery-type"><label><input type="radio" name="lpDelivery" value="home" checked><span>🏠 '+(lang==='ar'?'المنزل':'Home')+'</span></label><label><input type="radio" name="lpDelivery" value="office"><span>🏢 '+(lang==='ar'?'المكتب':'Office')+'</span></label></div></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'العنوان (الحي، الشارع، رقم المبنى)':'Address')+'</label><input type="text" id="lpAddress" required placeholder="'+(lang==='ar'?'حي السلام، شارع 5، رقم 12':'Neighborhood, street, building')+'"></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'ملاحظة (اختياري)':'Note (optional)')+'</label><textarea id="lpNote" rows="2" placeholder="'+(lang==='ar'?'أي ملاحظات إضافية':'Any additional notes')+'"></textarea></div>';
-  html+='<div class="lp-note"><span>⚠️</span><span>'+(lang==='ar'?'سعر التوصيل يتم تأكيده بعد التواصل معك.':'Delivery cost confirmed after contact.')+'</span></div>';
+  html+='<div class="lp-note"><span>⚠️</span><span>'+(lang==='ar'?'تكلفة التوصيل تُحدَّد بعد التأكيد معك هاتفياً.':'Delivery cost confirmed with you by phone.')+'</span></div>';
   html+='<button type="submit" class="lp-submit" id="lpSubmitBtn">🛒 '+(lang==='ar'?'تأكيد الطلب':'Place Order')+'</button>';
   html+='</form>';
   html+='<a href="https://wa.me/'+wa+'?text='+waMsg+'" target="_blank" class="lp-wa-btn">💬 '+(lang==='ar'?'تواصل واتساب':'WhatsApp Us')+'</a>';
