@@ -44,6 +44,7 @@ function doGet(e) {
 
   switch (action) {
     case 'catalog': result = getCatalog(); break;
+    case 'capi_test': result = capiTest(); break;
     case 'settings': result = getSettings(); break;
     case 'track': result = trackOrder(params.order_id || ''); break;
     case 'order': result = createOrder(params); break;
@@ -315,6 +316,41 @@ function sendPurchaseToFacebook(orderData){
   } catch(e) {
     Logger.log('CAPI error [pixel ' + pixelId + ']: ' + e.toString());
   }
+}
+
+function capiTest() {
+  var pixelId = getSettingsValue('pixel_id');
+  var accessToken = getSettingsValue('fb_capi_token');
+  if (!pixelId) return { error: 'pixel_id not set' };
+  if (!accessToken) return { error: 'fb_capi_token not set' };
+  var tokenInfo = {};
+  try {
+    var tResp = UrlFetchApp.fetch(
+      'https://graph.facebook.com/debug_token?input_token=' + encodeURIComponent(accessToken) + '&access_token=' + encodeURIComponent(accessToken),
+      { muteHttpExceptions: true }
+    );
+    tokenInfo = JSON.parse(tResp.getContentText());
+  } catch(e) { tokenInfo = { error: e.toString() }; }
+  var testResult = {};
+  try {
+    var payload = {
+      data: [{
+        event_name: 'Purchase',
+        event_time: Math.floor(Date.now() / 1000),
+        action_source: 'website',
+        user_data: { client_ip_address: '127.0.0.1', client_user_agent: 'Mozilla/5.0 (SmartKiosk Diagnostic)' },
+        custom_data: { currency: 'DZD', value: 0, order_id: 'DIAG-' + Date.now(), content_type: 'product' }
+      }]
+    };
+    var opts = { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true };
+    var resp = UrlFetchApp.fetch(
+      'https://graph.facebook.com/v22.0/' + pixelId + '/events?access_token=' + encodeURIComponent(accessToken),
+      opts
+    );
+    testResult = JSON.parse(resp.getContentText());
+  } catch(e) { testResult = { error: e.toString() }; }
+  var tokenOk = !(tokenInfo && tokenInfo.error);
+  return { pixel_id: pixelId, token_valid: !!tokenOk, token_info: tokenInfo, test_event: testResult };
 }
 
 function generateOrderId() {
