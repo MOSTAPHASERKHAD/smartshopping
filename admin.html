@@ -231,6 +231,7 @@
           <div class="form-group"><label>إضافة للشحن بعيدالبوادي (دج)</label><input id="set_shipping_remote" type="number" value="0" placeholder="إضافة للولايات البعيدة"></div>
           <div class="form-group"><label>كلمة مرور الأدمن</label><input id="set_admin_password" type="password" placeholder="اتركه فارغاً لتعطيل الحماية"></div>
           <div class="form-group"><label>Gemini API Key</label><input id="set_gemini_api_key" type="password" placeholder="AIzaSy..."></div>
+          <div class="form-group"><label>Facebook CAPI</label><select id="set_capi_enabled"><option value="true">مفعّل</option><option value="false">معطّل</option></select></div>
           <div class="form-group"><label>Facebook CAPI Token</label><input id="set_fb_capi_token" type="password" placeholder="EAAb... (اتركه فارغاً للحفاظ على الحالي)"></div>
           <div class="form-group"><label>AI System Prompt (Custom instructions)</label><textarea id="set_ai_prompt" rows="5" placeholder="Leave empty for default (honest + transparent)">You are Smart Assistant for Smart Shopping Algeria. Help customers with product search, prices, shipping, returns, payment, order tracking. Reply in Arabic or Darja as the customer prefers. Be friendly and professional. If asked about a product defect, mention it honestly without exaggeration. If a product is not suitable, tell them honestly instead of pushing them to buy. If you are not sure, say you are not sure and give WhatsApp 0557543177. Do not exaggerate or make up information.</textarea></div>
         </div>
@@ -1274,6 +1275,7 @@ function loadSettings() {
     document.getElementById('set_admin_password').value = '';
     if(document.getElementById('set_gemini_api_key')) document.getElementById('set_gemini_api_key').value = data.gemini_api_key || '';
     if(document.getElementById('set_ai_prompt')) document.getElementById('set_ai_prompt').value = data.ai_prompt || '';
+    if(document.getElementById('set_capi_enabled')) document.getElementById('set_capi_enabled').value = data.capi_enabled || 'true';
   });
 }
 
@@ -1294,7 +1296,8 @@ async function saveSettings() {
     shipping_home: document.getElementById('set_shipping_home').value || '0',
     shipping_office: document.getElementById('set_shipping_office').value || '0',
     shipping_remote: document.getElementById('set_shipping_remote').value || '0',
-    ai_prompt: (document.getElementById('set_ai_prompt')||{}).value || ''
+    ai_prompt: (document.getElementById('set_ai_prompt')||{}).value || '',
+    capi_enabled: (document.getElementById('set_capi_enabled')||{}).value || 'true'
   };
   var gemKey = (document.getElementById('set_gemini_api_key')||{}).value || '';
   if (gemKey) data.gemini_api_key = gemKey;
