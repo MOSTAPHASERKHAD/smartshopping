@@ -51,7 +51,8 @@ var ADMIN_REQUIRED = {
   'admin_delete_coupon': 1, 'admin_list_reviews': 1, 'admin_delete_review': 1,
   'admin_list_pages': 1, 'admin_save_page': 1, 'admin_list_customers': 1,
   'admin_list_subscribers': 1, 'admin_save_theme': 1,
-  'admin_delete_theme': 1, 'admin_set_default_theme': 1, 'generate_recovery': 1
+  'admin_delete_theme': 1, 'admin_set_default_theme': 1, 'generate_recovery': 1,
+  'capi_test': 1
 };
 
 function _adminGate(action, params) {
@@ -147,6 +148,23 @@ function _createVerifiedUpload(base64, mimeType) {
   var file = folder.createFile(v.blob.setName('sk_' + Utilities.getUuid().replace(/-/g, '') + '.' + v.ext));
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return { ok: true, url: 'https://drive.google.com/uc?id=' + file.getId() + '&export=view' };
+}
+
+// ── AI chat rate limit (protects the owner's Gemini quota from abuse) ──
+var AI_RATE_MAX = 30;
+
+function _aiRateOk() {
+  var props = PropertiesService.getScriptProperties();
+  var hour = Math.floor(Date.now() / 3600000);
+  if (props.getProperty('ai_hour') !== String(hour)) {
+    props.setProperty('ai_hour', String(hour));
+    props.setProperty('ai_count', '1');
+    return true;
+  }
+  var count = parseInt(props.getProperty('ai_count') || '0');
+  if (count >= AI_RATE_MAX) return false;
+  props.setProperty('ai_count', String(count + 1));
+  return true;
 }
 
 // ── Input sanitizer: strips HTML/angle brackets + caps length ──
@@ -457,21 +475,58 @@ function createOrder(params) {
     utmMedium,    // وسيلة الإعلان
     utmCampaign   // اسم الحملة
   ]);
+  // Count coupon usage only when an order is actually placed with it
+  // (validation alone must not burn the coupon's usage limit).
+  if (params.coupon_code) {
+    var coupon = _findCoupon(params.coupon_code, subtotal);
+    if (coupon.valid && coupon.used_count_col > 0) {
+      try {
+        var cs = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Coupons');
+        if (cs) {
+          var usedNow = parseInt(cs.getRange(coupon.row, coupon.used_count_col).getValue()) || 0;
+          cs.getRange(coupon.row, coupon.used_count_col).setValue(usedNow + 1);
+        }
+      } catch (e) { Logger.log('coupon increment error: ' + e); }
+    }
+  }
   return { ok: true, order_id: orderId };
+}
+
+// Look up a stored order by id (authoritative phone/subtotal for CAPI events).
+function _getOrderRow(orderId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Orders');
+  if (!sheet) return null;
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var idx = {};
+  for (var h = 0; h < headers.length; h++) { idx[String(headers[h]).toLowerCase().trim()] = h; }
+  var idCol = idx['order_id'];
+  if (idCol < 0) return null;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][idCol] === orderId) {
+      return {
+        phone: idx['phone'] >= 0 ? String(data[i][idx['phone']]) : '',
+        subtotal: idx['subtotal'] >= 0 ? String(data[i][idx['subtotal']]) : '0'
+      };
+    }
+  }
+  return null;
 }
 
 function capiSendPurchase(params) {
   params = params || {};
   var orderId = (params.order_id || '').substring(0, 60);
-  var phone = (params.phone || '').replace(/[^0-9+]/g, '').substring(0, 20);
-  var subtotal = String(params.subtotal || '0').substring(0, 20);
   if (!orderId) return { error: 'Missing order_id' };
   var enabled = getSettingsValue('capi_enabled');
   if (enabled === 'false' || enabled === '0') return { ok: true, sent: false, reason: 'capi_disabled' };
   var pixelId = getSettingsValue('pixel_id');
   var token = getSettingsValue('fb_capi_token');
   if (!pixelId || !token) return { ok: true, sent: false, reason: 'missing_config' };
-  var orderData = { orderId: orderId, phone: phone, subtotal: subtotal };
+  // Use authoritative order data from the sheet — never trust client-supplied totals.
+  var order = _getOrderRow(orderId);
+  if (!order) return { ok: true, sent: false, reason: 'order_not_found' };
+  var orderData = { orderId: orderId, phone: order.phone, subtotal: order.subtotal };
   try { sendPurchaseToFacebook(orderData); } catch(e) { Logger.log('CAPI err: ' + e); }
   return { ok: true, sent: true };
 }
@@ -1144,8 +1199,9 @@ function verifyRecovery(params) {
   return { ok: false, error: 'رمز الاسترجاع غير صحيح' };
 }
 
-function validateCoupon(params) {
-  var code = (params.coupon_code || '').toUpperCase().trim();
+// Read-only coupon lookup shared by validation and order placement.
+function _findCoupon(code, subtotal) {
+  code = (code || '').toUpperCase().trim();
   if (!code) return { valid: false, error: 'Enter a coupon code' };
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Coupons');
@@ -1169,15 +1225,20 @@ function validateCoupon(params) {
       var usedCount = parseInt(coupon.used_count) || 0;
       if (usedCount >= maxUses) return { valid: false, error: 'Coupon usage limit reached' };
       var minOrder = parseInt(coupon.min_order) || 0;
-      var subtotal = parseInt(params.subtotal) || 0;
-      if (subtotal < minOrder) return { valid: false, error: 'Minimum order for this coupon is ' + minOrder + ' DZD' };
+      var sub = parseInt(subtotal) || 0;
+      if (sub < minOrder) return { valid: false, error: 'Minimum order for this coupon is ' + minOrder + ' DZD' };
       var percent = parseFloat(coupon.percent) || 0;
-      var discount = Math.round(subtotal * percent / 100);
-      sheet.getRange(i + 1, headers.indexOf('used_count') + 1).setValue(usedCount + 1);
-      return { valid: true, percent: percent, discount: discount, code: code };
+      var discount = Math.round(sub * percent / 100);
+      return { valid: true, row: i + 1, used_count_col: headers.indexOf('used_count') + 1, percent: percent, discount: discount, code: code };
     }
   }
   return { valid: false, error: 'Invalid coupon code' };
+}
+
+function validateCoupon(params) {
+  var result = _findCoupon(params.coupon_code, params.subtotal);
+  if (!result.valid) return { valid: false, error: result.error };
+  return { valid: true, percent: result.percent, discount: result.discount, code: result.code };
 }
 
 function adminListCoupons() {
@@ -1597,8 +1658,9 @@ function adminSetDefaultTheme(params) {
 function aiChat(params) {
   var message = params.message || '';
   if (!message) return { reply: 'Please send a message.' };
-  // Sanitize: limit message length
   message = message.substring(0, 500);
+
+  if (!_aiRateOk()) return { reply: 'The assistant is busy right now. Please try again in a few minutes.' };
 
   var settings = getSettings();
   var apiKey = settings.gemini_api_key || '';
