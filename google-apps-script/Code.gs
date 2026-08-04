@@ -353,6 +353,22 @@ function capiTest() {
   return { pixel_id: pixelId, token_valid: !!tokenOk, token_info: tokenInfo, test_event: testResult };
 }
 
+function fixOrdersHeaders() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Orders');
+  if (!sheet) return { error: 'Orders sheet not found' };
+  var canonical = ['order_id','created_at','name','phone','wilaya_code','wilaya_ar','wilaya_en','municipality','delivery_type','items_json','subtotal','shipping_note','status','notes','utm_source','utm_medium','utm_campaign'];
+  var lastCol = sheet.getLastColumn();
+  var current = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h){ return String(h || '').toLowerCase().trim(); });
+  var hasMunicipality = current.indexOf('municipality') >= 0;
+  var hasDelivery = current.indexOf('delivery_type') >= 0;
+  if (hasMunicipality) return { ok: true, message: 'العناوين سليمة (tوجد municipality). لم يتم أي تغيير.' };
+  if (!hasDelivery) return { ok: true, message: 'تخطيط عناوين غير متعارف عليه، لم يتم تغيير شيء: ' + current.join(', ') };
+  sheet.getRange(1, 1, 1, canonical.length).setValues([canonical]);
+  Logger.log('Orders headers fixed to: ' + canonical.join(', '));
+  return { ok: true, message: 'تم إصلاح عناوين جدول Orders إلى 17 عموداً صحيحاً.' };
+}
+
 function generateOrderId() {
   var now = new Date();
   var datePart = Utilities.formatDate(now, 'Africa/Algiers', 'yyyyMMdd');
