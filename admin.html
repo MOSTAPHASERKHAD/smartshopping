@@ -532,6 +532,14 @@ var allProducts = [];
 var allOrders = [];
 var settings = {};
 
+// Escape server-provided values before injecting into innerHTML (prevents stored XSS).
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, function(ch) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+
 // ===== API =====
 function apiPost(action, params, callback) {
   apiGet(action, params, callback);
@@ -636,11 +644,11 @@ function loadCoupons() {
     list.innerHTML = data.coupons.map(function(c) {
       var active = (c.active === true || c.active === 'TRUE' || c.active === 'true' || c.active === 1);
       return '<tr>' +
-        '<td><strong>' + (c.code || '') + '</strong></td>' +
+        '<td><strong>' + esc(c.code || '') + '</strong></td>' +
         '<td>' + (c.percent || 0) + '%</td>' +
         '<td>' + Number(c.min_order || 0).toLocaleString() + ' دج</td>' +
         '<td>' + (c.used_count || 0) + ' / ' + (c.max_uses || '∞') + '</td>' +
-        '<td>' + (c.expiry || '—') + '</td>' +
+        '<td>' + esc(c.expiry || '—') + '</td>' +
         '<td><span class="status-badge ' + (active ? 'status-confirmed' : 'status-cancelled') + '">' + (active ? 'نشط' : 'معطّل') + '</span></td>' +
         '<td><button class="btn btn-sm btn-outline" onclick="editCoupon(' + c._row + ')">تعديل</button> <button class="btn btn-sm" style="color:var(--danger)" onclick="deleteCoupon(' + c._row + ')">حذف</button></td>' +
       '</tr>';
@@ -727,7 +735,7 @@ function loadDashboard() {
       }
       lastOrderCount = data.orders.length;
       var html = data.orders.slice(0, 5).map(function(o) {
-        return '<tr><td><strong>' + o.order_id + '</strong></td><td>' + o.name + '</td><td><a href="https://wa.me/' + o.phone + '" target="_blank" style="color:var(--accent)">' + o.phone + '</a></td><td>' + o.wilaya_ar + '</td><td>' + Number(o.subtotal).toLocaleString() + ' DZD</td><td><span class="badge badge-' + o.status + '">' + getStatusText(o.status) + '</span></td></tr>';
+        return '<tr><td><strong>' + esc(o.order_id) + '</strong></td><td>' + esc(o.name) + '</td><td><a href="https://wa.me/' + esc(o.phone) + '" target="_blank" style="color:var(--accent)">' + esc(o.phone) + '</a></td><td>' + esc(o.wilaya_ar) + '</td><td>' + Number(o.subtotal).toLocaleString() + ' DZD</td><td><span class="badge badge-' + esc(o.status) + '">' + getStatusText(o.status) + '</span></td></tr>';
       }).join('');
       document.getElementById('dash-orders').innerHTML = html || '<tr><td colspan="6" class="empty">لا توجد طلبات</td></tr>';
       renderCharts(data.orders);
@@ -763,7 +771,7 @@ function renderCharts(orders) {
   });
   var sortedProducts = Object.keys(productCounts).sort(function(a, b) { return productCounts[b] - productCounts[a]; }).slice(0, 5);
   var topProductsHtml = sortedProducts.length ? sortedProducts.map(function(name, i) {
-    return '<li><div class="item-info"><span class="rank">' + (i + 1) + '</span><span>' + name + '</span></div><span class="count">x' + productCounts[name] + '</span></li>';
+    return '<li><div class="item-info"><span class="rank">' + (i + 1) + '</span><span>' + esc(name) + '</span></div><span class="count">x' + productCounts[name] + '</span></li>';
   }).join('') : '<li class="empty" style="border:none">لا توجد بيانات</li>';
   var el2 = document.getElementById('top-products');
   if (el2) el2.innerHTML = topProductsHtml;
@@ -775,7 +783,7 @@ function renderCharts(orders) {
   });
   var sortedWilayas = Object.keys(wilayaCounts).sort(function(a, b) { return wilayaCounts[b] - wilayaCounts[a]; }).slice(0, 5);
   var topWilayasHtml = sortedWilayas.length ? sortedWilayas.map(function(name, i) {
-    return '<li><div class="item-info"><span class="rank">' + (i + 1) + '</span><span>' + name + '</span></div><span class="count">' + wilayaCounts[name] + '</span></li>';
+    return '<li><div class="item-info"><span class="rank">' + (i + 1) + '</span><span>' + esc(name) + '</span></div><span class="count">' + wilayaCounts[name] + '</span></li>';
   }).join('') : '<li class="empty" style="border:none">لا توجد بيانات</li>';
   var el3 = document.getElementById('top-wilayas');
   if (el3) el3.innerHTML = topWilayasHtml;
@@ -877,16 +885,17 @@ function loadProducts() {
       return;
     }
     var html = data.products.map(function(p) {
-      var img = p.image1 ? '<img class="img-thumb" src="' + p.image1 + '" onerror="this.style.display=\'none\'">' : '<div class="img-thumb" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:.7rem">لا صورة</div>';
+      var img = p.image1 ? '<img class="img-thumb" src="' + esc(p.image1) + '" onerror="this.style.display=\'none\'">' : '<div class="img-thumb" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:.7rem">لا صورة</div>';
+      var pid = esc(p.id || '');
       return '<tr>' +
         '<td>' + img + '</td>' +
-        '<td><strong>' + (p.title_ar || '') + '</strong><br><small style="color:#999">' + (p.title_en || '') + '</small></td>' +
+        '<td><strong>' + esc(p.title_ar || '') + '</strong><br><small style="color:#999">' + esc(p.title_en || '') + '</small></td>' +
         '<td>' + Number(p.price).toLocaleString() + ' DZD</td>' +
-        '<td>' + (p.category_ar || '-') + '</td>' +
+        '<td>' + esc(p.category_ar || '-') + '</td>' +
         '<td>' + (p.stock <= 0 ? '<span class="badge badge-cancelled">نفذ</span>' : p.stock <= 5 ? '<span class="badge badge-pending">متبقي ' + p.stock + '</span>' : p.stock) + '</td>' +
         '<td>' + (p.active ? '<span class="badge badge-confirmed">نشط</span>' : '<span class="badge badge-cancelled">غير نشط</span>') + '</td>' +
-        '<td><div style="display:flex;flex-direction:column;gap:4px"><input type="text" readonly value="' + window.location.origin + '/?product=' + (p.id || '') + '" style="font-size:.65rem;padding:4px 6px;border:1px solid #eaeaea;border-radius:4px;width:180px;background:#f9f9f9;direction:ltr;text-align:left" id="lp-link-' + p.id + '"><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:#25d366;color:#fff;padding:3px 8px;font-size:.65rem" onclick="copyLandingLink(\'' + p.id + '\')">نسخ</button><a href="' + window.location.origin + '/?product=' + (p.id || '') + '" target="_blank" class="btn btn-sm" style="background:#3b82f6;color:#fff;padding:3px 8px;font-size:.65rem;text-decoration:none">فتح</a></div></div></td>' +
-        '<td><button class="btn btn-info btn-sm" onclick="editProduct(' + p._row + ')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p._row + ',\'' + (p.title_ar || '') + '\')">حذف</button></td>' +
+        '<td><div style="display:flex;flex-direction:column;gap:4px"><input type="text" readonly value="' + esc(window.location.origin + '/?product=' + pid) + '" style="font-size:.65rem;padding:4px 6px;border:1px solid #eaeaea;border-radius:4px;width:180px;background:#f9f9f9;direction:ltr;text-align:left" id="lp-link-' + pid + '"><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:#25d366;color:#fff;padding:3px 8px;font-size:.65rem" onclick="copyLandingLink(\'' + pid + '\')">نسخ</button><a href="' + esc(window.location.origin + '/?product=' + pid) + '" target="_blank" class="btn btn-sm" style="background:#3b82f6;color:#fff;padding:3px 8px;font-size:.65rem;text-decoration:none">فتح</a></div></div></td>' +
+        '<td><button class="btn btn-info btn-sm" onclick="editProduct(' + p._row + ')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p._row + ',\'' + esc(p.title_ar || '') + '\')">حذف</button></td>' +
       '</tr>';
     }).join('');
     document.getElementById('products-list').innerHTML = html;
@@ -1144,14 +1153,14 @@ function renderOrders() {
   var html = filtered.map(function(o) {
     var items = [];
     try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
-    var itemsText = items.map(function(it) { return it.title + ' x' + it.qty; }).join(', ');
+    var itemsText = items.map(function(it) { return esc(it.title) + ' x' + it.qty; }).join(', ');
     return '<tr>' +
       '<td><input type="checkbox" class="order-check" value="' + o._row + '"></td>' +
-      '<td><strong>' + o.order_id + '</strong></td>' +
-      '<td>' + (o.created_at || '').substring(0, 10) + '</td>' +
-      '<td>' + o.name + '</td>' +
-      '<td><a href="https://wa.me/' + (o.phone || '') + '" target="_blank" style="color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:3px">📱 ' + (o.phone || '') + '</a></td>' +
-      '<td>' + o.wilaya_ar + '</td>' +
+      '<td><strong>' + esc(o.order_id) + '</strong></td>' +
+      '<td>' + esc((o.created_at || '').substring(0, 10)) + '</td>' +
+      '<td>' + esc(o.name) + '</td>' +
+      '<td><a href="https://wa.me/' + esc(o.phone || '') + '" target="_blank" style="color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:3px">📱 ' + esc(o.phone || '') + '</a></td>' +
+      '<td>' + esc(o.wilaya_ar) + '</td>' +
       '<td>' + (o.delivery_type === 'Office' ? 'مكتب' : 'منزل') + '</td>' +
       '<td>' + Number(o.subtotal).toLocaleString() + ' DZD</td>' +
       '<td><select onchange="updateOrderStatus(\'' + o._row + '\',this.value)" style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:.75rem">' +
@@ -1163,8 +1172,8 @@ function renderOrders() {
       '</select></td>' +
       '<td style="white-space:nowrap">' +
         '<button class="btn btn-info btn-xs" onclick="viewOrder(' + o._row + ')">تفاصيل</button> ' +
-        '<a href="https://wa.me/' + (o.phone || '') + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-xs">واتساب</a> ' +
-        '<button class="btn btn-danger btn-xs" onclick="deleteOrder(' + o._row + ',\'' + (o.order_id || '') + '\')">حذف</button>' +
+        '<a href="https://wa.me/' + esc(o.phone || '') + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-xs">واتساب</a> ' +
+        '<button class="btn btn-danger btn-xs" onclick="deleteOrder(' + o._row + ',\'' + esc(o.order_id || '') + '\')">حذف</button>' +
       '</td>' +
     '</tr>';
   }).join('');
@@ -1226,21 +1235,22 @@ function viewOrder(row) {
   var items = [];
   try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
   var itemsHtml = items.map(function(it) {
-    return '<tr><td>' + it.title + '</td><td>' + it.qty + '</td><td>' + Number(it.price).toLocaleString() + ' DZD</td><td>' + Number(it.price * it.qty).toLocaleString() + ' DZD</td></tr>';
+    return '<tr><td>' + esc(it.title) + '</td><td>' + it.qty + '</td><td>' + Number(it.price).toLocaleString() + ' DZD</td><td>' + Number(it.price * it.qty).toLocaleString() + ' DZD</td></tr>';
   }).join('');
-  var noteText = o.notes || '';
-  var addrMatch = noteText.match(/\| (.+)$/);
-  var orderNote = noteText;
-  var orderAddr = '';
-  if (addrMatch) { orderAddr = addrMatch[1]; orderNote = noteText.replace(' | ' + orderAddr, ''); }
+  var rawNote = String(o.notes || '');
+  var addrMatch = rawNote.match(/\| (.+)$/);
+  var orderAddrRaw = addrMatch ? addrMatch[1] : '';
+  var orderNoteRaw = addrMatch ? rawNote.replace(' | ' + orderAddrRaw, '') : rawNote;
+  var orderNote = esc(orderNoteRaw);
+  var orderAddr = orderAddrRaw ? esc(orderAddrRaw) : '';
 
   document.getElementById('orderDetail').innerHTML =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
-      '<div><strong>رقم الطلب:</strong><br>' + o.order_id + '</div>' +
-      '<div><strong>التاريخ:</strong><br>' + o.created_at + '</div>' +
-      '<div><strong>العميل:</strong><br>' + o.name + '</div>' +
-      '<div><strong>الهاتف:</strong><br><a href="https://wa.me/' + o.phone + '" target="_blank" style="color:var(--accent)">' + o.phone + '</a></div>' +
-      '<div><strong>الولاية:</strong><br>' + (o.wilaya_ar || '') + ' (' + (o.wilaya_en || '') + ')</div>' +
+      '<div><strong>رقم الطلب:</strong><br>' + esc(o.order_id) + '</div>' +
+      '<div><strong>التاريخ:</strong><br>' + esc(o.created_at) + '</div>' +
+      '<div><strong>العميل:</strong><br>' + esc(o.name) + '</div>' +
+      '<div><strong>الهاتف:</strong><br><a href="https://wa.me/' + esc(o.phone) + '" target="_blank" style="color:var(--accent)">' + esc(o.phone) + '</a></div>' +
+      '<div><strong>الولاية:</strong><br>' + esc(o.wilaya_ar || '') + ' (' + esc(o.wilaya_en || '') + ')</div>' +
       '<div><strong>التوصيل:</strong><br>' + (o.delivery_type === 'Office' ? 'مكتب' : 'منزل') + '</div>' +
       (orderAddr ? '<div style="grid-column:1/-1"><strong>العنوان:</strong><br>' + orderAddr + '</div>' : '') +
       (orderNote ? '<div style="grid-column:1/-1"><strong>الملاحظة:</strong><br>' + orderNote + '</div>' : '') +
@@ -1249,8 +1259,8 @@ function viewOrder(row) {
     '<table style="width:100%;border-collapse:collapse;margin-bottom:16px"><thead><tr style="background:var(--bg)"><th style="padding:8px;text-align:right">المنتج</th><th style="padding:8px;text-align:right">الكمية</th><th style="padding:8px;text-align:right">السعر</th><th style="padding:8px;text-align:right">الإجمالي</th></tr></thead><tbody>' + itemsHtml + '</tbody></table>' +
     '<div style="text-align:left;font-weight:700;font-size:1.1rem">المجموع: ' + Number(o.subtotal).toLocaleString() + ' DZD</div>' +
     '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">' +
-      '<a href="https://wa.me/' + o.phone + '?text=' + encodeURIComponent('مرحبا ' + o.name + '، طلبك رقم ' + o.order_id + ' قيد المعالجة') + '" target="_blank" class="btn btn-success">📱 واتساب العميل</a>' +
-      '<a href="tel:' + o.phone + '" class="btn btn-info">📞 اتصال</a>' +
+      '<a href="https://wa.me/' + esc(o.phone) + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success">📱 واتساب العميل</a>' +
+      '<a href="tel:' + esc(o.phone) + '" class="btn btn-info">📞 اتصال</a>' +
       '<button class="btn btn-outline" onclick="closeOrderModal()">إغلاق</button>' +
     '</div>';
 
@@ -1347,14 +1357,14 @@ function loadTestimonials() {
       for (var i = 0; i < (t.rating || 5); i++) stars += '★';
       for (var i = (t.rating || 5); i < 5; i++) stars += '☆';
       return '<tr>' +
-        '<td><strong>' + (t.name || '') + '</strong></td>' +
-        '<td>' + (t.location || '-') + '</td>' +
-        '<td style="max-width:300px">' + (t.text || '') + '</td>' +
+        '<td><strong>' + esc(t.name || '') + '</strong></td>' +
+        '<td>' + esc(t.location || '-') + '</td>' +
+        '<td style="max-width:300px">' + esc(t.text || '') + '</td>' +
         '<td style="color:#f59e0b">' + stars + '</td>' +
         '<td>' + (t.active ? '<span class="badge badge-confirmed">ظاهرة</span>' : '<span class="badge badge-cancelled">مخفية</span>') + '</td>' +
         '<td style="white-space:nowrap">' +
           '<button class="btn btn-info btn-xs" onclick="editTestimonial(' + t._row + ')">تعديل</button> ' +
-          '<button class="btn btn-danger btn-xs" onclick="deleteTestimonial(' + t._row + ',\'' + (t.name || '') + '\')">حذف</button>' +
+          '<button class="btn btn-danger btn-xs" onclick="deleteTestimonial(' + t._row + ',\'' + esc(t.name || '') + '\')">حذف</button>' +
         '</td>' +
       '</tr>';
     }).join('');
@@ -1433,19 +1443,19 @@ function loadReviews() {
           var photos = typeof r.photos === 'string' ? JSON.parse(r.photos) : r.photos;
           if (photos && photos.length) {
             photosHtml = '<div style="display:flex;gap:4px;flex-wrap:wrap">' + photos.map(function(url) {
-              return '<img src="' + url + '" style="width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:pointer" onclick="window.open(\'' + url + '\',\'_blank\')">';
+              return '<img src="' + esc(url) + '" style="width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:pointer" onclick="window.open(\'' + esc(url) + '\',\'_blank\')">';
             }).join('') + '</div>';
           }
         } catch(e) {}
       }
       return '<tr>' +
-        '<td>' + (r.product_id || '') + '</td>' +
-        '<td>' + (r.name || '') + '</td>' +
-        '<td>' + (r.location || '') + '</td>' +
-        '<td>' + (r.text || '') + '</td>' +
+        '<td>' + esc(r.product_id || '') + '</td>' +
+        '<td>' + esc(r.name || '') + '</td>' +
+        '<td>' + esc(r.location || '') + '</td>' +
+        '<td>' + esc(r.text || '') + '</td>' +
         '<td>' + photosHtml + '</td>' +
         '<td style="color:#f59e0b">' + stars + '</td>' +
-        '<td>' + (r.created_at || '') + '</td>' +
+        '<td>' + esc(r.created_at || '') + '</td>' +
         '<td><button class="btn btn-danger btn-xs" onclick="deleteReview(' + r._row + ')">حذف</button></td>' +
       '</tr>';
     }).join('');
@@ -1483,13 +1493,13 @@ function renderBannersList() {
     var link = bannerData['banner' + i + '_link'] || '';
     html += '<div class="panel" style="margin-bottom:12px">' +
       '<div class="panel-header"><h3>بانر ' + i + '</h3>' +
-      '<img id="prev_banner' + i + '" src="' + (img || 'logo.png') + '" style="height:50px;border-radius:4px;object-fit:cover; ' + (img ? '' : 'display:none;') + '" onerror="this.src=\'logo.png\'">' +
+      '<img id="prev_banner' + i + '" src="' + esc(img || 'logo.png') + '" style="height:50px;border-radius:4px;object-fit:cover; ' + (img ? '' : 'display:none;') + '" onerror="this.src=\'logo.png\'">' +
       '</div>' +
       '<div class="panel-body">' +
-        '<div class="form-group"><label>رابط الصورة</label><input id="banner' + i + '_img" value="' + img + '" placeholder="https://i.ibb.co/..." oninput="var p=document.getElementById(\'prev_banner' + i + '\'); p.src=this.value; p.style.display=this.value?\'block\':\'none\';"></div>' +
-        '<div class="form-group"><label>العنوان (عربي)</label><input id="banner' + i + '_title" value="' + title + '"></div>' +
-        '<div class="form-group"><label>العنوان الفرعي (عربي)</label><input id="banner' + i + '_subtitle" value="' + subtitle + '"></div>' +
-        '<div class="form-group"><label>رابط عند الضغط</label><input id="banner' + i + '_link" value="' + link + '" placeholder="https://..."></div>' +
+        '<div class="form-group"><label>رابط الصورة</label><input id="banner' + i + '_img" value="' + esc(img) + '" placeholder="https://i.ibb.co/..." oninput="var p=document.getElementById(\'prev_banner' + i + '\'); p.src=this.value; p.style.display=this.value?\'block\':\'none\';"></div>' +
+        '<div class="form-group"><label>العنوان (عربي)</label><input id="banner' + i + '_title" value="' + esc(title) + '"></div>' +
+        '<div class="form-group"><label>العنوان الفرعي (عربي)</label><input id="banner' + i + '_subtitle" value="' + esc(subtitle) + '"></div>' +
+        '<div class="form-group"><label>رابط عند الضغط</label><input id="banner' + i + '_link" value="' + esc(link) + '" placeholder="https://..."></div>' +
       '</div>' +
     '</div>';
   }
@@ -1521,7 +1531,7 @@ function loadNewsletter() {
     var list = document.getElementById('newsletter-list');
     if (!data || !data.subscribers || !data.subscribers.length) { list.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--text2);padding:24px">لا يوجد مشتركين</td></tr>'; return; }
     list.innerHTML = data.subscribers.map(function(s) {
-      return '<tr><td>' + (s.email || '') + '</td><td>' + (s.subscribed_at || '') + '</td></tr>';
+      return '<tr><td>' + esc(s.email || '') + '</td><td>' + esc(s.subscribed_at || '') + '</td></tr>';
     }).join('');
   });
 }
