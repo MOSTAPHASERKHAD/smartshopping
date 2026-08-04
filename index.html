@@ -1807,9 +1807,9 @@ function getShippingCost() {
 
 // === Phase 2.1: Promo Banners ===
 var DEFAULT_BANNERS = [
-  { img:'promo-hero.png', title:'تسوّق بذكاء', subtitle:'منتجات متنوعة بأفضل الأسعار', link:'' },
-  { img:'promo-sale.png', title:'عروض حصرية', subtitle:'خصومات تصل إلى 50%', link:'' },
-  { img:'promo-accessories.png', title:'إكسسوارات', subtitle:'أحدث الإكسسوارات التقنية', link:'' }
+  { img:'promo-hero.webp', title:'تسوّق بذكاء', subtitle:'منتجات متنوعة بأفضل الأسعار', link:'' },
+  { img:'promo-sale.webp', title:'عروض حصرية', subtitle:'خصومات تصل إلى 50%', link:'' },
+  { img:'promo-accessories.webp', title:'إكسسوارات', subtitle:'أحدث الإكسسوارات التقنية', link:'' }
 ];
 var heroSlides = [];
 var heroIdx = 0;
@@ -1882,7 +1882,7 @@ function renderHeroSlide(idx) {
   existing.forEach(function(s) { s.remove(); });
   var el = document.createElement('div');
   el.className = 'slide active';
-  var html = '<img src="' + esc(slide.img) + '" alt="' + esc(slide.title || 'Promo banner') + '" onerror="var p=this.parentElement;if(p){var i=new Image();i.src=\'promo-hero.png\';this.src=i.src;this.onerror=null}">';
+  var html = '<img src="' + esc(slide.img) + '" alt="' + esc(slide.title || 'Promo banner') + '" onerror="this.style.display=\'none\';if(this.parentElement){this.parentElement.style.background=\'linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%)\'}">';
   if (slide.title) {
     html += '<div class="slide-text"><h3>' + esc(slide.title) + '</h3>';
     if (slide.subtitle) html += '<p>' + esc(slide.subtitle) + '</p>';
