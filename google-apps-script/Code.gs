@@ -349,7 +349,7 @@ function capiTest() {
     );
     testResult = JSON.parse(resp.getContentText());
   } catch(e) { testResult = { error: e.toString() }; }
-  var tokenOk = !(tokenInfo && tokenInfo.error);
+  var tokenOk = !(tokenInfo && tokenInfo.error) || (testResult && testResult.events_received === 1);
   return { pixel_id: pixelId, token_valid: !!tokenOk, token_info: tokenInfo, test_event: testResult };
 }
 
