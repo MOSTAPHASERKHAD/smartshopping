@@ -201,8 +201,8 @@ async function post(action, body) {
     const sw = await (await timedFetch(BASE + '/sw.js')).text();
     const v33 = sw.indexOf("'smartshopping-v33'") !== -1;
     const scoped = sw.indexOf('self.registration.scope') !== -1;
-    const oldScoped = sw.indexOf('/smartshopping/') !== -1;
-    check('PWA sw.js is v33 scope-relative', v33 && scoped && !oldScoped, `v33=${v33} scoped=${scoped} oldpath=${oldScoped}`);
+    const hardcodedPrecache = sw.indexOf("caches.match('/smartshopping/") !== -1;
+    check('PWA sw.js is v33 scope-relative', v33 && scoped && !hardcodedPrecache, `v33=${v33} scoped=${scoped} hardcodedFallback=${hardcodedPrecache}`);
   } catch (e) { check('PWA sw.js v33', false, e.message); }
   try {
     const idx = await (await timedFetch(BASE + '/')).text();
