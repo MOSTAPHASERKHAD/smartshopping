@@ -2247,7 +2247,7 @@ document.addEventListener('DOMContentLoaded',function(){init()});
 
 // === PWA: Register Service Worker ===
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW registration',e)});
+  navigator.serviceWorker.register('sw.js').catch(function(e){console.warn('SW registration',e)});
 }
 
 // === Live preview via postMessage (used by admin theme customizer) ===

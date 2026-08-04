@@ -1,12 +1,12 @@
-var CACHE_NAME = 'smartshopping-v31';
+var CACHE_NAME = 'smartshopping-v32';
 var ASSETS = [
   '/smartshopping/',
   '/smartshopping/index.html',
   '/smartshopping/admin.html',
   '/smartshopping/manifest.json',
-  '/assets/css/index.css',
-  '/assets/css/product.css',
-  '/assets/css/admin.css',
+  '/smartshopping/assets/css/index.css',
+  '/smartshopping/assets/css/product.css',
+  '/smartshopping/assets/css/admin.css',
   '/smartshopping/promo-hero.webp',
   '/smartshopping/promo-sale.webp',
   '/smartshopping/promo-accessories.webp',
