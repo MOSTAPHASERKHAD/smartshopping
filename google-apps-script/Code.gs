@@ -72,6 +72,83 @@ function _orderSpamGuard(phone) {
   return true;
 }
 
+// ── Login brute-force throttle (admin login / recovery): after N failures, block 60s ──
+var LOGIN_MAX_FAILS = 5;
+var LOGIN_BLOCK_MS = 60 * 1000;
+
+function _loginBlocked() {
+  var props = PropertiesService.getScriptProperties();
+  var until = parseInt(props.getProperty('login_blocked_until') || '0');
+  return Date.now() < until;
+}
+
+function _loginRecordFailure() {
+  var props = PropertiesService.getScriptProperties();
+  var fails = parseInt(props.getProperty('login_fails') || '0') + 1;
+  if (fails >= LOGIN_MAX_FAILS) {
+    props.setProperty('login_blocked_until', String(Date.now() + LOGIN_BLOCK_MS));
+    props.setProperty('login_fails', '0');
+  } else {
+    props.setProperty('login_fails', String(fails));
+  }
+}
+
+function _loginReset() {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('login_fails', '0');
+  props.deleteProperty('login_blocked_until');
+}
+
+// ── Image upload hardening: allowlist, size + magic-byte validation, rate limit ──
+var UPLOAD_ALLOWED_MIME = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+var UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
+var UPLOAD_RATE_LIMIT = 300;
+
+function _uploadRateOk() {
+  var props = PropertiesService.getScriptProperties();
+  var hour = Math.floor(Date.now() / 3600000);
+  if (props.getProperty('upload_hour') !== String(hour)) {
+    props.setProperty('upload_hour', String(hour));
+    props.setProperty('upload_count', '1');
+    return true;
+  }
+  var count = parseInt(props.getProperty('upload_count') || '0');
+  if (count >= UPLOAD_RATE_LIMIT) return false;
+  props.setProperty('upload_count', String(count + 1));
+  return true;
+}
+
+function _validateImageBlob(blob) {
+  var bytes = blob.getBytes();
+  if (!bytes || bytes.length === 0) return { error: 'Empty file' };
+  if (bytes.length > UPLOAD_MAX_BYTES) return { error: 'File too large (max 3MB)' };
+  var mime = (blob.getContentType() || '').toLowerCase();
+  var ext = UPLOAD_ALLOWED_MIME[mime];
+  if (!ext) return { error: 'Unsupported image type' };
+  function match(prefix) { for (var i = 0; i < prefix.length; i++) { if (bytes[i] !== prefix[i]) return false; } return true; }
+  var ok = false;
+  if (mime === 'image/jpeg') ok = match([0xFF, 0xD8, 0xFF]);
+  else if (mime === 'image/png') ok = match([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+  else if (mime === 'image/gif') ok = match([0x47, 0x49, 0x46, 0x38]);
+  else if (mime === 'image/webp') ok = match([0x52, 0x49, 0x46, 0x46]) && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+  if (!ok) return { error: 'File is not a valid image' };
+  return { ok: true, blob: blob, ext: ext };
+}
+
+function _createVerifiedUpload(base64, mimeType) {
+  if (!_uploadRateOk()) return { error: 'Upload limit reached, try again later' };
+  var blob;
+  try {
+    blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType || 'image/jpeg', 'upload');
+  } catch (e) { return { error: 'Invalid image data' }; }
+  var v = _validateImageBlob(blob);
+  if (v.error) return { error: v.error };
+  var folder = DriveApp.getFolderById(getOrCreateFolderId());
+  var file = folder.createFile(v.blob.setName('sk_' + Utilities.getUuid().replace(/-/g, '') + '.' + v.ext));
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return { ok: true, url: 'https://drive.google.com/uc?id=' + file.getId() + '&export=view' };
+}
+
 // ── Input sanitizer: strips HTML/angle brackets + caps length ──
 function _sanitize(value, maxLen) {
   if (value === null || value === undefined) return '';
@@ -203,12 +280,6 @@ function doPost(e) {
   }
 
   var json = JSON.stringify(result);
-  if (action === 'admin_upload_image') {
-    var safeJson = json.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\x3c');
-    return ContentService.createTextOutput(
-      '<script>try{window.top.postMessage(' + safeJson + ',"*");}catch(e){document.title="ERROR";}</script>'
-    ).setMimeType(ContentService.MimeType.HTML);
-  }
   if (callback) {
     return ContentService.createTextOutput(callback + '(' + json + ');')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
@@ -989,18 +1060,8 @@ function adminDeleteTestimonial(params) {
 }
 
 function adminUploadImage(params) {
-  var base64 = params.imageData;
-  var fileName = params.fileName || 'image.jpg';
-  var mimeType = params.mimeType || 'image/jpeg';
-  var num = params.num || '1';
-  if (!base64) return { error: 'No image data' };
-
-  var blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, fileName);
-  var folder = DriveApp.getFolderById(getOrCreateFolderId());
-  var file = folder.createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  var url = 'https://drive.google.com/uc?id=' + file.getId() + '&export=view';
-  return { ok: true, url: url, _num: num };
+  var v = _createVerifiedUpload(params.imageData, params.mimeType);
+  return { ok: !!v.ok, url: v.url || '', _num: params.num || '1', error: v.error || '' };
 }
 
 function getOrCreateFolderId() {
@@ -1013,29 +1074,19 @@ function getOrCreateFolderId() {
 }
 
 function adminUploadImageGet(params) {
-  var base64 = params.base64;
-  var fileName = params.fileName || 'image.jpg';
-  var num = params.num || '1';
-  if (!base64) return { error: 'No image data' };
-
-  try {
-    var blob = Utilities.newBlob(Utilities.base64Decode(base64), 'image/jpeg', fileName);
-    var folder = DriveApp.getFolderById(getOrCreateFolderId());
-    var file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    var url = 'https://drive.google.com/uc?id=' + file.getId() + '&export=view';
-    return { url: url, _num: num };
-  } catch(ex) {
-    return { error: ex.toString() };
-  }
+  var v = _createVerifiedUpload(params.base64, params.mimeType);
+  return { ok: !!v.ok, url: v.url || '', _num: params.num || '1', error: v.error || '' };
 }
 
 function verifyAdmin(params) {
   var storedPassword = getSettingsValue('admin_password');
   if (!storedPassword) return { ok: false, error: 'لم يتم تعيين كلمة مرور. أدخل كلمة مرور في الإعدادات أولاً.', setupRequired: true };
+  if (_loginBlocked()) return { ok: false, error: 'محاولات كثيرة خاطئة. انتظر دقيقة وحاول مرة أخرى.' };
   if (params.password === storedPassword) {
+    _loginReset();
     return { ok: true, token: _issueAdminToken() };
   }
+  _loginRecordFailure();
   return { ok: false, error: 'كلمة المرور غير صحيحة' };
 }
 
@@ -1074,7 +1125,9 @@ function verifyRecovery(params) {
   var providedHash = params.code ? hashString(params.code) : '';
   if (!storedHash) return { ok: false, error: 'لا يوجد رمز استرجاع. استخدم إعدادات Google Sheet.' };
   if (!providedHash) return { ok: false, error: 'أدخل رمز الاسترجاع' };
+  if (_loginBlocked()) return { ok: false, error: 'محاولات كثيرة خاطئة. انتظر دقيقة وحاول مرة أخرى.' };
   if (providedHash === storedHash) {
+    _loginReset();
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName('Settings');
     if (sheet) {
@@ -1087,6 +1140,7 @@ function verifyRecovery(params) {
     try { CacheService.getScriptCache().remove('settings'); } catch(e) {}
     return { ok: true };
   }
+  _loginRecordFailure();
   return { ok: false, error: 'رمز الاسترجاع غير صحيح' };
 }
 
@@ -1363,14 +1417,17 @@ function customerLogin(params) {
 
 function customerProfile(params) {
   var phone = (params.phone || '').replace(/\s/g, '').trim();
-  if (!phone) return { ok: false, error: 'Phone required' };
+  var password = params.password || '';
+  if (!phone || !password) return { ok: false, error: 'Phone and password required' };
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Customers');
   if (!sheet) return { ok: false, error: 'No accounts' };
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
+  var hashedInput = _hashCustomerPassword(password, phone);
   for (var i = 1; i < data.length; i++) {
     if (data[i][0] === phone) {
+      if (data[i][1] !== hashedInput) return { ok: false, error: 'Wrong password' };
       var customer = {};
       for (var j = 0; j < headers.length; j++) { customer[headers[j]] = data[i][j]; }
       delete customer.password;
