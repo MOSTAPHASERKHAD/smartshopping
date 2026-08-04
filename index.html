@@ -43,7 +43,7 @@ if(!sessionStorage.getItem('sw_cleared')){
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://i.ibb.co">
-<link rel="preload" href="promo-hero.png" as="image">
+<link rel="preload" href="promo-hero.webp" as="image" type="image/webp">
 <link rel="stylesheet" href="assets/css/index.css">
 <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <!-- Tracking Pixels moved to body below -->
@@ -97,9 +97,9 @@ document.head.appendChild(ld);
 <!-- Promo Banner -->
 <div id="section-hero" class="container" style="margin-top:16px">
   <div class="hero-slider" id="heroSlider" style="display:block">
-    <div class="slide active"><img src="promo-hero.png" alt="تسوّق بذكاء - Smart Shopping"><div class="slide-text"><h3>تسوّق بذكاء</h3><p>منتجات متنوعة بأفضل الأسعار</p></div></div>
-    <div class="slide"><img src="promo-sale.png" alt="عروض حصرية - خصومات تصل إلى 50%"><div class="slide-text"><h3>عروض حصرية</h3><p>خصومات تصل إلى 50%</p></div></div>
-    <div class="slide"><img src="promo-accessories.png" alt="إكسسوارات تقنية - Smart Shopping"><div class="slide-text"><h3>إكسسوارات</h3><p>أحدث الإكسسوارات التقنية</p></div></div>
+    <div class="slide active"><img src="promo-hero.webp" alt="تسوّق بذكاء" onerror="this.style.display='none';this.parentElement.style.cssText+='background:linear-gradient(135deg,#6366f1,#a855f7);min-height:320px'"><div class="slide-text"><h3>تسوّق بذكاء</h3><p>منتجات متنوعة بأفضل الأسعار</p></div></div>
+    <div class="slide"><img src="promo-sale.webp" alt="عروض حصرية" onerror="this.style.display='none';this.parentElement.style.cssText+='background:linear-gradient(135deg,#ef4444,#f97316);min-height:320px'"><div class="slide-text"><h3>عروض حصرية</h3><p>خصومات تصل إلى 50%</p></div></div>
+    <div class="slide"><img src="promo-accessories.webp" alt="إكسسوارات" onerror="this.style.display='none';this.parentElement.style.cssText+='background:linear-gradient(135deg,#0ea5e9,#6366f1);min-height:320px'"><div class="slide-text"><h3>إكسسوارات</h3><p>أحدث الإكسسوارات التقنية</p></div></div>
     <div class="nav-arrow prev" onclick="heroNav(-1)">‹</div>
     <div class="nav-arrow next" onclick="heroNav(1)">›</div>
     <div class="dots" id="heroDots"></div>
