@@ -1,4 +1,4 @@
-var CACHE_NAME = 'smartshopping-v30';
+var CACHE_NAME = 'smartshopping-v31';
 var ASSETS = [
   '/smartshopping/',
   '/smartshopping/index.html',
