@@ -168,6 +168,11 @@ function doPost(e) {
 }
 
 function getCatalog() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('catalog');
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Catalog');
   if (!sheet) return { products: [] };
@@ -193,10 +198,17 @@ function getCatalog() {
       products.push(product);
     }
   }
-  return { products: products };
+  var result = { products: products };
+  try { cache.put('catalog', JSON.stringify(result), 600); } catch(e) {}
+  return result;
 }
 
 function getSettings() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('settings');
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Settings');
   if (!sheet) return {};
@@ -206,6 +218,7 @@ function getSettings() {
   for (var i = 1; i < data.length; i++) {
     if (!secretKeys[data[i][0]]) { settings[data[i][0]] = data[i][1]; }
   }
+  try { cache.put('settings', JSON.stringify(settings), 600); } catch(e) {}
   return settings;
 }
 
@@ -502,6 +515,7 @@ function adminAddProduct(params) {
     variant_price, variant_stock,
     JSON.stringify(params.variant_options || [])
   ]);
+  try { CacheService.getScriptCache().remove('catalog'); } catch(e) {}
   return { ok: true, id: id };
 }
 
@@ -560,6 +574,7 @@ function adminEditProduct(params) {
       sheet.getRange(row, j + 1).setValue(val);
     }
   }
+  try { CacheService.getScriptCache().remove('catalog'); } catch(e) {}
   return { ok: true };
 }
 
@@ -570,6 +585,7 @@ function adminDeleteProduct(params) {
   var row = parseInt(params._row);
   if (!row || row < 2) return { error: 'Invalid row' };
   sheet.deleteRow(row);
+  try { CacheService.getScriptCache().remove('catalog'); } catch(e) {}
   return { ok: true };
 }
 
@@ -701,8 +717,10 @@ function adminUpdateSettings(params) {
   }
   if (passwordChanged) {
     var recovery = generateRecoveryCode();
+    try { CacheService.getScriptCache().remove('settings'); } catch(e) {}
     return { ok: true, recovery_code: recovery.recovery_code || '' };
   }
+  try { CacheService.getScriptCache().remove('settings'); } catch(e) {}
   return { ok: true };
 }
 
