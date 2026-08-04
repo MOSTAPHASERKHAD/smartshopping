@@ -183,7 +183,7 @@ async function post(action, body) {
       items_json: JSON.stringify([{ id: 'PROD-1785264858984', qty: 1, price: 100 }]),
       subtotal: '100'
     });
-    if (ord && ord.orderId) { createdOrderId = ord.orderId; check('13f order created (POST)', true, ord.orderId); }
+    if (ord && (ord.orderId || ord.order_id)) { createdOrderId = ord.orderId || ord.order_id; check('13f order created (POST)', true, createdOrderId); }
     else if (ord && ord.error) { check('13f order created (POST)', false, JSON.stringify(ord).slice(0, 120)); }
     else { check('13f order created (POST)', false, JSON.stringify(ord).slice(0, 120)); }
   } catch (e) { check('13f order created (POST)', false, e.message); }
