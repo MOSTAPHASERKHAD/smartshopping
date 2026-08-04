@@ -11,12 +11,21 @@
  * NOTE: GAS deploy must be updated with google-apps-script/Code.gs first.
  */
 const urlArg = process.argv.find(a => a.startsWith('--url='));
-const pwArg = process.argv.find(a => a.startsWith('--password='));
+let PASSWORD = null;
+{
+  const i = process.argv.indexOf('--password');
+  if (i !== -1 && process.argv[i + 1] && process.argv[i + 1][0] !== '-') PASSWORD = process.argv[i + 1];
+  if (PASSWORD === null) { const eq = process.argv.find(a => a.startsWith('--password=')); if (eq) PASSWORD = eq.slice('--password='.length); }
+}
 const API = urlArg
   ? urlArg.slice('--url='.length)
   : 'https://script.google.com/macros/s/AKfycbwSbvmaGo5s7yB4Vw29589Z_UgBY1TYd3QrwmW90ivy5jVx0gbr_jh5MxSwQzepIQ2JEQ/exec';
-const PASSWORD = pwArg ? pwArg.slice('--password='.length) : null;
 const BASE = 'https://smartshopping.click'; // static/PWA host (same-origin root)
+
+// Admin auth expects SHA-256 of the password (client hashes before sending).
+const crypto = require('crypto');
+const sha256 = s => crypto.createHash('sha256').update(String(s)).digest('hex');
+const PW_HASH = PASSWORD ? sha256(PASSWORD) : null;
 
 let pass = 0, fail = 0, skip = 0;
 const failures = [];
@@ -223,13 +232,13 @@ async function post(action, body) {
     } catch (e) { check('A admin_list unauthed', false, e.message); }
 
     try {
-      const wrong = await post('verify_admin', { password: '__wrong__' });
+      const wrong = await post('verify_admin', { password: sha256('__wrong__') });
       check('B verify_admin wrong password rejected', wrong.ok === false, JSON.stringify(wrong).slice(0, 80));
     } catch (e) { check('B verify_admin wrong', false, e.message); }
 
     let token = null;
     try {
-      const login = await post('verify_admin', { password: PASSWORD });
+      const login = await post('verify_admin', { password: PW_HASH });
       if (login.ok && login.token) token = login.token;
       check('C verify_admin correct password issues token', !!token, JSON.stringify(login).slice(0, 80));
     } catch (e) { check('C verify_admin correct', false, e.message); }
