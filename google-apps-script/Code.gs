@@ -217,7 +217,8 @@ function trackOrder(orderId) {
   var statusCol = -1;
   for (var k = 0; k < headers.length; k++) {
     var h = headers[k].toString().toLowerCase().trim();
-    if (h === 'status' || h === 'shipping_note') { statusCol = k; break; }
+    if (h === 'status') { statusCol = k; break; }
+    if (h === 'shipping_note') { statusCol = k; }
   }
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
@@ -564,7 +565,8 @@ function adminListOrders() {
   var statusCol = -1;
   for (var k = 0; k < headers.length; k++) {
     var h = headers[k].toString().toLowerCase().trim();
-    if (h === 'status' || h === 'shipping_note') { statusCol = k; break; }
+    if (h === 'status') { statusCol = k; break; }
+    if (h === 'shipping_note') { statusCol = k; }
   }
   var orders = [];
   for (var i = 1; i < data.length; i++) {
@@ -591,7 +593,8 @@ function adminUpdateOrder(params) {
     var statusCol = -1;
     for (var i = 0; i < headers.length; i++) {
       var h = headers[i].toString().toLowerCase().trim();
-      if (h === 'status' || h === 'shipping_note') { statusCol = i + 1; break; }
+      if (h === 'status') { statusCol = i + 1; break; }
+      if (h === 'shipping_note') { statusCol = i + 1; }
     }
     var oldStatus = statusCol > 0 ? String(sheet.getRange(row, statusCol).getValue()).toLowerCase().trim() : '';
     if (params.status) {
