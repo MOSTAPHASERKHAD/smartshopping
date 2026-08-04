@@ -278,19 +278,24 @@ function trackOrder(orderId) {
   if (!sheet) return { error: 'Orders sheet not found' };
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
-  var statusCol = -1;
-  for (var k = 0; k < headers.length; k++) {
-    var h = headers[k].toString().toLowerCase().trim();
-    if (h === 'status') { statusCol = k; break; }
-    if (h === 'shipping_note') { statusCol = k; }
-  }
+  var idx = {};
+  for (var h = 0; h < headers.length; h++) { idx[String(headers[h]).toLowerCase().trim()] = h; }
+  var statusCol = idx['status'] >= 0 ? idx['status'] : idx['shipping_note'];
+  var idCol = idx['order_id'];
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
-    var idIndex = headers.indexOf('order_id');
-    if (row[idIndex] === orderId) {
-      var order = {};
-      for (var j = 0; j < headers.length; j++) { order[headers[j]] = row[j]; }
-      if (statusCol >= 0) { order.status = row[statusCol]; }
+    if (idCol >= 0 && row[idCol] === orderId) {
+      // Public response contains NO PII (name/phone/address/notes/utm stay private).
+      var order = {
+        order_id: row[idCol],
+        created_at: (idx['created_at'] >= 0) ? row[idx['created_at']] : '',
+        status: (statusCol >= 0) ? row[statusCol] : '',
+        wilaya_ar: (idx['wilaya_ar'] >= 0) ? row[idx['wilaya_ar']] : '',
+        wilaya_en: (idx['wilaya_en'] >= 0) ? row[idx['wilaya_en']] : '',
+        delivery_type: (idx['delivery_type'] >= 0) ? row[idx['delivery_type']] : '',
+        items_json: (idx['items_json'] >= 0) ? row[idx['items_json']] : '[]',
+        subtotal: (idx['subtotal'] >= 0) ? row[idx['subtotal']] : 0
+      };
       return { found: true, order: order };
     }
   }
@@ -327,12 +332,43 @@ function customerOrders(phone) {
   return { orders: orders };
 }
 
+// Rebuild an order's items_json with every string field sanitized (kills stored XSS).
+function _sanitizeOrderItems(itemsJson) {
+  var items = [];
+  try { items = JSON.parse(itemsJson || '[]'); } catch(e) { items = []; }
+  if (!Array.isArray(items)) items = [];
+  var cleaned = [];
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    if (!it || typeof it !== 'object') continue;
+    var c = {};
+    for (var k in it) {
+      if (k === 'title' || k === 'name') c[k] = _sanitize(it[k], 300);
+      else if (typeof it[k] === 'string') c[k] = _sanitize(it[k], 500);
+      else c[k] = it[k];
+    }
+    cleaned.push(c);
+  }
+  return JSON.stringify(cleaned);
+}
+
 function createOrder(params) {
   params = params || {};
   if (!params.name || !params.phone) return { error: 'Missing required fields (name, phone)' };
   var name = (params.name || '').replace(/[<>"'&]/g, '').substring(0, 200);
   var phone = (params.phone || '').replace(/[^0-9+]/g, '').substring(0, 20);
   var note = (params.note || '').replace(/[<>"'&]/g, '').substring(0, 500);
+  // All remaining fields are sanitized too — otherwise a public order could
+  // inject HTML that later renders in the admin panel or the public track view.
+  var wilayaAr = _sanitize(params.wilaya_ar, 100);
+  var wilayaEn = _sanitize(params.wilaya_en, 100);
+  var municipality = _sanitize(params.municipality, 200);
+  var deliveryType = _sanitize(params.delivery_type, 20);
+  var subtotal = String(params.subtotal || '0').replace(/[^0-9.]/g, '').substring(0, 20) || '0';
+  var utmSource = _sanitize(params.utm_source, 100);
+  var utmMedium = _sanitize(params.utm_medium, 100);
+  var utmCampaign = _sanitize(params.utm_campaign, 100);
+  var itemsJson = _sanitizeOrderItems(params.items_json);
   if (!_orderSpamGuard(phone)) return { error: 'يرجى الانتظار قليلاً قبل إرسال طلب آخر' };
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Orders');
@@ -342,13 +378,13 @@ function createOrder(params) {
   var createdAt = Utilities.formatDate(now, 'Africa/Algiers', 'yyyy-MM-dd HH:mm:ss');
   sheet.appendRow([
     orderId, createdAt, name, phone,
-    params.wilaya_code || '', params.wilaya_ar || '', params.wilaya_en || '',
-    params.municipality || '',  // البلدية
-    params.delivery_type || '', params.items_json || '[]',
-    params.subtotal || '0', 'سعر التوصيل يُحدد بعد التأكيد', 'pending', note,
-    params.utm_source || '',    // مصدر الحملة الإعلانية
-    params.utm_medium || '',    // وسيلة الإعلان
-    params.utm_campaign || ''   // اسم الحملة
+    _sanitize(params.wilaya_code, 20), wilayaAr, wilayaEn,
+    municipality,  // البلدية
+    deliveryType, itemsJson,
+    subtotal, 'سعر التوصيل يُحدد بعد التأكيد', 'pending', note,
+    utmSource,    // مصدر الحملة الإعلانية
+    utmMedium,    // وسيلة الإعلان
+    utmCampaign   // اسم الحملة
   ]);
   return { ok: true, order_id: orderId };
 }
@@ -544,7 +580,8 @@ function repairData() {
 function generateOrderId() {
   var now = new Date();
   var datePart = Utilities.formatDate(now, 'Africa/Algiers', 'yyyyMMdd');
-  var randomPart = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  // 8 hex chars from a v4 UUID (cryptographically random) -> 4 billion+ combos, not enumerable.
+  var randomPart = Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
   return 'SK-' + datePart + '-' + randomPart;
 }
 
