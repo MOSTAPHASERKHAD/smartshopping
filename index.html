@@ -1031,6 +1031,15 @@ function trackInitiateCheckout(total){
   trackEvent('InitiateCheckout',{value:total,currency:'DZD'});
 }
 
+function fireCapiSend(params){
+  function attempt(retry){
+    apiCall('capi_send',params,function(res){
+      if(res&&res.error&&!retry){setTimeout(function(){attempt(true)},3000)}
+    });
+  }
+  attempt(false);
+}
+
 var _modalCount = 0;
 function _lockBody(lock) {
   if (lock) { _modalCount++; } else { _modalCount = Math.max(0, _modalCount - 1); }
@@ -1484,7 +1493,7 @@ function submitOrder(e){
     cartDiscount=0;cartCouponCode='';
     var dr=document.getElementById('discountResult');if(dr)dr.style.display='none';
     try{trackPurchase(data.order_id,sub)}catch(e){console.warn('trackPurchase',e)}
-    try{apiCall('capi_send',{order_id:data.order_id,phone:p,subtotal:sub},function(){})}catch(e){console.warn('capi_send',e)}
+    try{fireCapiSend({order_id:data.order_id,phone:p,subtotal:sub})}catch(e){console.warn('capi_send',e)}
   });
 }
 
@@ -2931,7 +2940,7 @@ function submitLandingOrder(e,productId){
       try{container.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){}
     }
     try{trackPurchase(orderId,product.price)}catch(e){console.warn('trackPurchase',e)}
-    try{apiCall('capi_send',{order_id:orderId,phone:p,subtotal:product.price},function(){})}catch(e){console.warn('capi_send',e)}
+    try{fireCapiSend({order_id:orderId,phone:p,subtotal:product.price})}catch(e){console.warn('capi_send',e)}
     try{localStorage.setItem(CUSTOMER_KEY,JSON.stringify({name:n,phone:p,address:addr}))}catch(e){console.warn('saveCustomer',e)}
   });
 }

@@ -266,9 +266,14 @@ function capiSendPurchase(params) {
   var phone = (params.phone || '').replace(/[^0-9+]/g, '').substring(0, 20);
   var subtotal = String(params.subtotal || '0').substring(0, 20);
   if (!orderId) return { error: 'Missing order_id' };
+  var enabled = getSettingsValue('capi_enabled');
+  if (enabled === 'false' || enabled === '0') return { ok: true, sent: false, reason: 'capi_disabled' };
+  var pixelId = getSettingsValue('pixel_id');
+  var token = getSettingsValue('fb_capi_token');
+  if (!pixelId || !token) return { ok: true, sent: false, reason: 'missing_config' };
   var orderData = { orderId: orderId, phone: phone, subtotal: subtotal };
   try { sendPurchaseToFacebook(orderData); } catch(e) { Logger.log('CAPI err: ' + e); }
-  return { ok: true };
+  return { ok: true, sent: true };
 }
 
 function getSettingsValue(key){
