@@ -1470,6 +1470,16 @@ function _migrateCustomerPassword(password, phone, stored) {
   return _hashCustomerPassword(password, phone);
 }
 
+// Column lookup by header name so customer logic never depends on a hard-coded
+// column position. Returns {} if the header row is missing/empty.
+function _customerColumns(headers) {
+  var map = {};
+  for (var j = 0; j < headers.length; j++) {
+    if (headers[j]) map[String(headers[j]).trim()] = j;
+  }
+  return map;
+}
+
 function customerRegister(params) {
   var phone = (params.phone || '').replace(/\s/g, '').trim();
   var password = params.password || '';
@@ -1502,12 +1512,17 @@ function customerLogin(params) {
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) return { ok: false, error: 'Account not found' };
   var headers = data[0];
+  var cols = _customerColumns(headers);
+  var phCol = cols['phone'];
+  if (phCol === undefined) return { ok: false, error: 'Customers sheet missing phone column' };
+  var pwCol = cols['password'];
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
-    if (row[0] === phone) {
-      if (_verifyCustomerPassword(password, phone, row[1])) {
-        var upgraded = _migrateCustomerPassword(password, phone, row[1]);
-        if (upgraded) sheet.getRange(i + 1, 2).setValue(upgraded);
+    if (String(row[phCol]).trim() === phone) {
+      var stored = pwCol === undefined ? '' : String(row[pwCol]);
+      if (_verifyCustomerPassword(password, phone, stored)) {
+        var upgraded = _migrateCustomerPassword(password, phone, stored);
+        if (upgraded && pwCol !== undefined) sheet.getRange(i + 1, pwCol + 1).setValue(upgraded);
         var customer = {};
         for (var j = 0; j < headers.length; j++) { customer[headers[j]] = row[j]; }
         delete customer.password;
@@ -1528,11 +1543,16 @@ function customerProfile(params) {
   if (!sheet) return { ok: false, error: 'No accounts' };
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
+  var cols = _customerColumns(headers);
+  var phCol = cols['phone'];
+  if (phCol === undefined) return { ok: false, error: 'Customers sheet missing phone column' };
+  var pwCol = cols['password'];
   for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === phone) {
-      if (!_verifyCustomerPassword(password, phone, data[i][1])) return { ok: false, error: 'Wrong password' };
-      var upgraded = _migrateCustomerPassword(password, phone, data[i][1]);
-      if (upgraded) sheet.getRange(i + 1, 2).setValue(upgraded);
+    if (String(data[i][phCol]).trim() === phone) {
+      var stored = pwCol === undefined ? '' : String(data[i][pwCol]);
+      if (!_verifyCustomerPassword(password, phone, stored)) return { ok: false, error: 'Wrong password' };
+      var upgraded = _migrateCustomerPassword(password, phone, stored);
+      if (upgraded && pwCol !== undefined) sheet.getRange(i + 1, pwCol + 1).setValue(upgraded);
       var customer = {};
       for (var j = 0; j < headers.length; j++) { customer[headers[j]] = data[i][j]; }
       delete customer.password;
