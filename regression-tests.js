@@ -36,29 +36,57 @@ function check(name, ok, detail) {
 }
 
 const H = { 'Content-Type': 'text/plain;charset=utf-8' };
-const TIMEOUT = 45000;
+const TIMEOUT = 90000; // GAS latency fluctuates (cold starts up to ~50s)
+const RETRIES = 2;     // retry transient aborts/timeouts on read-only GETs
 async function timedFetch(url, opts) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), TIMEOUT);
   try { return await fetch(url, { ...opts, signal: ac.signal }); }
   finally { clearTimeout(t); }
 }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function isLoadingPage(txt) { return typeof txt === 'string' && /<!DOCTYPE|Traitement de la demande|Impossible d'ouvrir/.test(txt.slice(0, 400)); }
 async function get(action, extra) {
   const q = new URLSearchParams({ action, ...(extra || {}) });
-  const r = await timedFetch(`${API}?${q.toString()}`);
-  const txt = await r.text();
-  try { return JSON.parse(txt); } catch { return { __raw: txt }; }
+  const full = `${API}?${q.toString()}`;
+  let last;
+  for (let i = 0; i <= RETRIES; i++) {
+    try {
+      const r = await timedFetch(full);
+      const txt = await r.text();
+      if (isLoadingPage(txt) && i < RETRIES) { last = { __raw: txt }; await sleep(2500); continue; }
+      try { return JSON.parse(txt); } catch { return { __raw: txt }; }
+    } catch (e) { last = e; if (i < RETRIES) await sleep(1500); }
+  }
+  throw last;
 }
 async function getRaw(action, extra) {
   const q = new URLSearchParams({ action, ...(extra || {}) });
-  const r = await timedFetch(`${API}?${q.toString()}`);
-  return r.text();
+  const full = `${API}?${q.toString()}`;
+  let last;
+  for (let i = 0; i <= RETRIES; i++) {
+    try {
+      const r = await timedFetch(full);
+      const txt = await r.text();
+      if (isLoadingPage(txt) && i < RETRIES) { last = txt; await sleep(2500); continue; }
+      return txt;
+    } catch (e) { last = e; if (i < RETRIES) await sleep(1500); }
+  }
+  throw last;
 }
 async function post(action, body) {
   const q = new URLSearchParams({ action, ...body });
-  const r = await timedFetch(API, { method: 'POST', body: q.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-  const txt = await r.text();
-  try { return JSON.parse(txt); } catch { return { __raw: txt }; }
+  const full = API;
+  let last;
+  for (let i = 0; i <= RETRIES; i++) {
+    try {
+      const r = await timedFetch(full, { method: 'POST', body: q.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+      const txt = await r.text();
+      if (isLoadingPage(txt) && i < RETRIES) { last = { __raw: txt }; await sleep(2500); continue; }
+      try { return JSON.parse(txt); } catch { return { __raw: txt }; }
+    } catch (e) { last = e; if (i < RETRIES) await sleep(1500); }
+  }
+  throw last;
 }
 
 (async () => {
