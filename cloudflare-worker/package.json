@@ -1,0 +1,16 @@
+{
+  "name": "smart-shopping-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker Backend for Smart Shopping",
+  "scripts": {
+    "dev":     "wrangler dev",
+    "deploy":  "wrangler deploy",
+    "db:init": "wrangler d1 execute smart-shopping-db --file=schema.sql",
+    "db:init:local": "wrangler d1 execute smart-shopping-db --local --file=schema.sql",
+    "db:studio": "wrangler d1 studio smart-shopping-db",
+    "tail":    "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
+}

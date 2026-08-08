@@ -1,0 +1,59 @@
+# ============================================================
+# wrangler.toml - إعدادات مشروع Cloudflare Worker
+# Smart Shopping Backend
+# ============================================================
+
+name = "smart-shopping-api"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# ── وضع المتغيرات الحساسة (Secrets) ──
+# لا تُضَف هنا مباشرةً — استخدم الأمر التالي:
+#   wrangler secret put ADMIN_SECRET_KEY
+# المتغيرات السرية المطلوبة:
+#   ADMIN_SECRET_KEY  → مفتاح التوقيع لتوليد JWT/tokens (عشوائي قوي)
+# المتغيرات غير الحساسة (يمكن وضعها هنا):
+
+[vars]
+ENVIRONMENT        = "production"
+# الأصول المسموح لها بالوصول للـ API (CORS Whitelist)
+# افصل بين النطاقات بفاصلة
+ALLOWED_ORIGINS    = "https://smartkiosk.pages.dev,https://yourdomain.com,https://www.yourdomain.com"
+# مدة صلاحية جلسة الأدمن (بالساعات)
+SESSION_TTL_HOURS  = "24"
+# الحد الأقصى لطلبات الأدمن في الدقيقة (Rate Limiting)
+RATE_LIMIT_ADMIN   = "60"
+# منطقة التوقيت لتنسيق التواريخ
+TIMEZONE           = "Africa/Algiers"
+
+# ── قاعدة بيانات D1 ──
+[[d1_databases]]
+binding  = "DB"          # الاسم الذي سيُستخدَم في الكود: env.DB
+database_name = "smart-shopping-db"
+# أنشئ قاعدة البيانات أولاً بالأمر:
+#   wrangler d1 create smart-shopping-db
+# ثم انسخ الـ database_id الظاهر وضعه هنا:
+database_id  = "05ec74cc-1259-48c1-a843-54fd5f7791dd"
+
+# ── KV Namespace للـ Cache ──
+# أنشئ الـ namespace بالأمر: wrangler kv:namespace create CACHE
+[[kv_namespaces]]
+binding    = "CACHE"
+id         = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+# للبيئة المحلية (dev):
+preview_id = "REPLACE_WITH_YOUR_KV_PREVIEW_ID"
+
+# ── إعدادات التطوير المحلي ──
+[dev]
+port = 8787
+local_protocol = "http"
+
+# ── إعدادات البيئة التجريبية (Staging) ──
+[env.staging]
+name = "smart-shopping-api-staging"
+vars = { ENVIRONMENT = "staging" }
+
+[[env.staging.d1_databases]]
+binding       = "DB"
+database_name = "smart-shopping-db-staging"
+database_id   = "REPLACE_WITH_STAGING_DB_ID"
