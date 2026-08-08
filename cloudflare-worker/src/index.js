@@ -40,6 +40,12 @@ import {
   adminListOrders, adminUpdateOrder, adminDeleteOrder,
 } from './handlers/orders.js';
 
+// ── استيراد معالجات العملاء ──
+import {
+  customerRegister, customerLogin, customerProfile, customerLogout,
+  adminListCustomers
+} from './handlers/customers.js';
+
 // ── استيراد معالجات الأدمن ──
 import {
   verifyAdmin, adminLogout, adminUpdateSettings,
@@ -192,6 +198,12 @@ async function route(action, params, token, env, ctx) {
   if (action === 'track')           return trackOrder(env, params.order_id);
   if (action === 'customer_orders') return customerOrders(env, params.phone);
 
+  // ── العملاء ──
+  if (action === 'customer_register') return customerRegister(env, params);
+  if (action === 'customer_login')    return customerLogin(env, params);
+  if (action === 'customer_profile')  return customerProfile(env, token);
+  if (action === 'customer_logout')   return customerLogout(env, token);
+
   // ── مصادقة الأدمن ──
   if (action === 'verify_admin')    return verifyAdmin(env, params);
   if (action === 'admin_logout')    return adminLogout(env, token);
@@ -236,6 +248,9 @@ async function route(action, params, token, env, ctx) {
   // ── الصفحات ──
   if (action === 'admin_list_pages') return adminListPages(env);
   if (action === 'admin_save_page')  return adminSavePage(env, params);
+
+  // ── العملاء ──
+  if (action === 'admin_list_customers') return adminListCustomers(env, params);
 
   // ── action غير معروف ──
   return {

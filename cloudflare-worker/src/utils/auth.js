@@ -231,3 +231,47 @@ export async function orderSpamGuard(db, phone) {
 
   return true;
 }
+
+/**
+ * ── Customer Authentication ──
+ */
+
+export async function issueCustomerSession(db, customerId, ttlMs = SESSION_TTL_MS) {
+  const token = generateToken();
+  const expiresAt = Date.now() + ttlMs;
+
+  await db.prepare(
+    `DELETE FROM customer_sessions WHERE expires_at < ?`
+  ).bind(Date.now()).run();
+
+  await db.prepare(
+    `INSERT INTO customer_sessions (token, customer_id, expires_at) VALUES (?, ?, ?)`
+  ).bind(token, customerId, expiresAt).run();
+
+  return token;
+}
+
+export async function validateCustomerToken(db, token) {
+  if (!token || token.length < 32) return null;
+
+  const row = await db.prepare(
+    `SELECT customer_id, expires_at FROM customer_sessions WHERE token = ? LIMIT 1`
+  ).bind(token).first();
+
+  if (!row) return null;
+
+  if (Date.now() > row.expires_at) {
+    await db.prepare(
+      `DELETE FROM customer_sessions WHERE token = ?`
+    ).bind(token).run();
+    return null;
+  }
+
+  return row.customer_id;
+}
+
+export async function revokeCustomerSession(db, token) {
+  await db.prepare(
+    `DELETE FROM customer_sessions WHERE token = ?`
+  ).bind(token).run();
+}

@@ -237,3 +237,30 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   expires_at INTEGER NOT NULL,
   created_at TEXT    DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
+
+-- ─────────────────────────────────────────────────────────────
+-- 10. جدول العملاء (Customers)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS customers (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  phone         TEXT    NOT NULL UNIQUE,
+  name          TEXT    DEFAULT '',
+  wilaya_code   TEXT    DEFAULT '',
+  wilaya_ar     TEXT    DEFAULT '',
+  wilaya_en     TEXT    DEFAULT '',
+  municipality  TEXT    DEFAULT '',
+  delivery_type TEXT    DEFAULT 'home',
+  password_hash TEXT    NOT NULL,
+  created_at    TEXT    DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+  updated_at    TEXT    DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+-- ─────────────────────────────────────────────────────────────
+-- 11. جدول جلسات العملاء (Customer Sessions)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS customer_sessions (
+  token       TEXT    PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  expires_at  INTEGER NOT NULL,
+  created_at  TEXT    DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
