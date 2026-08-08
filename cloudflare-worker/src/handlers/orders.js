@@ -15,6 +15,8 @@
  *   adminDeleteOrder() → action=admin_delete_order
  */
 
+import { sendCapiEvent } from './marketing.js';
+
 import {
   sanitize,
   sanitizePhone,
@@ -41,7 +43,7 @@ import { orderSpamGuard } from '../utils/auth.js';
  * البيانات الاختيارية:
  *   note, coupon_code, utm_source, utm_medium, utm_campaign
  */
-export async function createOrder(env, params) {
+export async function createOrder(env, params, request, ctx) {
   // ── التحقق من الحقول المطلوبة ──
   const name  = sanitize(params.name,  200);
   const phone = sanitizePhone(params.phone);
@@ -163,6 +165,23 @@ export async function createOrder(env, params) {
     'pending', note,
     utmSource, utmMedium, utmCampaign,
   ).run();
+
+  // ── إرسال حدث CAPI في الخلفية (Non-blocking) ──
+  if (ctx && ctx.waitUntil) {
+    ctx.waitUntil(
+      sendCapiEvent(
+        env,
+        'Purchase',
+        {
+          value: realSubtotal - finalDiscount,
+          order_id: orderId,
+          content_ids: secureItems.map(i => i.id.toString())
+        },
+        { phone },
+        request
+      )
+    );
+  }
 
   return { ok: true, order_id: orderId };
 }

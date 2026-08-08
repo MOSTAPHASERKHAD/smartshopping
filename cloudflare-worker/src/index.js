@@ -61,6 +61,9 @@ import {
   publicUploadImage, adminUploadImage
 } from './handlers/uploads.js';
 
+// ── استيراد معالجات التسويق (CAPI) ──
+import { adminCapiTest } from './handlers/marketing.js';
+
 // ── استيراد معالجات الأدمن ──
 import {
   verifyAdmin, adminLogout, adminUpdateSettings,
@@ -149,7 +152,7 @@ export default {
     let result;
 
     try {
-      result = await route(action, params, token, env, ctx);
+      result = await route(action, params, token, env, ctx, request);
     } catch (error) {
       // خطأ غير متوقع: سجِّله دون كشفه للمستخدم
       console.error(`[Worker Error] action=${action}`, error?.message, error?.stack);
@@ -183,9 +186,10 @@ export default {
  * @param {string|null} token
  * @param {Env} env
  * @param {ExecutionContext} ctx
+ * @param {Request} request
  * @returns {Promise<object>}
  */
-async function route(action, params, token, env, ctx) {
+async function route(action, params, token, env, ctx, request) {
 
   // ══════════════════════════════════════════
   // ── مسارات عامة (Public Routes) ──
@@ -215,7 +219,7 @@ async function route(action, params, token, env, ctx) {
   if (action === 'validate_coupon') return validateCoupon(env, params);
 
   // ── الطلبات ──
-  if (action === 'order')           return createOrder(env, params);
+  if (action === 'order')           return createOrder(env, params, request, ctx);
   if (action === 'track')           return trackOrder(env, params.order_id);
   if (action === 'customer_orders') return customerOrders(env, params.phone);
 
@@ -283,6 +287,9 @@ async function route(action, params, token, env, ctx) {
 
   // ── رفع الملفات ──
   if (action === 'admin_upload_image')  return adminUploadImage(env, params);
+
+  // ── التسويق ──
+  if (action === 'admin_capi_test') return adminCapiTest(env, params, request);
 
   // ── action غير معروف ──
   return {
