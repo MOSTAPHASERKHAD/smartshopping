@@ -51,15 +51,23 @@ local_protocol = "http"
 # ── إعدادات البيئة التجريبية (Staging) ──
 [env.staging]
 name = "smart-shopping-api-staging"
-vars = { ENVIRONMENT = "staging" }
+vars = { ENVIRONMENT = "staging", ALLOWED_ORIGINS = "https://smartshopping.click,https://www.smartshopping.click,http://127.0.0.1:8787", SESSION_TTL_HOURS = "24", RATE_LIMIT_ADMIN = "60", TIMEZONE = "Africa/Algiers" }
 
 [[env.staging.d1_databases]]
 binding       = "DB"
 database_name = "smart-shopping-db-staging"
-database_id   = "REPLACE_WITH_STAGING_DB_ID"
+database_id   = "09d7b9df-bc13-4e03-b607-33d47a3048f2"
 
-# ── R2 Storage للصور ──
+[[env.staging.kv_namespaces]]
+binding = "CACHE"
+id = "d96fdcdf549b40fab46e974c0aff6e53"
+
+# ── R2 Bucket مخصص للـ Staging (معزول تماماً عن الإنتاج) ──
+[[env.staging.r2_buckets]]
+binding     = "MEDIA"
+bucket_name = "smart-shopping-media-staging"
+
+# ── R2 Bucket للإنتاج (لا يُستخدم حالياً — جاهز للمستقبل) ──
 [[r2_buckets]]
-binding = "BUCKET"
+binding     = "MEDIA"
 bucket_name = "smart-shopping-images"
-preview_bucket_name = "smart-shopping-images-preview"

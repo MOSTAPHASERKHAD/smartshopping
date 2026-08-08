@@ -50,7 +50,7 @@ function getMimeTypeFromMagicBytes(bytes) {
  * المنطق المشترك لرفع الصورة
  */
 async function processAndUpload(env, base64Data, maxSize, folder) {
-  if (!env.BUCKET) return { ok: false, error: 'R2 Bucket is not configured' };
+  if (!env.MEDIA) return { ok: false, error: 'R2 Bucket is not configured' };
   if (!base64Data) return { ok: false, error: 'لم يتم إرسال بيانات الصورة' };
 
   let bytes;
@@ -73,7 +73,7 @@ async function processAndUpload(env, base64Data, maxSize, folder) {
   const ext = mimeType.split('/')[1];
   const filename = `${folder}/${Date.now()}_${generateToken().substring(0,8)}.${ext}`;
 
-  await env.BUCKET.put(filename, bytes, {
+  await env.MEDIA.put(filename, bytes, {
     httpMetadata: { contentType: mimeType }
   });
 
@@ -97,4 +97,35 @@ export async function publicUploadImage(env, params) {
  */
 export async function adminUploadImage(env, params) {
   return processAndUpload(env, params.data || params.image, MAX_ADMIN_SIZE, 'products');
+}
+
+/**
+ * [ADMIN] حذف ملف من R2
+ */
+export async function adminDeleteMedia(env, params) {
+  if (!env.MEDIA) return { ok: false, error: 'R2 Bucket is not configured' };
+  const key = params.key;
+  if (!key) return { ok: false, error: 'مفتاح الملف مطلوب' };
+  if (key.includes('..')) return { ok: false, error: 'مسار غير مسموح به' };
+  await env.MEDIA.delete(key);
+  return { ok: true, message: 'تم حذف الملف' };
+}
+
+/**
+ * [ADMIN] قائمة الملفات من R2
+ */
+export async function adminListMedia(env, params) {
+  if (!env.MEDIA) return { ok: false, error: 'R2 Bucket is not configured' };
+  const prefix = params.prefix || '';
+  const listed = await env.MEDIA.list({ prefix, limit: 100 });
+  return {
+    ok: true,
+    files: listed.objects.map(o => ({
+      key:          o.key,
+      size:         o.size,
+      uploaded:     o.uploaded,
+      content_type: o.httpMetadata?.contentType,
+    })),
+    truncated: listed.truncated,
+  };
 }

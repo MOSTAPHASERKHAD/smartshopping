@@ -58,7 +58,7 @@ import {
 
 // ── استيراد معالجات الرفع (Uploads) ──
 import {
-  publicUploadImage, adminUploadImage
+  publicUploadImage, adminUploadImage, adminDeleteMedia, adminListMedia
 } from './handlers/uploads.js';
 
 // ── استيراد معالجات التسويق (CAPI) ──
@@ -290,6 +290,8 @@ async function route(action, params, token, env, ctx, request) {
 
   // ── رفع الملفات ──
   if (action === 'admin_upload_image')  return adminUploadImage(env, params);
+  if (action === 'admin_delete_media')  return adminDeleteMedia(env, params);
+  if (action === 'admin_list_media')    return adminListMedia(env, params);
 
   // ── التسويق ──
   if (action === 'admin_capi_test') return adminCapiTest(env, params, request);
