@@ -64,6 +64,9 @@ import {
 // ── استيراد معالجات التسويق (CAPI) ──
 import { adminCapiTest } from './handlers/marketing.js';
 
+// ── استيراد معالجات الذكاء الاصطناعي ──
+import { adminAiChat } from './handlers/ai.js';
+
 // ── استيراد معالجات الأدمن ──
 import {
   verifyAdmin, adminLogout, adminUpdateSettings,
@@ -290,6 +293,9 @@ async function route(action, params, token, env, ctx, request) {
 
   // ── التسويق ──
   if (action === 'admin_capi_test') return adminCapiTest(env, params, request);
+
+  // ── الذكاء الاصطناعي ──
+  if (action === 'admin_ai_chat')   return adminAiChat(env, params);
 
   // ── action غير معروف ──
   return {
