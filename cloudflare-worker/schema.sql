@@ -264,3 +264,13 @@ CREATE TABLE IF NOT EXISTS customer_sessions (
   expires_at  INTEGER NOT NULL,
   created_at  TEXT    DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
+
+-- ─────────────────────────────────────────────────────────────
+-- 12. جدول الثيمات المخصصة (Themes)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS themes (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT    NOT NULL UNIQUE,
+  config_json TEXT    DEFAULT '{}',
+  updated_at  TEXT    DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);

@@ -102,6 +102,18 @@ export async function getSettings(env) {
     }
   }
 
+  // ── جلب إعدادات الثيم النشط ──
+  if (settings.theme_default) {
+    const themeRow = await env.DB.prepare(
+      `SELECT config_json FROM themes WHERE name = ? LIMIT 1`
+    ).bind(settings.theme_default).first();
+    
+    if (themeRow && themeRow.config_json) {
+      settings.theme_config = safeParseJson(themeRow.config_json, {});
+    }
+  }
+
+  // ── خزِّن في Cache ──
   if (env.CACHE) {
     await env.CACHE.put(cacheKey, JSON.stringify(settings), {
       expirationTtl: SETTINGS_CACHE_TTL,

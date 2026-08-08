@@ -51,6 +51,11 @@ import {
   newsletterSubscribe, adminListSubscribers
 } from './handlers/subscribers.js';
 
+// ── استيراد معالجات الثيمات ──
+import {
+  adminListThemes, adminSaveTheme, adminDeleteTheme
+} from './handlers/themes.js';
+
 // ── استيراد معالجات الأدمن ──
 import {
   verifyAdmin, adminLogout, adminUpdateSettings,
@@ -262,6 +267,11 @@ async function route(action, params, token, env, ctx) {
 
   // ── النشرة البريدية ──
   if (action === 'admin_list_subscribers') return adminListSubscribers(env, params);
+
+  // ── الثيمات ──
+  if (action === 'admin_list_themes')   return adminListThemes(env);
+  if (action === 'admin_save_theme')    return adminSaveTheme(env, params);
+  if (action === 'admin_delete_theme')  return adminDeleteTheme(env, params);
 
   // ── action غير معروف ──
   return {
