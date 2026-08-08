@@ -46,6 +46,11 @@ import {
   adminListCustomers
 } from './handlers/customers.js';
 
+// ── استيراد معالجات النشرة البريدية ──
+import {
+  newsletterSubscribe, adminListSubscribers
+} from './handlers/subscribers.js';
+
 // ── استيراد معالجات الأدمن ──
 import {
   verifyAdmin, adminLogout, adminUpdateSettings,
@@ -190,6 +195,9 @@ async function route(action, params, token, env, ctx) {
   // ── الصفحات المخصصة ──
   if (action === 'get_pages')       return getPages(env);
 
+  // ── النشرة البريدية ──
+  if (action === 'newsletter_subscribe') return newsletterSubscribe(env, params);
+
   // ── الكوبونات (التحقق العام) ──
   if (action === 'validate_coupon') return validateCoupon(env, params);
 
@@ -251,6 +259,9 @@ async function route(action, params, token, env, ctx) {
 
   // ── العملاء ──
   if (action === 'admin_list_customers') return adminListCustomers(env, params);
+
+  // ── النشرة البريدية ──
+  if (action === 'admin_list_subscribers') return adminListSubscribers(env, params);
 
   // ── action غير معروف ──
   return {
