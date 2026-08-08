@@ -57,3 +57,9 @@ vars = { ENVIRONMENT = "staging" }
 binding       = "DB"
 database_name = "smart-shopping-db-staging"
 database_id   = "REPLACE_WITH_STAGING_DB_ID"
+
+# ── R2 Storage للصور ──
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "smart-shopping-images"
+preview_bucket_name = "smart-shopping-images-preview"

@@ -56,6 +56,11 @@ import {
   adminListThemes, adminSaveTheme, adminDeleteTheme
 } from './handlers/themes.js';
 
+// ── استيراد معالجات الرفع (Uploads) ──
+import {
+  publicUploadImage, adminUploadImage
+} from './handlers/uploads.js';
+
 // ── استيراد معالجات الأدمن ──
 import {
   verifyAdmin, adminLogout, adminUpdateSettings,
@@ -203,6 +208,9 @@ async function route(action, params, token, env, ctx) {
   // ── النشرة البريدية ──
   if (action === 'newsletter_subscribe') return newsletterSubscribe(env, params);
 
+  // ── رفع الملفات ──
+  if (action === 'upload_image') return publicUploadImage(env, params);
+
   // ── الكوبونات (التحقق العام) ──
   if (action === 'validate_coupon') return validateCoupon(env, params);
 
@@ -272,6 +280,9 @@ async function route(action, params, token, env, ctx) {
   if (action === 'admin_list_themes')   return adminListThemes(env);
   if (action === 'admin_save_theme')    return adminSaveTheme(env, params);
   if (action === 'admin_delete_theme')  return adminDeleteTheme(env, params);
+
+  // ── رفع الملفات ──
+  if (action === 'admin_upload_image')  return adminUploadImage(env, params);
 
   // ── action غير معروف ──
   return {
