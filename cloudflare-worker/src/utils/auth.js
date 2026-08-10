@@ -102,13 +102,55 @@ export async function revokeAdminSession(db, token) {
 }
 
 /**
- * التحقق من كلمة مرور الأدمن (login)
- * يقارن هاش كلمة المرور المُدخَلة مع المحفوظة في الإعدادات
+ * مقارنة نصوص hex في زمن ثابت (Constant-Time)
+ * تمنع هجمات التوقيت على مقارنة كلمة المرور / الـ token
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
+ */
+export function timingSafeEqualHex(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+/**
+ * إعادة هاش كلمة مرور الأدمن الموثوق
+ * الأولوية: Secret `ADMIN_PASSWORD_HASH` (الموثوق) ثم `admin_password_hash` في D1 (انتقالي).
  * @param {D1Database} db
- * @param {string} password - كلمة المرور الخام (تُهاش هنا)
+ * @param {Env} env
+ * @returns {Promise<string|null>} null = لم تُهيَّأ الحساب بعد
+ */
+async function resolveAdminPasswordHash(db, env) {
+  const secretHash = env && typeof env.ADMIN_PASSWORD_HASH === 'string'
+    ? env.ADMIN_PASSWORD_HASH.trim()
+    : '';
+  if (secretHash) return secretHash;
+
+  const hashRow = await db.prepare(
+    `SELECT value FROM settings WHERE key = 'admin_password_hash' LIMIT 1`
+  ).first();
+  return (hashRow && hashRow.value) ? hashRow.value : null;
+}
+
+/**
+ * التحقق من كلمة مرور الأدمن (login)
+ * نحوّل كلمة المرور (التي تأتي مُهاشةً مرة من الواجهة: sha256(raw))
+ * إلى هاش ثانوي: sha256(sha256(raw)) ثم نقارنها في زمن ثابت.
+ *
+ * FALL-CLOSED: في حالة عدم وجود أي هاش مُهيَّأ (لا Secret ولا سطر في D1)
+ * لا يُعرَف أي "وضع إعداد أولي" أبداً:
+ * - في أي بيئة العلاقة تُرفض (لا setup لأي واجهة).
+ * @param {D1Database} db
+ * @param {string} password - هاش الواجهة sha256(raw)
+ * @param {Env} env
  * @returns {Promise<{ok:boolean, error?:string}>}
  */
-export async function verifyAdminPassword(db, password) {
+export async function verifyAdminPassword(db, password, env = {}) {
   if (!password) return { ok: false, error: 'كلمة المرور مطلوبة' };
 
   // تحقق من الحجب أولاً
@@ -120,19 +162,17 @@ export async function verifyAdminPassword(db, password) {
     return { ok: false, error: 'تم تجاوز الحد المسموح، يرجى الانتظار دقيقة' };
   }
 
-  // اجلب هاش كلمة المرور المحفوظة
-  const hashRow = await db.prepare(
-    `SELECT value FROM settings WHERE key = 'admin_password_hash' LIMIT 1`
-  ).first();
+  // اجلب هاش كلمة المرور الموثوق (Secret أولاً ثم D1)
+  const expectedHash = await resolveAdminPasswordHash(db, env);
 
-  if (!hashRow || !hashRow.value) {
-    // لا توجد كلمة مرور = وضع الإعداد الأولي
-    return { ok: true, setupMode: true };
+  // FALL-CLOSED: لا يوجد حساب مهيَّأ — لا يُعرض أي وضع إعداد أولي
+  if (!expectedHash) {
+    return { ok: false, error: 'لم يتم تهيئة حساب الأدمن بعد' };
   }
 
-  // قارن الهاش
+  // قارن الهاش في زمن ثابت
   const inputHash = await sha256(password);
-  if (inputHash !== hashRow.value) {
+  if (!timingSafeEqualHex(inputHash, expectedHash)) {
     await recordLoginFailure(db);
     return { ok: false, error: 'كلمة المرور غير صحيحة' };
   }
@@ -174,6 +214,10 @@ async function recordLoginFailure(db) {
 /**
  * حارس مسارات الأدمن (Admin Gate Middleware)
  * يُطبَّق قبل أي action يبدأ بـ admin_
+ *
+ * FAIL-CLOSED:
+ * - لا يوجد أي "استثناء وضع إعداد أولي" بعد الآن.
+ * - كل مسارات admin_* تتطلب توكن جلسة أدمن صالحاً بلا أي استثناء.
  * @param {string} action
  * @param {string|null} token
  * @param {D1Database} db
@@ -191,14 +235,6 @@ export async function adminGate(action, token, db) {
     PROTECTED_PREFIXES.some(p => action.startsWith(p));
 
   if (!needsAuth) return true;
-
-  // استثناء خاص: admin_update_settings في وضع الإعداد الأولي
-  if (action === 'admin_update_settings') {
-    const hashRow = await db.prepare(
-      `SELECT value FROM settings WHERE key = 'admin_password_hash' LIMIT 1`
-    ).first();
-    if (!hashRow || !hashRow.value) return true; // وضع Setup
-  }
 
   return validateAdminToken(db, token);
 }

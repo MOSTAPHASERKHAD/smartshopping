@@ -33,12 +33,7 @@ import {
 export async function verifyAdmin(env, params) {
   const password = params.password || '';
 
-  const result = await verifyAdminPassword(env.DB, password);
-
-  if (result.setupMode) {
-    // وضع الإعداد الأولي — لا يوجد باسورد بعد
-    return { ok: true, setup_mode: true, token: null };
-  }
+  const result = await verifyAdminPassword(env.DB, password, env);
 
   if (!result.ok) {
     return { ok: false, error: result.error };
@@ -71,7 +66,12 @@ export async function adminLogout(env, token) {
  */
 export async function adminUpdateSettings(env, params) {
   // المفاتيح المحمية لا تُعَدَّل مباشرةً من هذا الطريق
-  const IMMUTABLE_KEYS = new Set(['login_fails', 'login_blocked_until']);
+  // (مصادَرة الأدمن تُدار حصرياً عبر Worker Secret ADMIN_PASSWORD_HASH)
+  const IMMUTABLE_KEYS = new Set([
+    'login_fails', 'login_blocked_until',
+    'admin_password_hash',      // لا يُكتب مباشرةً — فقط عبر admin_password (يُهاش)
+    'admin_recovery_code',      // أكواد الاسترداد تُدار آلياً
+  ]);
 
   const updates = [];
   const bindings = [];

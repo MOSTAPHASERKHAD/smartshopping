@@ -16,6 +16,9 @@ compatibility_date = "2024-09-23"
 
 [vars]
 ENVIRONMENT        = "production"
+# حماية Fail-closed: منع أي وضع إعداد أولي في الإنتاج.
+# المصداقية تُدار حصرياً عبر Worker Secret ADMIN_PASSWORD_HASH.
+ADMIN_ALLOW_SETUP  = "false"
 # الأصول المسموح لها بالوصول للـ API (CORS Whitelist)
 # افصل بين النطاقات بفاصلة
 ALLOWED_ORIGINS    = "https://smartshopping.click,https://www.smartshopping.click"
@@ -36,12 +39,11 @@ database_name = "smart-shopping-db"
 database_id  = "05ec74cc-1259-48c1-a843-54fd5f7791dd"
 
 # ── KV Namespace للـ Cache ──
-# أنشئ الـ namespace بالأمر: wrangler kv:namespace create CACHE
 [[kv_namespaces]]
 binding    = "CACHE"
-id         = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id         = "0276a15a76924b70a28c96304c182d3d"
 # للبيئة المحلية (dev):
-preview_id = "REPLACE_WITH_YOUR_KV_PREVIEW_ID"
+preview_id = "0276a15a76924b70a28c96304c182d3d"
 
 # ── إعدادات التطوير المحلي ──
 [dev]
@@ -51,7 +53,7 @@ local_protocol = "http"
 # ── إعدادات البيئة التجريبية (Staging) ──
 [env.staging]
 name = "smart-shopping-api-staging"
-vars = { ENVIRONMENT = "staging", ALLOWED_ORIGINS = "https://smartshopping.click,https://www.smartshopping.click,http://127.0.0.1:8787", SESSION_TTL_HOURS = "24", RATE_LIMIT_ADMIN = "60", TIMEZONE = "Africa/Algiers" }
+vars = { ENVIRONMENT = "staging", ALLOWED_ORIGINS = "https://smartshopping.click,https://www.smartshopping.click,http://127.0.0.1:8787", SESSION_TTL_HOURS = "24", RATE_LIMIT_ADMIN = "60", TIMEZONE = "Africa/Algiers", ADMIN_ALLOW_SETUP = "false" }
 
 [[env.staging.d1_databases]]
 binding       = "DB"
@@ -67,7 +69,7 @@ id = "d96fdcdf549b40fab46e974c0aff6e53"
 binding     = "MEDIA"
 bucket_name = "smart-shopping-media-staging"
 
-# ── R2 Bucket للإنتاج (لا يُستخدم حالياً — جاهز للمستقبل) ──
+# ── R2 Bucket للإنتاج ──
 [[r2_buckets]]
 binding     = "MEDIA"
-bucket_name = "smart-shopping-images"
+bucket_name = "smart-shopping-media"
