@@ -32,7 +32,7 @@
 // === Versioned SW Cache Buster ===
 // If SW version changes, clear ALL caches and reload to serve fresh content
 (function(){
-  var REQUIRED_VER = 'v33';
+  var REQUIRED_VER = 'v34';
   var stored = localStorage.getItem('sk_sw_ver');
   if(stored === REQUIRED_VER) return; // already up to date
   if(!('serviceWorker' in navigator)) { localStorage.setItem('sk_sw_ver', REQUIRED_VER); return; }
@@ -107,22 +107,23 @@ document.head.appendChild(ld);
 
 <!-- Promo Banner -->
 <div id="section-hero" class="container" style="margin-top:16px">
-  <div class="hero-slider" id="heroSlider" style="display:block">
-    <div class="slide active"><img src="promo-hero.webp" alt="تسوّق بذكاء" onerror="this.style.display='none';this.parentElement.style.cssText+='background:linear-gradient(135deg,#6366f1,#a855f7);min-height:320px'"><div class="slide-text"><h3>تسوّق بذكاء</h3><p>منتجات متنوعة بأفضل الأسعار</p></div></div>
-    <div class="slide"><img src="promo-sale.webp" alt="عروض حصرية" onerror="this.style.display='none';this.parentElement.style.cssText+='background:linear-gradient(135deg,#ef4444,#f97316);min-height:320px'"><div class="slide-text"><h3>عروض حصرية</h3><p>خصومات تصل إلى 50%</p></div></div>
-    <div class="slide"><img src="promo-accessories.webp" alt="إكسسوارات" onerror="this.style.display='none';this.parentElement.style.cssText+='background:linear-gradient(135deg,#0ea5e9,#6366f1);min-height:320px'"><div class="slide-text"><h3>إكسسوارات</h3><p>أحدث الإكسسوارات التقنية</p></div></div>
+  <!-- Skeleton shown while settings API loads -->
+  <div id="bannerSkeleton" class="skeleton-banner" aria-hidden="true" role="presentation"></div>
+  <!-- Real slider, hidden until loadHeroBanners() is called with actual data -->
+  <div class="hero-slider" id="heroSlider" style="display:none">
     <div class="nav-arrow prev" onclick="heroNav(-1)">‹</div>
     <div class="nav-arrow next" onclick="heroNav(1)">›</div>
     <div class="dots" id="heroDots"></div>
   </div>
 </div>
 
+
 <!-- Theme Engine (advanced theming system) -->
-<script src="themes/theme-schema.js"></script>
-<script src="themes/theme-engine.js"></script>
-<script src="themes/default-themes.js"></script>
-<script src="themes/theme-importer.js"></script>
-<script src="themes/theme-editor.js"></script>
+<script src="themes/theme-schema.js" defer></script>
+<script src="themes/theme-engine.js" defer></script>
+<script src="themes/default-themes.js" defer></script>
+<script src="themes/theme-importer.js" defer></script>
+<script src="themes/theme-editor.js" defer></script>
 
 <section id="section-products">
 <div class="container">
@@ -608,9 +609,13 @@ document.head.appendChild(ld);
 
 <script>
 var _V='6.1.1';if(localStorage.getItem('_v')!==_V)localStorage.setItem('_v',_V);
-var API_URL = 'https://script.google.com/macros/s/AKfycbwSbvmaGo5s7yB4Vw29589Z_UgBY1TYd3QrwmW90ivy5jVx0gbr_jh5MxSwQzepIQ2JEQ/exec';
-// Admin Apps Script (where themes are stored in the Themes sheet)
-var ADMIN_API_URL = 'https://script.google.com/macros/s/AKfycbwSbvmaGo5s7yB4Vw29589Z_UgBY1TYd3QrwmW90ivy5jVx0gbr_jh5MxSwQzepIQ2JEQ/exec';
+// --- ROLLBACK PRESERVATION (GAS) ---
+// var API_URL = 'https://script.google.com/macros/s/AKfycbwSbvmaGo5s7yB4Vw29589Z_UgBY1TYd3QrwmW90ivy5jVx0gbr_jh5MxSwQzepIQ2JEQ/exec';
+// var ADMIN_API_URL = 'https://script.google.com/macros/s/AKfycbwSbvmaGo5s7yB4Vw29589Z_UgBY1TYd3QrwmW90ivy5jVx0gbr_jh5MxSwQzepIQ2JEQ/exec';
+
+// --- CLOUDFLARE PRODUCTION WORKER ---
+var API_URL = 'https://smart-shopping-api.mostaphaserkhad.workers.dev';
+var ADMIN_API_URL = 'https://smart-shopping-api.mostaphaserkhad.workers.dev';
 var LANG_KEY = 'sk_lang';
 var CART_KEY = 'sk_cart';
 var currentLang = localStorage.getItem(LANG_KEY) || 'ar';
@@ -967,8 +972,48 @@ function apiCall(action,params,callback){
     .then(function(d){if(timer)clearTimeout(timer);callback(d)})
     .catch(function(){if(timer)clearTimeout(timer);callback({error:'Network error'})});
 }
+function apiPost(action,params,callback){
+  var url=API_URL;
+  var body = { action: action };
+  if(params){for(var k in params){body[k]=params[k];}}
+  var form = [];
+  for(var key in body){form.push(encodeURIComponent(key)+'='+encodeURIComponent(body[key]===undefined||body[key]===null?'':String(body[key])));}
+  var ctrl=('AbortController' in window)?new AbortController():null;
+  var timer=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},45000):null;
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: form.join('&'),
+    signal: ctrl?ctrl.signal:undefined
+  })
+    .then(function(r){return r.json()})
+    .then(function(d){if(timer)clearTimeout(timer);callback(d)})
+    .catch(function(){if(timer)clearTimeout(timer);callback({error:'Network error'})});
+}
 function cacheGet(key,ttl){try{var c=JSON.parse(localStorage.getItem('ac_'+key));if(c&&Date.now()-c.ts<ttl)return c.data}catch(e){}return null}
 function cacheSet(key,data){try{localStorage.setItem('ac_'+key,JSON.stringify({ts:Date.now(),data:data}))}catch(e){}}
+// Cache-API fast path: Service Worker serves the catalog stale-while-revalidate,
+// so a cache hit returns instantly without any GAS round-trip.
+function catalogFromCache(cb){
+  if(!('caches' in window))return cb(null);
+  try{
+    caches.keys().then(function(keys){
+      keys.sort(function(a,b){return a.lastIndexOf('v34')>=0?-1:0}); // prefer current SW cache first
+      var chain=Promise.resolve();
+      keys.forEach(function(k){
+        chain=chain.then(function(found){if(found)return found;return caches.open(k).then(function(c){return c.match(API_URL+'?action=catalog')}).then(function(r){if(r){return r.json().catch(function(){return null})}}).then(function(d){return d&&d.products?d:null}).catch(function(){return null})});
+      });
+      return chain.then(cb);
+    }).catch(function(){cb(null)});
+  }catch(e){cb(null)}
+}
+function seedCatalogCache(products){
+  try{
+    if(!('caches' in window))return;
+    var resp=new Response(JSON.stringify({products:products}),{headers:{'Content-Type':'application/json; charset=utf-8'}});
+    caches.keys().then(function(keys){return Promise.all(keys.map(function(k){return caches.open(k).then(function(c){return c.put(API_URL+'?action=catalog',resp.clone())})}))}).catch(function(){});
+  }catch(e){}
+}
 
 // === Load default theme from admin Themes sheet (Google Sheets) ===
 function loadServerTheme(){
@@ -996,7 +1041,11 @@ function apiCallAdmin(action,params,callback){
   fetch(url).then(function(r){return r.json()}).then(function(d){callback(d)}).catch(function(){callback({error:'Network error'})});
 }
 
+var _pixelsLoaded = false;
 function loadTrackingPixels(s){
+  if (_pixelsLoaded) return;
+  _pixelsLoaded = true;
+  
   // Facebook Pixel
   if(s.pixel_id){
     (function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)})(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
@@ -1099,14 +1148,29 @@ function init(){
   loadCustomerSession();
   initViewMode();
   checkReferralParam();
-  loadHeroBanners({}, true);
+  // --- Banner init: show skeleton until we have real data ---
+  // Do NOT call loadHeroBanners({},true) eagerly; let skeleton show instead.
   var cachedSettings=cacheGet('settings',3600000);
-  if(cachedSettings){storeSettings=cachedSettings;applySettings(cachedSettings)}
+  if(cachedSettings){
+    storeSettings=cachedSettings;
+    applySettings(cachedSettings); // hides skeleton & loads banners from cache immediately
+  }
+  // Always fetch fresh settings in background (SWR pattern)
   apiCall('settings',{},function(d){
-    if(!d||d.error){if(!storeSettings){storeSettings={};loadHeroBanners({},true);checkCookieConsent()}return}
+    if(!d||d.error){
+      // Network failure: if we have no cached settings yet, fall back to default banners
+      if(!storeSettings){
+        storeSettings={};
+        hideBannerSkeleton();
+        loadHeroBanners({},true);
+        checkCookieConsent();
+      }
+      return;
+    }
     cacheSet('settings',d);
     if(storeSettings===d)return;
-    storeSettings=d;applySettings(d);
+    storeSettings=d;
+    applySettings(d);
   });
   function applySettings(d){
     if(d.gemini_api_key){chatAIEnabled=true;try{delete d.gemini_api_key}catch(e){}}
@@ -1120,17 +1184,37 @@ function init(){
       }
     }
     if(d.phone){document.querySelectorAll('a[href*="wa.me"]').forEach(function(a){a.href='https://wa.me/'+d.phone})}
+    // Resolve banners then hide skeleton
     var hasBanners=false;for(var i=1;i<=5;i++){if(d['banner'+i+'_img']){hasBanners=true;break;}}
-    if(hasBanners&&!bannerForceDefault){loadHeroBanners(d);}else if(!bannerForceDefault){loadAdminBanners();}
+    if(hasBanners&&!bannerForceDefault){
+      hideBannerSkeleton();
+      loadHeroBanners(d);
+    } else if(!bannerForceDefault){
+      // No banner keys in settings: try admin API, show default if that fails too
+      loadAdminBannersOrDefault();
+    } else {
+      hideBannerSkeleton();
+    }
     checkCookieConsent();
     setTimeout(checkLandingPage,500);
   }
+
   var cachedCatalog=cacheGet('catalog',86400000);
   if(cachedCatalog&&cachedCatalog.products){
     allProducts=cachedCatalog.products;
     var v={};allProducts.forEach(function(x){v[x.id]=true});
     cart=cart.filter(function(c){return v[c.id]});
     buildCategories();renderProducts();checkProductLanding();
+  } else {
+    // No localStorage snapshot: try the SW Cache-API (instant, no GAS round-trip).
+    catalogFromCache(function(d){
+      if(!d||!d.products||!d.products.length)return;
+      if(allProducts&&allProducts.length)return; // already resolved
+      allProducts=d.products;
+      var vid={};allProducts.forEach(function(x){vid[x.id]=true});
+      cart=cart.filter(function(c){return vid[c.id]});
+      buildCategories();renderProducts();checkProductLanding();
+    });
   }
   (function attemptCatalog(retries){
     apiCall('catalog',{},function(d){
@@ -1140,6 +1224,7 @@ function init(){
           if(!allProducts.length)document.getElementById('productsGrid').innerHTML='<p style="text-align:center;padding:40px;color:var(--text2);grid-column:1/-1">'+t('no_results')+'</p>';return
         }
         cacheSet('catalog',d);
+        seedCatalogCache(d.products);
         if(d.products===allProducts)return;
         allProducts=d.products;
         var validIds={};allProducts.forEach(function(x){validIds[x.id]=true});
@@ -1280,7 +1365,7 @@ function renderProducts(){
       variantBadges=parts.length?'<div class="product-variants-row" style="font-size:.65rem;color:var(--text2);margin-top:2px">'+parts.join(' | ')+'</div>':'';
     }
     var pid=esc(p.id);var ttl=esc(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar||'');
-    return '<div class="product-card fade-in" style="animation-delay:'+Math.min(i*40,2000)+'ms">'+
+    return '<div class="product-card fade-in" style="animation-delay:'+Math.min(i*40,300)+'ms">'+
       '<div class="product-image-wrap">'+
         '<img class="product-image" src="'+img+'" alt="'+esc(p.title_ar||'')+'" loading="lazy" onerror="this.src=\''+esc(fallbackSvg)+'\'">'+
         (disc?'<span class="product-badge">-'+Math.round((p.old_price-p.price)/p.old_price*100)+'%</span>':'')+
@@ -1474,10 +1559,10 @@ function submitOrder(e){
   var finalSub = sub - cartDiscount;
   if (finalSub < 0) finalSub = 0;
   var utmData=getUTM();
-  apiCall('order',{
+  apiPost('order',{
     name:n,phone:p,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
-    municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,subtotal:finalSub,note:note,
-    coupon_code:cartCouponCode,discount:cartDiscount,
+    municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note,
+    coupon_code:cartCouponCode,
     utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||''
   },function(data){
     setLoading('submitBtn', false);
@@ -1686,9 +1771,9 @@ function submitProductDetail(e){
   if(pdVariantColor)variantNote+=' | اللون: '+pdVariantColor;
   var items=JSON.stringify([{id:pid,title:currentLang==='ar'?prod.title_ar:prod.title_en,price:finalPrice,qty:1,size:pdVariantSize||'',color:pdVariantColor||'',sku:getSelectedVariant(prod)?.sku||''}]);
   setLoading('pdSubmit', true);
-  apiCall('order',{
+  apiPost('order',{
     name:n,phone:ph,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
-    municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,subtotal:finalPrice,note:note+variantNote
+    municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note+variantNote
   },function(data){
     setLoading('pdSubmit', false);
     if(!data||data.error||!data.ok){showToast((currentLang==='ar'?'خطأ: ':'Error: ')+(data?data.error||(currentLang==='ar'?'خطأ غير معروف':'Unknown error'):(currentLang==='ar'?'خطأ في الشبكة':'Network error')),'error');return}
@@ -1814,8 +1899,30 @@ var heroSlides = [];
 var heroIdx = 0;
 var heroTimer = null;
 var heroFallbackTimer = null;
-window.addEventListener('beforeunload', function(){ if(heroFallbackTimer) clearTimeout(heroFallbackTimer); if(heroTimer) clearInterval(heroTimer); });
+window.addEventListener('pagehide', function(){ if(heroFallbackTimer) clearTimeout(heroFallbackTimer); if(heroTimer) clearInterval(heroTimer); });
 var bannerForceDefault = false;
+
+/** Hides the banner skeleton placeholder and reveals the actual slider. */
+function hideBannerSkeleton() {
+  var sk = document.getElementById('bannerSkeleton');
+  if (sk) {
+    sk.style.transition = 'opacity 0.3s ease';
+    sk.style.opacity = '0';
+    setTimeout(function() {
+      if (sk.parentNode) sk.parentNode.removeChild(sk);
+    }, 320);
+  }
+  var slider = document.getElementById('heroSlider');
+  if (slider) {
+    slider.style.opacity = '0';
+    slider.style.display = 'block';
+    // Trigger reflow then fade in
+    requestAnimationFrame(function() {
+      slider.style.transition = 'opacity 0.35s ease';
+      slider.style.opacity = '1';
+    });
+  }
+}
 
 function loadHeroBanners(settings, forceDefault) {
   try {
@@ -1840,9 +1947,9 @@ function loadHeroBanners(settings, forceDefault) {
     }
     var banner = document.getElementById('heroSlider');
     if (!banner) return;
-    banner.style.display = 'block';
     renderHeroSlide(0);
     renderHeroDots();
+    hideBannerSkeleton(); // show slider, remove skeleton
     clearInterval(heroTimer);
     heroTimer = setInterval(function() { heroNav(1); }, 4000);
     if (!forceDefault) {
@@ -1881,7 +1988,10 @@ function renderHeroSlide(idx) {
   existing.forEach(function(s) { s.remove(); });
   var el = document.createElement('div');
   el.className = 'slide active';
-  var html = '<img src="' + esc(slide.img) + '" alt="' + esc(slide.title || 'Promo banner') + '" onerror="this.style.display=\'none\';if(this.parentElement){this.parentElement.style.background=\'linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%)\'}">';
+  // Image with onerror fallback: hide broken img and show gradient background
+  var html = '<img src="' + esc(slide.img) + '" alt="' + esc(slide.title || 'Promo banner') + '"' +
+    ' loading="eager"' +
+    ' onerror="this.style.display=\'none\';if(this.parentElement){this.parentElement.style.background=\'linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%)\'}">';
   if (slide.title) {
     html += '<div class="slide-text"><h3>' + esc(slide.title) + '</h3>';
     if (slide.subtitle) html += '<p>' + esc(slide.subtitle) + '</p>';
@@ -1917,9 +2027,23 @@ function heroGo(idx) {
 
 function loadAdminBanners(){
   apiCallAdmin('settings',{},function(d){
-    if(d&&!d.error){loadHeroBanners(d);}else{loadHeroBanners({},true);}
+    if(d&&!d.error){loadHeroBanners(d);}else{hideBannerSkeleton();loadHeroBanners({},true);}
   });
 }
+
+/** Like loadAdminBanners() but also hides the skeleton on both success and failure. */
+function loadAdminBannersOrDefault(){
+  apiCallAdmin('settings',{},function(d){
+    if(d&&!d.error){
+      var hasBanners=false;for(var i=1;i<=5;i++){if(d['banner'+i+'_img']){hasBanners=true;break;}}
+      if(hasBanners){loadHeroBanners(d);}else{hideBannerSkeleton();loadHeroBanners({},true);}
+    } else {
+      hideBannerSkeleton();
+      loadHeroBanners({},true);
+    }
+  });
+}
+
 
 // === Phase 2.2: Recently Viewed ===
 // === Phase 2.4: Wishlist ===
@@ -2051,19 +2175,11 @@ function submitReview() {
           canvas.width = w; canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           var base64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
-          var cb = 'rev_img_' + Date.now() + '_' + uploaded;
-          var s = document.createElement('script');
-          s.src = API_URL + '?action=upload_image&base64=' + encodeURIComponent(base64) + '&fileName=review_' + Date.now() + '.jpg&callback=' + cb;
-          var sRemoved = false;
-          function removeScript() { if (!sRemoved) { sRemoved = true; try { document.head.removeChild(s); } catch(e) {} } }
-          window[cb] = function(r) { delete window[cb]; removeScript(); if (r && r.url) photoUrls.push(r.url); uploaded++; uploadNext(); };
-          s.onerror = function() {
-            delete window[cb];
-            removeScript();
+          apiPost('upload_image', { data: base64, fileName: 'review_' + Date.now() + '.jpg', mimeType: 'image/jpeg' }, function(r) {
+            if (r && r.url) photoUrls.push(r.url);
             uploaded++;
             uploadNext();
-          };
-          document.head.appendChild(s);
+          });
         };
         img.src = e.target.result;
       };
@@ -2908,10 +3024,10 @@ function submitLandingOrder(e,productId){
   var wil=WILAYAS.find(function(x){return x.code===w});
   var items=JSON.stringify([{id:product.id,title:currentLang==='ar'?product.title_ar:product.title_en,price:product.price,qty:1}]);
   var utmData=getUTM();
-  apiCall('order',{
+  apiPost('order',{
     name:n,phone:p,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
-    municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,subtotal:product.price,note:note,
-    coupon_code:'',discount:0,
+    municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note,
+    coupon_code:'',
     utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||''
   },function(data){
     if(!data||data.error||!data.ok){
