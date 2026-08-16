@@ -1,7 +1,7 @@
 // اختبارات API — يُشغَّل بـ: node test_worker.js
 // تأكد من تشغيل الـ Worker أولاً: npm run dev
 
-const BASE = 'http://127.0.0.1:8787';
+const BASE = process.argv[2] || 'http://127.0.0.1:8787';
 let pass = 0, fail = 0;
 
 async function test(label, url, opts = {}, expect = {}) {

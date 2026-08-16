@@ -25,25 +25,25 @@ import {
   generateOrderId,
   formatAlgeriaTime,
 } from '../utils/sanitize.js';
-import { orderSpamGuard } from '../utils/auth.js';
+import { orderSpamGuard, validateCustomerToken, DEFAULT_MASTER_TENANT_ID } from '../utils/auth.js';
 
 // ─────────────────────────────────────────────
 // ── معالجات العامة (Public Handlers) ──
 // ─────────────────────────────────────────────
 
 /**
- * [PUBLIC] إنشاء طلب جديد
- * يُحاكي createOrder() في GAS مع نفس التحقق والتنظيف
- * 
- * البيانات المطلوبة:
- *   name, phone, items_json, subtotal,
- *   wilaya_ar, wilaya_en, wilaya_code,
- *   municipality, delivery_type
- * 
- * البيانات الاختيارية:
- *   note, coupon_code, utm_source, utm_medium, utm_campaign
+ * [PUBLIC] إنشاء طلب جديد مع عزل التاجر
+ * @param {Env} env
+ * @param {object} params
+ * @param {Request} request
+ * @param {ExecutionContext} ctx
+ * @param {string|null} token
+ * @param {string} [tenantId]
  */
-export async function createOrder(env, params, request, ctx) {
+export async function createOrder(env, params, request, ctx, token, tenantId = DEFAULT_MASTER_TENANT_ID) {
+  // إن وُجد توكن جلسة عميل صالح، يُربط الطلب بهويته تلقائياً (session ownership).
+  // الزبون (بلا token) يبقون يُنشئون الطلب بشكل طبيعي دون أي قيد.
+  const customerId = token ? await validateCustomerToken(env.DB, token) : null;
   // ── التحقق من الحقول المطلوبة ──
   const name  = sanitize(params.name,  200);
   const phone = sanitizePhone(params.phone);
@@ -69,6 +69,9 @@ export async function createOrder(env, params, request, ctx) {
   const utmSource   = sanitize(params.utm_source,   100);
   const utmMedium   = sanitize(params.utm_medium,   100);
   const utmCampaign = sanitize(params.utm_campaign, 100);
+  const fbc         = sanitize(params.fbc,          250);
+  const fbp         = sanitize(params.fbp,          250);
+  const email       = sanitize(params.email,        150);
   const couponCode  = sanitize(params.coupon_code,  50).toUpperCase();
 
   // تنظيف العناصر (يقتل XSS المخزَّن)
@@ -79,15 +82,14 @@ export async function createOrder(env, params, request, ctx) {
   try { itemsArr = JSON.parse(itemsJson); } catch { /* فارغة */ }
   if (!Array.isArray(itemsArr) || !itemsArr.length) return { ok: false, error: 'السلة فارغة' };
 
-  // ── 🔒 الحماية: حساب السعر من قاعدة البيانات ──
+  // ── 🔒 الحماية: حساب السعر من قاعدة البيانات داخل نطاق التاجر المعتمد ──
   const productIds = itemsArr.map(item => Number(item.id)).filter(id => !isNaN(id));
   if (!productIds.length) return { ok: false, error: 'بيانات السلة غير صالحة' };
 
-  // استخراج المنتجات الحقيقية (D1 SQLite لا يدعم مصفوفات مباشرة في IN، سنستخدم ?)
   const placeholders = productIds.map(() => '?').join(',');
   const { results: realProducts } = await env.DB.prepare(
-    `SELECT id, name, price, active FROM products WHERE id IN (${placeholders})`
-  ).bind(...productIds).all();
+    `SELECT id, name, price, active, stock FROM products WHERE id IN (${placeholders}) AND (tenant_id = ? OR tenant_id IS NULL)`
+  ).bind(...productIds, tenantId).all();
 
   const productsMap = new Map(realProducts.map(p => [p.id, p]));
 
@@ -104,6 +106,13 @@ export async function createOrder(env, params, request, ctx) {
     if (!dbProduct) return { ok: false, error: `المنتج رقم ${pId} غير موجود` };
     if (dbProduct.active !== 1) return { ok: false, error: `المنتج ${dbProduct.name} غير متوفر حالياً` };
 
+    // ── 🔒 حماية المخزون (Server-Side Authoritative) ──
+    const stock = Number(dbProduct.stock);
+    if (stock >= 0) {
+      if (stock === 0) return { ok: false, error: `المنتج ${dbProduct.name} نفد من المخزون` };
+      if (qty > stock) return { ok: false, error: `الكمية المطلوبة من ${dbProduct.name} تتجاوز المخزون المتاح (${stock})` };
+    }
+
     const price = Number(dbProduct.price) || 0;
     realSubtotal += (price * qty);
 
@@ -117,14 +126,14 @@ export async function createOrder(env, params, request, ctx) {
 
   const secureItemsJson = JSON.stringify(secureItems);
 
-  // ── معالجة الكوبون (على السعر الحقيقي) ──
+  // ── معالجة الكوبون (على السعر الحقيقي داخل متجر التاجر) ──
   let finalDiscount = 0;
   if (couponCode) {
     const couponRow = await env.DB.prepare(`
       SELECT id, discount_type, discount_value, min_order, max_uses, used_count, expires_at
       FROM coupons
-      WHERE code = ? AND active = 1 LIMIT 1
-    `).bind(couponCode).first();
+      WHERE code = ? AND active = 1 AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1
+    `).bind(couponCode, tenantId).first();
 
     if (
       couponRow &&
@@ -138,32 +147,61 @@ export async function createOrder(env, params, request, ctx) {
 
       // زَد العداد بعد قبول الطلب
       await env.DB.prepare(
-        `UPDATE coupons SET used_count = used_count + 1 WHERE id = ?`
-      ).bind(couponRow.id).run();
+        `UPDATE coupons SET used_count = used_count + 1 WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
+      ).bind(couponRow.id, tenantId).run();
     }
   }
+
+  // ── حساب سعر التوصيل (Server-Side Authoritative) ──
+  const shippingSettings = { shipping_home: '', shipping_office: '', shipping_remote: '' };
+  try {
+    const { results: shipRows } = await env.DB.prepare(
+      `SELECT key, value FROM settings WHERE key IN ('shipping_home','shipping_office','shipping_remote') AND (tenant_id = ? OR tenant_id IS NULL)`
+    ).bind(tenantId).all();
+    for (const row of shipRows) shippingSettings[row.key] = row.value;
+  } catch (e) { /* defaults remain '' */ }
+
+  const shippingMethod = String(deliveryType || 'home').toLowerCase();
+  const REMOTE_WILAYAS = new Set(['01','08','11','30','33','37','47','50','51','52','53','54','55','56','57','58']);
+
+  let shippingCost = 0;
+  if (shippingMethod === 'home' || shippingMethod === 'office') {
+    const base = parseInt(shippingSettings['shipping_' + shippingMethod]) || 0;
+    if (base > 0) {
+      shippingCost = base;
+      const remote = parseInt(shippingSettings.shipping_remote) || 0;
+      if (remote > 0 && REMOTE_WILAYAS.has(wilayaCode)) {
+        shippingCost += remote;
+      }
+    }
+  }
+  const shippingNote = shippingCost > 0
+    ? ''
+    : 'سعر التوصيل يُحدد بعد التأكيد هاتفياً';
 
   // ── إنشاء معرّف الطلب ──
   const orderId   = generateOrderId();
   const createdAt = formatAlgeriaTime();
 
-  // ── حفظ الطلب في D1 ──
+  // ── حفظ الطلب في D1 مع tenant_id الموثوق ──
   await env.DB.prepare(`
     INSERT INTO orders (
-      order_id, created_at, name, phone,
+      tenant_id, order_id, created_at, name, phone,
       wilaya_code, wilaya_ar, wilaya_en, municipality, delivery_type,
-      items_json, subtotal, discount, coupon_code,
+      items_json, subtotal, shipping_cost, shipping_note, discount, coupon_code,
       status, notes,
-      utm_source, utm_medium, utm_campaign
+      utm_source, utm_medium, utm_campaign, customer_id,
+      delivery_company, tracking_code
     ) VALUES (
-      ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+      ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
     )
   `).bind(
-    orderId, createdAt, name, phone,
+    tenantId, orderId, createdAt, name, phone,
     wilayaCode, wilayaAr, wilayaEn, municipality, deliveryType,
-    secureItemsJson, realSubtotal, finalDiscount, couponCode,
+    secureItemsJson, realSubtotal, shippingCost, shippingNote, finalDiscount, couponCode,
     'pending', note,
-    utmSource, utmMedium, utmCampaign,
+    utmSource, utmMedium, utmCampaign, customerId,
+    'yalidine', '',
   ).run();
 
   // ── إرسال حدث CAPI في الخلفية (Non-blocking) ──
@@ -173,11 +211,11 @@ export async function createOrder(env, params, request, ctx) {
         env,
         'Purchase',
         {
-          value: realSubtotal - finalDiscount,
+          value: realSubtotal - finalDiscount + shippingCost,
           order_id: orderId,
           content_ids: secureItems.map(i => i.id.toString())
         },
-        { phone },
+        { phone, email, fbc, fbp },
         request
       )
     );
@@ -192,18 +230,19 @@ export async function createOrder(env, params, request, ctx) {
  * يُحاكي trackOrder() في GAS
  * @param {string} orderId
  */
-export async function trackOrder(env, orderId) {
+export async function trackOrder(env, orderId, tenantId = DEFAULT_MASTER_TENANT_ID) {
   if (!orderId) return { found: false, error: 'معرّف الطلب مطلوب' };
 
   const order = await env.DB.prepare(`
     SELECT
       order_id, created_at, status, shipping_note,
       wilaya_ar, wilaya_en, delivery_type,
-      items_json, subtotal, discount
+      items_json, subtotal, discount, shipping_cost,
+      delivery_company, tracking_code
     FROM orders
-    WHERE order_id = ?
+    WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL)
     LIMIT 1
-  `).bind(sanitize(orderId, 60)).first();
+  `).bind(sanitize(orderId, 60), tenantId).first();
 
   if (!order) return { found: false, error: 'الطلب غير موجود' };
 
@@ -217,32 +256,36 @@ export async function trackOrder(env, orderId) {
 }
 
 /**
- * [PUBLIC] جلب طلبات زبون برقم هاتفه
- * يُحاكي customerOrders() في GAS
- * @param {string} phone
+ * [CUSTOMER] جلب طلبات العميل المسجّل الداخل فقط مع عزل التاجر
  */
-export async function customerOrders(env, phone) {
-  const cleanPhone = sanitizePhone(phone);
-  if (!cleanPhone || cleanPhone.length < 9) {
-    return { orders: [] };
+export async function customerOrders(env, token, tenantId = DEFAULT_MASTER_TENANT_ID) {
+  const customerId = token ? await validateCustomerToken(env.DB, token) : null;
+
+  if (!customerId) {
+    return { ok: false, error: { code: 'UNAUTHORIZED', message: 'يرجى تسجيل الدخول لعرض طلباتك' }, orders: [] };
   }
 
-  // تطابق مرن مع/بدون كود الدولة
+  const customer = await env.DB.prepare(
+    `SELECT phone FROM customers WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`
+  ).bind(customerId, tenantId).first();
+
+  const ownPhone = customer?.phone || null;
+
   const { results } = await env.DB.prepare(`
     SELECT order_id, created_at, status, subtotal, items_json
     FROM orders
-    WHERE replace(phone, '+', '') LIKE '%' || replace(?, '+', '') || '%'
-       OR phone = ?
+    WHERE (customer_id = ? OR (customer_id IS NULL AND phone = ?))
+      AND (tenant_id = ? OR tenant_id IS NULL)
     ORDER BY created_at DESC
     LIMIT 20
-  `).bind(cleanPhone, cleanPhone).all();
+  `).bind(customerId, ownPhone, tenantId).all();
 
   const orders = results.map(o => ({
     ...o,
     items_json: safeParseJson(o.items_json, []),
   }));
 
-  return { orders };
+  return { ok: true, orders };
 }
 
 // ─────────────────────────────────────────────
@@ -250,12 +293,9 @@ export async function customerOrders(env, phone) {
 // ─────────────────────────────────────────────
 
 /**
- * [ADMIN] قائمة جميع الطلبات
- * يُحاكي adminListOrders() في GAS
- * يدعم الفلترة بالحالة والصفحات (Pagination)
- * @param {object} params - { status?, page?, limit? }
+ * [ADMIN] قائمة جميع الطلبات لمتجر التاجر الموثق
  */
-export async function adminListOrders(env, params = {}) {
+export async function adminListOrders(env, params = {}, tenantId = DEFAULT_MASTER_TENANT_ID) {
   const status = params.status ? sanitize(params.status, 20) : null;
   const page   = Math.max(1, parseInt(params.page  ?? 1));
   const limit  = Math.min(100, Math.max(1, parseInt(params.limit ?? 50)));
@@ -267,13 +307,15 @@ export async function adminListOrders(env, params = {}) {
       wilaya_ar, wilaya_en, municipality, delivery_type,
       items_json, subtotal, shipping_cost, discount, coupon_code,
       status, shipping_note, admin_note, notes,
-      utm_source, utm_medium, utm_campaign
+      utm_source, utm_medium, utm_campaign,
+      delivery_company, tracking_code
     FROM orders
+    WHERE (tenant_id = ? OR tenant_id IS NULL)
   `;
-  const bindings = [];
+  const bindings = [tenantId];
 
   if (status) {
-    query += ` WHERE status = ?`;
+    query += ` AND status = ?`;
     bindings.push(status);
   }
 
@@ -282,13 +324,13 @@ export async function adminListOrders(env, params = {}) {
 
   const { results } = await env.DB.prepare(query).bind(...bindings).all();
 
-  // جلب العدد الكلي للصفحات
+  // جلب العدد الكلي للصفحات داخل نطاق هذا التاجر
   const countQuery = status
-    ? `SELECT COUNT(*) as total FROM orders WHERE status = ?`
-    : `SELECT COUNT(*) as total FROM orders`;
+    ? `SELECT COUNT(*) as total FROM orders WHERE (tenant_id = ? OR tenant_id IS NULL) AND status = ?`
+    : `SELECT COUNT(*) as total FROM orders WHERE (tenant_id = ? OR tenant_id IS NULL)`;
   const countRow = status
-    ? await env.DB.prepare(countQuery).bind(status).first()
-    : await env.DB.prepare(countQuery).first();
+    ? await env.DB.prepare(countQuery).bind(tenantId, status).first()
+    : await env.DB.prepare(countQuery).bind(tenantId).first();
 
   const orders = results.map(o => ({
     ...o,
@@ -307,31 +349,33 @@ export async function adminListOrders(env, params = {}) {
 }
 
 /**
- * [ADMIN] تحديث حالة أو ملاحظات طلب
- * يُحاكي adminUpdateOrder() في GAS
- * @param {object} params - { order_id, status?, shipping_note?, admin_note?, shipping_cost? }
+ * [ADMIN] تحديث حالة أو ملاحظات طلب مع التحقق من ملكية التاجر (IDOR Protection)
  */
-export async function adminUpdateOrder(env, params) {
+export async function adminUpdateOrder(env, params, tenantId = DEFAULT_MASTER_TENANT_ID) {
   const orderId = sanitize(params.order_id, 60);
   if (!orderId) return { ok: false, error: 'معرّف الطلب مطلوب' };
 
   const existing = await env.DB.prepare(
-    `SELECT id FROM orders WHERE order_id = ? LIMIT 1`
-  ).bind(orderId).first();
+    `SELECT id, status FROM orders WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`
+  ).bind(orderId, tenantId).first();
 
-  if (!existing) return { ok: false, error: 'الطلب غير موجود' };
+  if (!existing) return { ok: false, error: 'الطلب غير موجود أو لا تملك صلاحية تعديله' };
 
-  // بنِ استعلام UPDATE ديناميكي بناءً على الحقول المُرسَلة
   const updates = [];
   const bindings = [];
 
   const VALID_STATUSES = new Set(['pending','confirmed','shipped','delivered','cancelled']);
 
+  const wantsDelivery = params.status !== undefined &&
+    sanitize(params.status, 20) === 'delivered';
+
   if (params.status !== undefined) {
     const s = sanitize(params.status, 20);
     if (!VALID_STATUSES.has(s)) return { ok: false, error: 'حالة غير صالحة' };
-    updates.push('status = ?');
-    bindings.push(s);
+    if (!wantsDelivery) {
+      updates.push('status = ?');
+      bindings.push(s);
+    }
   }
   if (params.shipping_note !== undefined) {
     updates.push('shipping_note = ?');
@@ -345,30 +389,170 @@ export async function adminUpdateOrder(env, params) {
     updates.push('shipping_cost = ?');
     bindings.push(sanitizeNumber(params.shipping_cost));
   }
+  if (params.delivery_company !== undefined) {
+    updates.push('delivery_company = ?');
+    bindings.push(sanitize(params.delivery_company, 100));
+  }
+  if (params.tracking_code !== undefined) {
+    updates.push('tracking_code = ?');
+    bindings.push(sanitize(params.tracking_code, 200));
+  }
 
-  if (!updates.length) return { ok: false, error: 'لم يُرسَل أي تعديل' };
+  if (!updates.length && !wantsDelivery) return { ok: false, error: 'لم يُرسَل أي تعديل' };
 
-  bindings.push(orderId);
-  await env.DB.prepare(
-    `UPDATE orders SET ${updates.join(', ')} WHERE order_id = ?`
-  ).bind(...bindings).run();
+  if (updates.length) {
+    bindings.push(orderId, tenantId);
+    await env.DB.prepare(
+      `UPDATE orders SET ${updates.join(', ')} WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
+    ).bind(...bindings).run();
+  }
+
+  // PATHWAY DELIVERED: المسار الوحيد المؤدي إلى إنقاص المخزون.
+  if (wantsDelivery) {
+    return processDeliveredOrderStock(env, orderId, tenantId);
+  }
 
   return { ok: true };
 }
 
 /**
- * [ADMIN] حذف طلب
- * @param {object} params - { order_id }
+ * [ADMIN] حذف طلب مع التحقق من ملكية التاجر (IDOR Protection)
  */
-export async function adminDeleteOrder(env, params) {
+export async function adminDeleteOrder(env, params, tenantId = DEFAULT_MASTER_TENANT_ID) {
   const orderId = sanitize(params.order_id, 60);
   if (!orderId) return { ok: false, error: 'معرّف الطلب مطلوب' };
 
-  await env.DB.prepare(
-    `DELETE FROM orders WHERE order_id = ?`
-  ).bind(orderId).run();
+  const result = await env.DB.prepare(
+    `DELETE FROM orders WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
+  ).bind(orderId, tenantId).run();
+
+  if (!result.meta.changes) {
+    return { ok: false, error: 'الطلب غير موجود أو لا تملك صلاحية حذفه' };
+  }
 
   return { ok: true };
+}
+
+/**
+ * [INTERNAL — DELIVERY CONFIRMED] إنقاص المخزون عند تأكيد التسليم فقط مع عزل التاجر
+ */
+export async function processDeliveredOrderStock(env, orderId, tenantId = DEFAULT_MASTER_TENANT_ID) {
+  const order = await env.DB.prepare(
+    `SELECT order_id, status, stock_decremented, items_json FROM orders WHERE order_id = ? LIMIT 1`
+  ).bind(orderId).first();
+
+  if (!order) return { ok: false, error: 'الطلب غير موجود' };
+
+  // No-op سريع: الطلب مُعالَج بالفعل أو أصلاً delivered.
+  if (order.status === 'delivered' || order.stock_decremented === 1) {
+    return { ok: true, alreadyProcessed: true };
+  }
+
+  // تحليل عناصر الطلب — الكمية تُؤخذ من بيانات الطلب المخزَّنة فقط (لا من العميل).
+  let items = [];
+  try { items = JSON.parse(order.items_json); } catch { /* فارغ */ }
+  if (!Array.isArray(items) || !items.length) {
+    return { ok: false, error: 'الطلب لا يحتوي عناصر صالحة' };
+  }
+
+  const productIds = items
+    .map(i => Number(i.id))
+    .filter(id => Number.isFinite(id) && id > 0);
+  if (!productIds.length) return { ok: false, error: 'بيانات الطلب غير صالحة' };
+
+  const placeholders = productIds.map(() => '?').join(',');
+  const { results: productRows } = await env.DB.prepare(
+    `SELECT id, stock FROM products WHERE id IN (${placeholders})`
+  ).bind(...productIds).all();
+  const stockMap = new Map(productRows.map(p => [p.id, p.stock]));
+
+  // ── PRE-CHECK (تحسين أداء فقط — آلية الصحة النهائية داخل الـ batch) ──
+  const decrements = [];
+  for (const item of items) {
+    const pId = Number(item.id);
+    const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
+    if (!Number.isFinite(pId) || pId <= 0) return { ok: false, error: 'insufficient_stock' };
+    const stock = Number(stockMap.get(pId));
+    if (stock === -1) continue;              // unlimited — لا يُنقص.
+    if (Number.isNaN(stock) || stock < qty) return { ok: false, error: 'insufficient_stock' };
+    decrements.push({ id: pId, qty });
+  }
+
+  // ── TRANSACTION واحدة: claim + assertions + decrements ──
+  // claimToken فريد لكل طلب — stock_processed_at يحمله بدلاً من timestamp.
+  const claimToken = crypto.randomUUID();
+
+  const stmts = [
+    // 0) CLAIM — exactly-once atomic gate.
+    env.DB.prepare(`
+      UPDATE orders
+      SET status = 'delivered',
+          stock_decremented = 1,
+          stock_processed_at = ?
+      WHERE order_id = ?
+        AND stock_decremented = 0
+        AND status <> 'delivered'
+    `).bind(claimToken, orderId),
+  ];
+
+  // 1) ASSERTIONS — لكل منتج محدود، داخل نفس الـ transaction.
+  //    - من خسر الـ claim (token مخزَّن != token هذا الطلب) → 0 (no-op، alreadyProcessed).
+  //    - stock كافٍ → 1 (pass).
+  //    - stock غير كافٍ → json('{invalid') يرمي SQL error → rollback الـ batch كله
+  //      (يشمل الـ claim) → لا delivered-without-decrement.
+  for (const d of decrements) {
+    stmts.push(env.DB.prepare(`
+      SELECT CASE
+        WHEN (SELECT stock_processed_at FROM orders WHERE order_id = ?) <> ? THEN 0
+        WHEN (SELECT stock FROM products WHERE id = ?) >= ? THEN 1
+        ELSE json('{invalid')
+      END
+    `).bind(orderId, claimToken, d.id, d.qty));
+  }
+
+  // 2) DECREMENTS — فقط للفائز بالـ claim: guard token حرفي.
+  //    Guard `stock >= ?` يمنع السالب؛ مطابقة الـ token تمنع أي decrement خاسر.
+  for (const d of decrements) {
+    stmts.push(env.DB.prepare(`
+      UPDATE products
+      SET stock = stock - ?
+      WHERE id = ?
+        AND stock >= ?
+        AND (
+          SELECT stock_processed_at
+          FROM orders
+          WHERE order_id = ?
+        ) = ?
+    `).bind(d.qty, d.id, d.qty, orderId, claimToken));
+  }
+
+  let results;
+  try {
+    results = await env.DB.batch(stmts);
+  } catch (err) {
+    // خطأ من الـ ASSERTION (مخزون غير كافٍ) أو أي خطأ SQL:
+    // D1 قام بـ rollback تلقائي للـ batch كله (يشمل الـ claim).
+    if (String(err?.message || err).includes('malformed JSON')) {
+      return { ok: false, error: 'insufficient_stock' };
+    }
+    // خطأ غير متوقع — rollback حدث أيضاً (لا delivered-without-decrement)،
+    // لكن نُعيده ليعالج في الطبقة العليا.
+    throw err;
+  }
+
+  const claim = results[0];
+  // لم نفز بالـ claim → معالجة متزامنة/سابقة سبقتنا → no-op (لا يلمس المخزون إطلاقاً).
+  if ((claim?.meta?.changes ?? 0) === 0) {
+    return { ok: true, alreadyProcessed: true };
+  }
+
+  // ── النجاح: commit مؤكد (claim + كل decrements) ──
+  // مسح cache الكتالوج فقط بعد commit ناجح.
+  if (env.CACHE) {
+    try { await env.CACHE.delete('catalog_v1'); } catch { /* cache best-effort */ }
+  }
+
+  return { ok: true, stock_processed_at: claimToken };
 }
 
 // ─────────────────────────────────────────────

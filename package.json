@@ -10,10 +10,15 @@
     "clean": "node scripts/clean.js"
   },
   "devDependencies": {
+    "canvas": "^3.2.3",
     "clean-css-cli": "^5.6.3",
     "html-minifier-terser": "^7.2.0",
     "terser": "^5.31.0"
   },
-  "keywords": ["ecommerce", "algeria", "pwa"],
+  "keywords": [
+    "ecommerce",
+    "algeria",
+    "pwa"
+  ],
   "license": "MIT"
 }

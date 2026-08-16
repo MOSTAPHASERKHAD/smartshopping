@@ -2,6 +2,9 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 
 const testFiles = [
+  'test_migration_safety.js',
+  'test_multi_tenant_harness.js',
+  'test_phase29_merchant_auth.js',
   'test_worker.js',
   'test_order_security.js',
   'test_customers.js',

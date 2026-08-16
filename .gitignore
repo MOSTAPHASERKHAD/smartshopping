@@ -1,3 +1,38 @@
 modify.py
 
 node_modules/
+
+# ── Secrets & secret-bearing artifacts ──
+# Never track plaintext secrets, API keys, or environment files.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# Export + report artifacts may contain plaintext values from GAS/D1
+# (e.g. gemini_api_key, admin_password, fb_capi_token). Keep them out of VCS.
+*_export*.json
+*_report*.json
+*.export.json
+cloudflare-worker/scripts/import.sql
+cloudflare-worker/scripts/import_production.sql
+
+# GAS/D1 data snapshots (may mirror production data)
+backups/
+cloudflare-worker/backups/
+/.git.phase18_2_2_prefilter/
+*.sql.tmp
+
+# ── Cloudflare local dev state (never commits worker dev artifacts) ──
+.wrangler/
+cloudflare-worker/.wrangler/
+cloudflare-worker/.tmp-dryrun/
+*.wrangler.tmp
+
+# ── Local scratch / tooling ──
+.tmp-dryrun/
+*.o
+*.dll.so

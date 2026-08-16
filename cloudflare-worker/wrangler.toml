@@ -7,6 +7,14 @@ name = "smart-shopping-api"
 main = "src/index.js"
 compatibility_date = "2024-09-23"
 
+workers_dev = true
+
+# ── توجيه النطاقات الفرعية للمتاجر المتعددة (Wildcard Storefront Routing) ──
+# النطاق الرئيسي (smartshopping.click) و www يُداران مباشرة عبر Cloudflare Pages Custom Domain
+routes = [
+  { pattern = "*.smartshopping.click/*", zone_name = "smartshopping.click" }
+]
+
 # ── وضع المتغيرات الحساسة (Secrets) ──
 # لا تُضَف هنا مباشرةً — استخدم الأمر التالي:
 #   wrangler secret put ADMIN_SECRET_KEY
@@ -21,7 +29,7 @@ ENVIRONMENT        = "production"
 ADMIN_ALLOW_SETUP  = "false"
 # الأصول المسموح لها بالوصول للـ API (CORS Whitelist)
 # افصل بين النطاقات بفاصلة
-ALLOWED_ORIGINS    = "https://smartshopping.click,https://www.smartshopping.click"
+ALLOWED_ORIGINS    = "https://smartshopping.click,https://www.smartshopping.click,https://smartshopping-76x.pages.dev"
 # مدة صلاحية جلسة الأدمن (بالساعات)
 SESSION_TTL_HOURS  = "24"
 # الحد الأقصى لطلبات الأدمن في الدقيقة (Rate Limiting)
@@ -53,7 +61,7 @@ local_protocol = "http"
 # ── إعدادات البيئة التجريبية (Staging) ──
 [env.staging]
 name = "smart-shopping-api-staging"
-vars = { ENVIRONMENT = "staging", ALLOWED_ORIGINS = "https://smartshopping.click,https://www.smartshopping.click,http://127.0.0.1:8787", SESSION_TTL_HOURS = "24", RATE_LIMIT_ADMIN = "60", TIMEZONE = "Africa/Algiers", ADMIN_ALLOW_SETUP = "false" }
+vars = { ENVIRONMENT = "staging", ALLOWED_ORIGINS = "https://smartshopping.click,https://www.smartshopping.click,https://smartshopping-76x.pages.dev,http://127.0.0.1:8787", SESSION_TTL_HOURS = "24", RATE_LIMIT_ADMIN = "60", TIMEZONE = "Africa/Algiers", ADMIN_ALLOW_SETUP = "false" }
 
 [[env.staging.d1_databases]]
 binding       = "DB"

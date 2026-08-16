@@ -1,0 +1,116 @@
+{
+  "target": "https://smart-shopping-api.mostaphaserkhad.workers.dev",
+  "timestamp": "2026-08-10T22:28:11.266Z",
+  "summary": {
+    "total": 21,
+    "pass": 21,
+    "fail": 0
+  },
+  "results": [
+    {
+      "name": "A1 catalog",
+      "passed": true,
+      "detail": "items=1, status=200"
+    },
+    {
+      "name": "A2 settings",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "A3 testimonials",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "name": "A4 get_reviews",
+      "passed": true,
+      "detail": "status=200, reviews=0"
+    },
+    {
+      "name": "A5 get_pages",
+      "passed": true,
+      "detail": "status=200, pages=0"
+    },
+    {
+      "name": "A6 validate_coupon(invalid)",
+      "passed": true,
+      "detail": "status=200, valid=false"
+    },
+    {
+      "name": "B1 verify_admin wrong pw",
+      "passed": true,
+      "detail": "ok=false"
+    },
+    {
+      "name": "B2 no setup_mode leak",
+      "passed": true,
+      "detail": "absent"
+    },
+    {
+      "name": "B3 verify_admin empty pw",
+      "passed": true,
+      "detail": "ok=false"
+    },
+    {
+      "name": "B4 verify_admin no param",
+      "passed": true,
+      "detail": "ok=false"
+    },
+    {
+      "name": "C1 admin_update_settings no token",
+      "passed": true,
+      "detail": "status=401"
+    },
+    {
+      "name": "C2 admin_list forged token",
+      "passed": true,
+      "detail": "status=401"
+    },
+    {
+      "name": "C3 admin_orders short token",
+      "passed": true,
+      "detail": "status=401"
+    },
+    {
+      "name": "D1 admin_logout no token",
+      "passed": true,
+      "detail": "status=401"
+    },
+    {
+      "name": "E1 settings no admin_password_hash leak",
+      "passed": true,
+      "detail": "absent"
+    },
+    {
+      "name": "F1 CORS allowed origin",
+      "passed": true,
+      "detail": "acao=https://smartshopping.click"
+    },
+    {
+      "name": "F2 CORS disallowed blocked",
+      "passed": true,
+      "detail": "acao=https://smartshopping.click"
+    },
+    {
+      "name": "G1 OPTIONS preflight",
+      "passed": true,
+      "detail": "status=204"
+    },
+    {
+      "name": "H1 unknown action",
+      "passed": true,
+      "detail": "status=200, code=UNKNOWN_ACTION"
+    },
+    {
+      "name": "I1 json content-type",
+      "passed": true,
+      "detail": "ct=application/json; charset=utf-8"
+    },
+    {
+      "name": "J1 admin_settings no token",
+      "passed": true,
+      "detail": "status=401"
+    }
+  ]
+}

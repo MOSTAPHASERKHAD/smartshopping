@@ -1,0 +1,138 @@
+{
+  "worker_url": "https://smart-shopping-api.mostaphaserkhad.workers.dev",
+  "deployment_id": "36025a8b-706c-486d-8932-95268ef73f87",
+  "timestamp": "2026-08-10T18:17:02.441Z",
+  "summary": {
+    "total": 21,
+    "pass": 21,
+    "fail": 0
+  },
+  "results": [
+    {
+      "name": "GET catalog",
+      "passed": true,
+      "detail": "items=1",
+      "ms": 911
+    },
+    {
+      "name": "GET settings",
+      "passed": true,
+      "detail": "store_name=Smart Shopping",
+      "ms": 314
+    },
+    {
+      "name": "GET testimonials",
+      "passed": true,
+      "detail": "ok=N/A",
+      "ms": 139
+    },
+    {
+      "name": "GET get_reviews",
+      "passed": true,
+      "detail": "reviews=0",
+      "ms": 306
+    },
+    {
+      "name": "GET get_pages",
+      "passed": true,
+      "detail": "pages=0",
+      "ms": 114
+    },
+    {
+      "name": "POST validate_coupon (invalid)",
+      "passed": true,
+      "detail": "valid=false",
+      "ms": 90
+    },
+    {
+      "name": "POST customer_register",
+      "passed": true,
+      "detail": "phone=0777000948",
+      "ms": 275
+    },
+    {
+      "name": "POST customer_login",
+      "passed": true,
+      "detail": "token=OK",
+      "ms": 217
+    },
+    {
+      "name": "GET customer_profile",
+      "passed": true,
+      "detail": "name=Test User Phase4",
+      "ms": 153
+    },
+    {
+      "name": "GET track (invalid id)",
+      "passed": true,
+      "detail": "found=false",
+      "ms": 119
+    },
+    {
+      "name": "POST order (created)",
+      "passed": true,
+      "detail": "order_id=SK-20260810-FFEU",
+      "ms": 290
+    },
+    {
+      "name": "🔒 Price Manipulation Protection",
+      "passed": true,
+      "detail": "sent=0, expected=27000, stored=27000",
+      "ms": 132
+    },
+    {
+      "name": "🔒 Admin no token → reject",
+      "passed": true,
+      "detail": "status=401",
+      "ms": 77
+    },
+    {
+      "name": "🔒 Admin invalid token → reject",
+      "passed": true,
+      "detail": "status=401",
+      "ms": 82
+    },
+    {
+      "name": "🔒 CORS allowed origin",
+      "passed": true,
+      "detail": "acao=https://smartshopping.click",
+      "ms": 85
+    },
+    {
+      "name": "🔒 CORS disallowed origin blocked",
+      "passed": true,
+      "detail": "acao=https://smartshopping.click",
+      "ms": 84
+    },
+    {
+      "name": "JSON response enforcement",
+      "passed": true,
+      "detail": "ct=application/json; charset=utf-8",
+      "ms": 83
+    },
+    {
+      "name": "🔒 SQL Injection (catalog)",
+      "passed": true,
+      "detail": "status=200",
+      "ms": 83
+    },
+    {
+      "name": "🔒 XSS in name field (sanitized/rejected)",
+      "passed": true,
+      "detail": "ok=false, err=رقم الهاتف غير صالح",
+      "ms": 81
+    },
+    {
+      "name": "🔒 verify_admin wrong secret → reject",
+      "passed": true,
+      "detail": "ok=false",
+      "ms": 81
+    },
+    {
+      "name": "🔒 R2 upload invalid MIME type → reject",
+      "passed": true,
+      "detail": "ok=false, err=نوع الملف غير مدعوم (فقط JPG, PNG, WEBP, GIF)",
+      "ms": 82
+    }
+  ]
+}

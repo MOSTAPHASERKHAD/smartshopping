@@ -149,6 +149,34 @@ body.rtl{font-family:var(--font-ar)}
 .new-order-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-left:4px;animation:pulse 1.2s infinite}
 @keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
 
+/* Phase 7 — Landing page configuration panel inside the product modal */
+.config-panel{border:1px solid var(--border);border-radius:var(--radius);margin-top:var(--ds-space-4);background:var(--bg);overflow:hidden}
+.config-panel summary{list-style:none;cursor:pointer;padding:var(--ds-space-3) var(--ds-space-5);display:flex;align-items:center;justify-content:space-between;gap:var(--ds-space-3);font-weight:700;font-size:var(--ds-text-sm);color:var(--text);user-select:none;transition:background var(--ds-transition-fast)}
+.config-panel summary::-webkit-details-marker{display:none}
+.config-panel summary:hover{background:var(--card)}
+.config-panel summary::after{content:'▾';font-size:var(--ds-text-sm);color:var(--text3);transition:transform var(--ds-transition-fast)}
+.config-panel[open] summary::after{transform:rotate(180deg)}
+.config-panel-summary-title{display:flex;align-items:center;gap:var(--ds-space-2)}
+.config-panel-body{padding:var(--ds-space-4) var(--ds-space-5) var(--ds-space-5);border-top:1px solid var(--border)}
+.config-panel-body .form-group{margin-bottom:12px}
+.config-panel-body .form-group label{text-transform:none;letter-spacing:0;font-weight:700}
+.config-section-title{font-size:var(--ds-text-xs);font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin:var(--ds-space-4) 0 var(--ds-space-2);padding-bottom:var(--ds-space-1);border-bottom:1px dashed var(--border)}
+.config-section-title:first-child{margin-top:0}
+.config-check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--ds-space-2)}
+.config-check{display:flex;align-items:center;gap:6px;font-size:var(--ds-text-sm);cursor:pointer;color:var(--text);padding:var(--ds-space-1) 0}
+.config-check input{width:auto;cursor:pointer}
+.config-preview-row{display:flex;align-items:center;gap:var(--ds-space-2);margin-bottom:var(--ds-space-3)}
+.lp-row{display:grid;grid-template-columns:60px 1fr 1fr 32px;gap:6px;align-items:center;margin-bottom:6px}
+.lp-row.lp-row-faq{grid-template-columns:1fr 1fr 32px}
+.lp-row input{padding:7px var(--ds-space-2);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:var(--ds-text-xs);outline:none;background:var(--card);width:100%}
+.lp-row input:focus{border-color:var(--accent)}
+.config-accent-line{display:flex;align-items:center;gap:8px}
+.config-accent-line input[type=color]{width:40px;height:32px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;cursor:pointer;padding:2px}
+.config-accent-line input[type=text]{width:110px;font-family:monospace!important;direction:ltr!important;text-align:left!important}
+.config-add-btn{font-size:var(--ds-text-xs);padding:5px var(--ds-space-3);border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;transition:all var(--ds-transition-fast);display:inline-flex;align-items:center;gap:4px;margin-top:2px}
+.config-add-btn:hover{border-color:var(--accent);color:var(--accent)}
+.config-hint{font-size:var(--ds-text-xs);color:var(--text3);margin-bottom:var(--ds-space-2)}
+
 @media(max-width:768px){
 .sidebar{width:56px}.sidebar-header .logo span:not(.icon){display:none}.sidebar-header .logo-badge{display:none}.sidebar-nav a span:not(.icon){display:none}.sidebar-nav a{padding:var(--ds-space-3);justify-content:center}.sidebar-footer{display:none}
 .main{margin-right:56px;padding:var(--ds-space-4)}

@@ -25,39 +25,48 @@
   <div class="login-card">
     <div class="login-logo"><img src="logo.png" alt="Smart Shopping" style="height:50px;width:auto"></div>
     <h2>Smart Shopping</h2>
-    <p>لوحة التحكم</p>
-    <div class="login-error" id="loginError">كلمة المرور خاطئة</div>
+    <p>تسجيل الدخول إلى لوحة التحكم</p>
+    <div class="login-error" id="loginError" style="display:none"></div>
     <div class="form-group">
-      <label>اسم المستخدم</label>
-      <input type="text" id="loginUser" value="admin" autocomplete="username">
+      <label>البريد الإلكتروني أو اسم المستخدم</label>
+      <input type="text" id="loginUser" placeholder="admin@example.com" autocomplete="username">
     </div>
     <div class="form-group">
       <label>كلمة المرور</label>
       <input type="password" id="loginPass" placeholder="أدخل كلمة المرور" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()">تسجيل الدخول</button>
-    <div style="text-align:center;margin-top:12px">
-      <a href="#" onclick="showForgotScreen();return false" style="color:#90A4AE;font-size:13px;text-decoration:none">نسيت كلمة المرور؟</a>
+    <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:13px">
+      <a href="#" onclick="showSignupScreen();return false" style="color:#2563eb;text-decoration:none;font-weight:bold">إنشاء حساب تاجر جديد</a>
+      <a href="#" onclick="showForgotScreen();return false" style="color:#90A4AE;text-decoration:none">نسيت كلمة المرور؟</a>
     </div>
   </div>
 </div>
 
-<!-- Setup Screen (first time) -->
-<div class="login-screen" id="setupScreen" style="display:none">
-  <div class="login-card">
+<!-- Signup Screen (New Merchant) -->
+<div class="login-screen" id="signupScreen" style="display:none">
+  <div class="login-card" style="max-width:440px">
     <div class="login-logo"><img src="logo.png" alt="Smart Shopping" style="height:50px;width:auto"></div>
-    <h2>🔑 إنشاء كلمة المرور</h2>
-    <p>هذه أول مرة تدخل فيها. أنشئ كلمة مرور جديدة</p>
-    <div class="login-error" id="setupError" style="display:none"></div>
+    <h2>🚀 إنشاء متجر جديد</h2>
+    <p>ابدأ التجارة الإلكترونية مع SmartKiosk</p>
+    <div class="login-error" id="signupError" style="display:none"></div>
+    <div class="login-success" id="signupSuccess" style="display:none;background:#064e3b;color:#a7f3d0;padding:10px;border-radius:6px;margin-bottom:12px;font-size:13px"></div>
     <div class="form-group">
-      <label>كلمة المرور الجديدة</label>
-      <input type="password" id="setupPass" placeholder="أدخل كلمة المرور" autocomplete="new-password">
+      <label>اسم المتجر *</label>
+      <input type="text" id="regStoreName" placeholder="مثلاً: متجر النخبة" required>
     </div>
     <div class="form-group">
-      <label>تأكيد كلمة المرور</label>
-      <input type="password" id="setupPassConfirm" placeholder="أعد كتابة كلمة المرور" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSetup()">
+      <label>البريد الإلكتروني *</label>
+      <input type="email" id="regEmail" placeholder="owner@myshop.com" required>
     </div>
-    <button class="btn-login" id="setupBtn" onclick="doSetup()">🔐 حفظ كلمة المرور</button>
+    <div class="form-group">
+      <label>كلمة المرور * (8 أحرف على الأقل)</label>
+      <input type="password" id="regPass" placeholder="كلمة مرور قوية" required>
+    </div>
+    <button class="btn-login" id="signupBtn" onclick="doRegister()">إنشاء الحساب والبدء</button>
+    <div style="text-align:center;margin-top:14px">
+      <a href="#" onclick="showLoginScreen();return false" style="color:#90A4AE;font-size:13px;text-decoration:none">← لديك حساب بالفعل؟ تسجيل الدخول</a>
+    </div>
   </div>
 </div>
 
@@ -65,17 +74,51 @@
 <div class="login-screen" id="forgotScreen" style="display:none">
   <div class="login-card">
     <div class="login-logo"><img src="logo.png" alt="Smart Shopping" style="height:50px;width:auto"></div>
-    <h2>🔓 استرجاع الحساب</h2>
-    <p>أدخل رمز الاسترجاع الذي حصلت عليه عند إنشاء كلمة المرور</p>
+    <h2>🔓 استعادة كلمة المرور</h2>
+    <p>أدخل بريدك الإلكتروني لتلقي رابط الاستعادة</p>
     <div class="login-error" id="forgotError" style="display:none"></div>
+    <div class="login-success" id="forgotSuccess" style="display:none;background:#064e3b;color:#a7f3d0;padding:10px;border-radius:6px;margin-bottom:12px;font-size:13px"></div>
     <div class="form-group">
-      <label>رمز الاسترجاع</label>
-      <input type="text" id="recoveryCode" placeholder="مثال: AB12XY34CD56WQ78" style="text-align:center;font-family:monospace;letter-spacing:2px;font-size:18px" onkeydown="if(event.key==='Enter')doVerifyRecovery()">
+      <label>البريد الإلكتروني</label>
+      <input type="email" id="forgotEmail" placeholder="admin@example.com" onkeydown="if(event.key==='Enter')doForgotPassword()">
     </div>
-    <button class="btn-login" id="forgotBtn" onclick="doVerifyRecovery()">🔍 تحقق</button>
-    <div style="text-align:center;margin-top:12px">
+    <button class="btn-login" id="forgotBtn" onclick="doForgotPassword()">إرسال رابط الاستعادة</button>
+    <div style="text-align:center;margin-top:14px">
       <a href="#" onclick="showLoginScreen();return false" style="color:#90A4AE;font-size:13px;text-decoration:none">← العودة لتسجيل الدخول</a>
     </div>
+  </div>
+</div>
+
+<!-- Reset Password Screen -->
+<div class="login-screen" id="resetScreen" style="display:none">
+  <div class="login-card">
+    <div class="login-logo"><img src="logo.png" alt="Smart Shopping" style="height:50px;width:auto"></div>
+    <h2>🔐 تعيين كلمة مرور جديدة</h2>
+    <p>أدخل كلمة المرور الجديدة لحسابك</p>
+    <div class="login-error" id="resetError" style="display:none"></div>
+    <div class="login-success" id="resetSuccess" style="display:none;background:#064e3b;color:#a7f3d0;padding:10px;border-radius:6px;margin-bottom:12px;font-size:13px"></div>
+    <div class="form-group">
+      <label>كلمة المرور الجديدة *</label>
+      <input type="password" id="resetNewPass" placeholder="8 أحرف على الأقل">
+    </div>
+    <div class="form-group">
+      <label>تأكيد كلمة المرور *</label>
+      <input type="password" id="resetNewPassConfirm" placeholder="أعد كتابة كلمة المرور" onkeydown="if(event.key==='Enter')doResetPassword()">
+    </div>
+    <button class="btn-login" id="resetBtn" onclick="doResetPassword()">حفظ كلمة المرور الجديدة</button>
+    <div style="text-align:center;margin-top:14px">
+      <a href="#" onclick="showLoginScreen();return false" style="color:#90A4AE;font-size:13px;text-decoration:none">← تسجيل الدخول</a>
+    </div>
+  </div>
+</div>
+
+<!-- Email Verification Notification Screen -->
+<div class="login-screen" id="verifyScreen" style="display:none">
+  <div class="login-card" style="text-align:center">
+    <div class="login-logo"><img src="logo.png" alt="Smart Shopping" style="height:50px;width:auto"></div>
+    <h2>✉️ تأكيد البريد الإلكتروني</h2>
+    <div id="verifyMessage" style="margin:20px 0;font-size:15px;line-height:1.6">جاري التحقق من البريد الإلكتروني...</div>
+    <button class="btn-login" onclick="showLoginScreen()">الانتقال لتسجيل الدخول</button>
   </div>
 </div>
 
@@ -214,6 +257,23 @@
     <div class="top-bar"><h1>الإعدادات</h1></div>
     <div class="panel">
       <div class="panel-body">
+        <div class="form-group full" style="border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:16px">
+          <label>شعار المتجر</label>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <div class="upload-box" style="width:120px;height:56px"><img id="logo_preview" src="logo1.png" alt="شعار المتجر"></div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;gap:8px">
+                <label class="upload-box" id="logo_upload_box" style="border:none;width:auto;height:auto;justify-content:flex-start;overflow:visible">
+                  <input type="file" id="logo_file" accept="image/png,image/jpeg,image/webp" onchange="onLogoFileChange(this)" style="display:none">
+                  <button type="button" class="btn btn-outline" onclick="document.getElementById('logo_file').click()">رفع شعار جديد</button>
+                </label>
+                <button type="button" class="btn btn-danger" id="btn_restore_logo" onclick="restoreDefaultLogo()" style="padding:6px 12px;font-size:0.75rem">استعادة الافتراضي</button>
+              </div>
+              <small style="color:var(--text3);font-size:.72rem">يدعم PNG و JPG و WebP — يُضغط تلقائياً (WebP، عرض أقصى 600px).</small>
+            </div>
+          </div>
+          <div id="logo_msg" style="font-size:.75rem;margin-top:8px;display:none"></div>
+        </div>
         <div class="form-row">
           <div class="form-group"><label>اسم المتجر (عربي)</label><input id="set_store_name_ar"></div>
           <div class="form-group"><label>اسم المتجر (إنجليزي)</label><input id="set_store_name_en"></div>
@@ -271,7 +331,7 @@
     <div class="top-bar"><h1>التقييمات</h1></div>
     <div class="panel">
       <div class="panel-body"><div class="table-wrap"><table><thead><tr>
-        <th>المنتج</th><th>الاسم</th><th>المدينة</th><th>النص</th><th>الصور</th><th>التقييم</th><th>التاريخ</th><th>إجراءات</th>
+        <th>المنتج</th><th>الاسم</th><th>الهاتف</th><th>النص</th><th>الصورة</th><th>التقييم</th><th>التاريخ</th><th>إجراءات</th>
       </tr></thead><tbody id="reviews-list"></tbody></table></div></div>
     </div>
   </div>
@@ -369,49 +429,44 @@
   </div>
   <div class="modal-body">
     <form onsubmit="saveProduct(event)">
-      <input type="hidden" id="p_row">
+      <input type="hidden" id="p_id">
       <div class="form-row">
-        <div class="form-group"><label>اسم المنتج (عربي) *</label><input id="p_title_ar" required></div>
-        <div class="form-group"><label>اسم المنتج (إنجليزي) *</label><input id="p_title_en" required></div>
+        <div class="form-group full"><label>اسم المنتج *</label><input id="p_name" required></div>
         <div class="form-group"><label>السعر *</label><input type="number" id="p_price" required></div>
-        <div class="form-group"><label>السعر القديم</label><input type="number" id="p_old_price"></div>
+        <div class="form-group"><label>السعر القديم (اختياري)</label><input type="number" id="p_old_price"></div>
+        <div class="form-group"><label>التصنيف</label><input id="p_category" placeholder="مثال: إلكترونيات" list="category_list"></div>
+        <datalist id="category_list"></datalist>
+        <div class="form-group"><label>SKU (اختياري)</label><input id="p_sku"></div>
         <div class="form-group full">
-          <label>صور المنتج</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <label class="upload-box" id="upload-box-1">
-              <input type="file" accept="image/*" onchange="previewImage(this,1)" style="display:none">
-              <img id="upload-preview-1">
-              <span id="upload-label-1" style="color:#999;font-size:.75rem">+ صورة 1</span>
+          <label>الصورة الرئيسية</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
+            <label class="upload-box" id="upload-box-main">
+              <input type="file" accept="image/*" onchange="previewImage(this,'main')" style="display:none">
+              <img id="upload-preview-main">
+              <span id="upload-label-main" style="color:#999;font-size:.75rem">+ الصورة الرئيسية</span>
             </label>
-            <label class="upload-box" id="upload-box-2">
-              <input type="file" accept="image/*" onchange="previewImage(this,2)" style="display:none">
-              <img id="upload-preview-2">
-              <span id="upload-label-2" style="color:#999;font-size:.75rem">+ صورة 2</span>
-            </label>
-            <label class="upload-box" id="upload-box-3">
-              <input type="file" accept="image/*" onchange="previewImage(this,3)" style="display:none">
-              <img id="upload-preview-3">
-              <span id="upload-label-3" style="color:#999;font-size:.75rem">+ صورة 3</span>
-            </label>
-          </div>
-          <small style="color:var(--text3);margin-top:4px;display:block">أو أدخل رابط الصورة يدوياً (6 صور كحد أقصى):</small>
-          <div class="form-row" style="margin-top:4px">
-            <div class="form-group"><input id="p_image1" placeholder="رابط الصورة 1 (الرئيسية)"></div>
-            <div class="form-group"><input id="p_image2" placeholder="رابط الصورة 2"></div>
-            <div class="form-group"><input id="p_image3" placeholder="رابط الصورة 3"></div>
-          </div>
-          <div class="form-row" style="margin-top:4px">
-            <div class="form-group"><input id="p_image4" placeholder="رابط الصورة 4"></div>
-            <div class="form-group"><input id="p_image5" placeholder="رابط الصورة 5"></div>
-            <div class="form-group"><input id="p_image6" placeholder="رابط الصورة 6"></div>
+            <div class="form-group" style="flex:1;min-width:200px;margin:0">
+              <small style="color:var(--text3);display:block;margin-bottom:4px">أو رابط مباشر للصورة الرئيسية:</small>
+              <input id="p_image_url" placeholder="https://..." oninput="onPrimaryImageUrlInput()">
+            </div>
           </div>
         </div>
-        <div class="form-group"><label>التصنيف (عربي)</label><input id="p_category_ar"></div>
-        <div class="form-group"><label>التصنيف (إنجليزي)</label><input id="p_category_en"></div>
-        <div class="form-group"><label>الوصف (عربي)</label><textarea id="p_desc_ar" rows="2"></textarea></div>
-        <div class="form-group"><label>الوصف (إنجليزي)</label><textarea id="p_desc_en" rows="2"></textarea></div>
+        <div class="form-group full">
+          <label>معرض الصور الإضافية (Gallery)</label>
+          <div id="galleryList" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <label class="upload-box" id="upload-box-gallery">
+              <input type="file" accept="image/*" onchange="addGalleryUpload(this)" style="display:none">
+              <span style="color:#999;font-size:.75rem">+ رفع للمعرض</span>
+            </label>
+            <input id="p_gallery_url_input" placeholder="أو ألصق رابط صورة للمعرض" style="flex:1;min-width:160px">
+            <button type="button" class="btn btn-sm btn-outline" onclick="addGalleryUrlFromInput()">إضافة</button>
+          </div>
+        </div>
+        <div class="form-group full"><label>الوصف المختصر</label><textarea id="p_description" rows="2"></textarea></div>
+        <div class="form-group full"><label>الوصف التفصيلي (اختياري)</label><textarea id="p_description_long" rows="3"></textarea></div>
         <div class="form-group"><label>المخزون</label><input type="number" id="p_stock" value="0"></div>
-        <div class="form-group"><label>الحالة</label><select id="p_active"><option value="true">نشط</option><option value="false">غير نشط</option></select></div>
+        <div class="form-group"><label>الحالة</label><select id="p_active"><option value="true">نشط</option><option value="false">قير نشط</option></select></div>
         <div class="form-group full" style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
           <label style="font-weight:700;font-size:.82rem;color:var(--text)">📦 خيارات المنتج (المقاسات والألوان) <span style="font-weight:400;color:var(--text2)">— اختياري</span></label>
           <div class="form-row" style="margin-top:6px">
@@ -445,6 +500,65 @@
             </div>
           </div>
         </div>
+        <details class="config-panel" id="lpPanel">
+          <summary>
+            <span class="config-panel-summary-title">🎨 صفحة الهبوط</span>
+            <span style="font-size:.68rem;font-weight:500;color:var(--text3)">إعدادات متقدمة — اختيارية</span>
+          </summary>
+          <div class="config-panel-body">
+            <div class="config-preview-row">
+              <button type="button" class="btn btn-sm btn-info" id="lpPreviewBtn" onclick="openLpPreview()">معاينة صفحة الهبوط</button>
+              <span class="config-hint" style="margin:0">يفتح معاينة حية للمنتج في صفحة المتجر</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>وضع صفحة الهبوط</label>
+                <select id="lp_mode">
+                  <option value="auto">تلقائي (افتراضي)</option>
+                  <option value="custom">مخصص</option>
+                </select>
+              </div>
+              <div class="form-group"></div>
+            </div>
+            <div class="form-group full" style="margin-bottom:8px">
+              <label>الأقسام المعروضة</label>
+              <div class="config-check-grid">
+                <label class="config-check"><input type="checkbox" id="lp_s_hero" checked>Hero</label>
+                <label class="config-check"><input type="checkbox" id="lp_s_gallery" checked>Gallery</label>
+                <label class="config-check"><input type="checkbox" id="lp_s_features" checked>Features</label>
+                <label class="config-check"><input type="checkbox" id="lp_s_details" checked>Details</label>
+                <label class="config-check"><input type="checkbox" id="lp_s_reviews" checked>Reviews</label>
+                <label class="config-check"><input type="checkbox" id="lp_s_faq" checked>FAQ</label>
+                <label class="config-check"><input type="checkbox" id="lp_s_trust" checked>Trust</label>
+                <label class="config-check"><input type="checkbox" id="lp_s_form" checked>Form</label>
+              </div>
+            </div>
+            <div class="config-section-title">Hero</div>
+            <div class="form-group full"><label>العنوان الرئيسي</label><input id="lp_hero_title"></div>
+            <div class="form-group full"><label>العنوان الفرعي</label><textarea id="lp_hero_subtitle" rows="2"></textarea></div>
+            <div class="form-row">
+              <div class="form-group"><label>نص زر الإجراء (CTA)</label><input id="lp_cta_label" value="اطلب الآن"></div>
+              <div class="form-group"><label>اللون المميز (Accent)</label>
+                <div class="config-accent-line">
+                  <input type="color" id="lp_accent_picker" value="#e94560" oninput="document.getElementById('lp_accent_color').value=this.value">
+                  <input type="text" id="lp_accent_color" value="#e94560" maxlength="7" oninput="syncLpAccentColor(this)">
+                </div>
+              </div>
+            </div>
+            <div class="form-group full"><label>نص الاستعجال (اختياري)</label><input id="lp_urgency_text" placeholder="مثال: العرض ينتهي قريباً 🔥"></div>
+            <div class="config-section-title">Features (حتى 6)</div>
+            <div id="lp_features"></div>
+            <button type="button" class="config-add-btn" onclick="addLpFeature()">+ إضافة ميزة</button>
+            <div class="config-section-title">FAQ (حتى 10)</div>
+            <div id="lp_faq"></div>
+            <button type="button" class="config-add-btn" onclick="addLpFaq()">+ إضافة سؤال</button>
+            <div class="config-section-title">SEO</div>
+            <div class="form-group full"><label>عنوان SEO</label><input id="lp_seo_title"></div>
+            <div class="form-group full"><label>وصف SEO</label><textarea id="lp_seo_desc" rows="2"></textarea></div>
+            <div class="form-group full"><label>صورة SEO</label><input id="lp_seo_image" placeholder="https://..."></div>
+            <div class="form-group full"><label>رسالة WhatsApp</label><textarea id="lp_whatsapp_text" rows="2"></textarea></div>
+          </div>
+        </details>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button type="submit" class="btn btn-accent">حفظ</button>
@@ -475,7 +589,7 @@
   </div>
   <div class="modal-body">
     <form onsubmit="saveCoupon(event)">
-      <input type="hidden" id="c_row">
+      <input type="hidden" id="c_id">
       <div class="form-row">
         <div class="form-group"><label>كود الخصم *</label><input id="c_code" required placeholder="مثلاً: RAMADAN10" style="text-transform:uppercase"></div>
         <div class="form-group"><label>نسبة الخصم (%) *</label><input id="c_percent" type="number" min="1" max="99" required value="10"></div>
@@ -506,7 +620,7 @@
   </div>
   <div class="modal-body">
     <form onsubmit="saveTestimonial(event)">
-      <input type="hidden" id="t_row">
+      <input type="hidden" id="t_id">
       <div class="form-row">
         <div class="form-group"><label>اسم العميل *</label><input id="t_name" required></div>
         <div class="form-group"><label>المدينة / الولاية</label><input id="t_location"></div>
@@ -641,20 +755,23 @@ function playNotification() {
 }
 
 // ===== COUPONS =====
+// ملاحظة (Phase 5C): الحقول الحقيقية في admin.js: id, code, discount_type,
+// discount_value, min_order, max_uses, used_count, expires_at, active. لا يوجد _row.
 function loadCoupons() {
   apiGet('admin_list_coupons', {}, function(data) {
     var list = document.getElementById('coupons-list');
     if (!data || !data.coupons || !data.coupons.length) { list.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:24px">لا توجد كوبونات</td></tr>'; return; }
     list.innerHTML = data.coupons.map(function(c) {
-      var active = (c.active === true || c.active === 'TRUE' || c.active === 'true' || c.active === 1);
+      var active = (c.active === true || c.active === 1);
+      var cid = esc(c.id);
       return '<tr>' +
         '<td><strong>' + esc(c.code || '') + '</strong></td>' +
-        '<td>' + (c.percent || 0) + '%</td>' +
+        '<td>' + (c.discount_value || 0) + (c.discount_type === 'fixed' ? ' دج' : '%') + '</td>' +
         '<td>' + Number(c.min_order || 0).toLocaleString() + ' دج</td>' +
         '<td>' + (c.used_count || 0) + ' / ' + (c.max_uses || '∞') + '</td>' +
-        '<td>' + esc(c.expiry || '—') + '</td>' +
+        '<td>' + esc(c.expires_at || '—') + '</td>' +
         '<td><span class="status-badge ' + (active ? 'status-confirmed' : 'status-cancelled') + '">' + (active ? 'نشط' : 'معطّل') + '</span></td>' +
-        '<td><button class="btn btn-sm btn-outline" onclick="editCoupon(' + c._row + ')">تعديل</button> <button class="btn btn-sm" style="color:var(--danger)" onclick="deleteCoupon(' + c._row + ')">حذف</button></td>' +
+        '<td><button class="btn btn-sm btn-outline" onclick="editCoupon(' + cid + ')">تعديل</button> <button class="btn btn-sm" style="color:var(--danger)" onclick="deleteCoupon(' + cid + ')">حذف</button></td>' +
       '</tr>';
     }).join('');
   });
@@ -662,43 +779,45 @@ function loadCoupons() {
 function openCouponModal(coupon) {
   document.getElementById('couponModal').classList.add('open');
   document.getElementById('couponModalTitle').textContent = coupon ? 'تعديل كوبون' : 'إضافة كوبون';
-  document.getElementById('c_row').value = coupon ? coupon._row : '';
+  document.getElementById('c_id').value = coupon ? coupon.id : '';
   document.getElementById('c_code').value = coupon ? coupon.code : '';
-  document.getElementById('c_percent').value = coupon ? coupon.percent : 10;
+  document.getElementById('c_percent').value = coupon ? coupon.discount_value : 10;
   document.getElementById('c_min_order').value = coupon ? (coupon.min_order || 0) : 0;
   document.getElementById('c_max_uses').value = coupon ? (coupon.max_uses || 100) : 100;
-  document.getElementById('c_expiry').value = coupon ? (coupon.expiry || '') : '';
-  document.getElementById('c_active').value = coupon ? (coupon.active === false || coupon.active === 'FALSE' ? 'false' : 'true') : 'true';
+  document.getElementById('c_expiry').value = coupon ? (coupon.expires_at || '') : '';
+  document.getElementById('c_active').value = coupon ? (coupon.active ? 'true' : 'false') : 'true';
 }
 function closeCouponModal() { document.getElementById('couponModal').classList.remove('open'); }
-function editCoupon(row) {
+function editCoupon(id) {
   apiGet('admin_list_coupons', {}, function(data) {
     if (data && data.coupons) {
-      var c = data.coupons.find(function(x) { return x._row === row; });
+      var c = data.coupons.find(function(x) { return String(x.id) === String(id); });
       if (c) openCouponModal(c);
     }
   });
 }
 function saveCoupon(e) {
   e.preventDefault();
-  var row = document.getElementById('c_row').value;
+  var id = document.getElementById('c_id').value;
   var data = {
     code: document.getElementById('c_code').value.toUpperCase().trim(),
-    percent: document.getElementById('c_percent').value,
+    discount_type: 'percent',
+    discount_value: document.getElementById('c_percent').value,
     min_order: document.getElementById('c_min_order').value || 0,
     max_uses: document.getElementById('c_max_uses').value || 100,
-    expiry: document.getElementById('c_expiry').value,
-    active: document.getElementById('c_active').value
+    expires_at: document.getElementById('c_expiry').value,
+    active: document.getElementById('c_active').value === 'true' ? '1' : '0'
   };
-  if (row) data._row = row;
-  var action = row ? 'admin_edit_coupon' : 'admin_add_coupon';
-  apiPost(action, data, function() {
-    closeCouponModal(); loadCoupons(); toast(row ? 'تم تعديل الكوبون' : 'تم إضافة الكوبون');
+  if (id) data.id = id;
+  var action = id ? 'admin_edit_coupon' : 'admin_add_coupon';
+  apiPost(action, data, function(r) {
+    if (!r || r.ok === false) { toast('خطأ: ' + (r && r.error ? r.error : 'فشل الحفظ')); return; }
+    closeCouponModal(); loadCoupons(); toast(id ? 'تم تعديل الكوبون' : 'تم إضافة الكوبون');
   });
 }
-function deleteCoupon(row) {
+function deleteCoupon(id) {
   if (!confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
-  apiPost('admin_delete_coupon', { _row: row }, function() {
+  apiPost('admin_delete_coupon', { id: id }, function() {
     loadCoupons(); toast('تم حذف الكوبون');
   });
 }
@@ -710,6 +829,7 @@ function loadDashboard() {
     if (data && data.products) {
       allProducts = data.products;
       document.getElementById('stat-products').textContent = data.products.length;
+      refreshCategoryList();
     }
   });
   apiGet('admin_orders', {}, function(data) {
@@ -828,7 +948,7 @@ function toggleSelectAll(cb) {
 function deleteOrder(row, name) {
   if (!confirm('هل تريد حذف طلب "' + name + '"؟')) return;
   toast('جاري الحذف...');
-  apiPost('admin_delete_order', { _row: row }, function(res) {
+  apiPost('admin_delete_order', { order_id: row }, function(res) {
     if (res && res.error) { toast('خطأ: ' + res.error); return; }
     toast('تم الحذف بنجاح');
     setTimeout(loadOrders, 1500);
@@ -839,13 +959,13 @@ function deleteSelectedOrders() {
   var checked = document.querySelectorAll('.order-check:checked');
   if (!checked.length) { toast('لم يتم تحديد أي طلب'); return; }
   if (!confirm('هل تريد حذف ' + checked.length + ' طلب؟')) return;
-  var rows = [];
-  checked.forEach(function(c) { rows.push(c.value); });
+  var orderIds = [];
+  checked.forEach(function(c) { orderIds.push(c.value); });
   var done = 0, failed = 0;
-  rows.forEach(function(row) {
-    apiPost('admin_delete_order', { _row: row }, function(res) {
+  orderIds.forEach(function(orderId) {
+    apiPost('admin_delete_order', { order_id: orderId }, function(res) {
       if (res && res.ok) done++; else failed++;
-      if (done + failed === rows.length) {
+      if (done + failed === orderIds.length) {
         toast('تم حذف ' + done + ' طلب' + (failed ? ' — فشل ' + failed : ''));
         setTimeout(loadOrders, 2000);
       }
@@ -859,61 +979,237 @@ function getStatusText(s) {
 }
 
 // ===== PRODUCTS =====
+// ملاحظة (Phase 5B — إصلاح عقد البيانات):
+// الحقول الحقيقية في D1/catalog.js: name, description, description_long, price,
+// price_old, image_url, gallery_json (array), category, sku, stock, active, id.
+// لا توجد حقول title_ar/title_en/image1..6/old_price/category_ar/category_en/_row.
+var currentGallery = [];
+
 function loadProducts() {
   document.getElementById('products-list').innerHTML = '<tr><td colspan="8" class="loading"><div class="spinner"></div></td></tr>';
   apiGet('admin_list', {}, function(data) {
     if (!data || !data.products) return;
     allProducts = data.products;
+    refreshCategoryList();
     if (!data.products.length) {
       document.getElementById('products-list').innerHTML = '<tr><td colspan="8" class="empty">لا توجد منتجات</td></tr>';
       return;
     }
     var html = data.products.map(function(p) {
-      var img = p.image1 ? '<img class="img-thumb" src="' + esc(p.image1) + '" onerror="this.style.display=\'none\'">' : '<div class="img-thumb" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:.7rem">لا صورة</div>';
+      var img = p.image_url ? '<img class="img-thumb" src="' + esc(p.image_url) + '" onerror="this.style.display=\'none\'">' : '<div class="img-thumb" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:.7rem">لا صورة</div>';
       var pid = esc(p.id || '');
       return '<tr>' +
         '<td>' + img + '</td>' +
-        '<td><strong>' + esc(p.title_ar || '') + '</strong><br><small style="color:#999">' + esc(p.title_en || '') + '</small></td>' +
+        '<td><strong>' + esc(p.name || '') + '</strong>' + (p.sku ? '<br><small style="color:#999">' + esc(p.sku) + '</small>' : '') + '</td>' +
         '<td>' + Number(p.price).toLocaleString() + ' DZD</td>' +
-        '<td>' + esc(p.category_ar || '-') + '</td>' +
+        '<td>' + esc(p.category || '-') + '</td>' +
         '<td>' + (p.stock <= 0 ? '<span class="badge badge-cancelled">نفذ</span>' : p.stock <= 5 ? '<span class="badge badge-pending">متبقي ' + p.stock + '</span>' : p.stock) + '</td>' +
-        '<td>' + (p.active ? '<span class="badge badge-confirmed">نشط</span>' : '<span class="badge badge-cancelled">غير نشط</span>') + '</td>' +
+        '<td>' + (p.active ? '<span class="badge badge-confirmed">نشط</span>' : '<span class="badge badge-cancelled">فير نشط</span>') + '</td>' +
         '<td><div style="display:flex;flex-direction:column;gap:4px"><input type="text" readonly value="' + esc(window.location.origin + '/?product=' + pid) + '" style="font-size:.65rem;padding:4px 6px;border:1px solid #eaeaea;border-radius:4px;width:180px;background:#f9f9f9;direction:ltr;text-align:left" id="lp-link-' + pid + '"><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:#25d366;color:#fff;padding:3px 8px;font-size:.65rem" onclick="copyLandingLink(\'' + pid + '\')">نسخ</button><a href="' + esc(window.location.origin + '/?product=' + pid) + '" target="_blank" class="btn btn-sm" style="background:#3b82f6;color:#fff;padding:3px 8px;font-size:.65rem;text-decoration:none">فتح</a></div></div></td>' +
-        '<td><button class="btn btn-info btn-sm" onclick="editProduct(' + p._row + ')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p._row + ',\'' + esc(p.title_ar || '') + '\')">حذف</button></td>' +
+        '<td><button class="btn btn-info btn-sm" onclick="editProduct(' + pid + ')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct(' + pid + ',\'' + esc(p.name || '') + '\')">حذف</button></td>' +
       '</tr>';
     }).join('');
     document.getElementById('products-list').innerHTML = html;
   });
 }
 
-function previewImage(input, num) {
+function previewImage(input, slot) {
   var file = input.files[0];
   if (!file) return;
   var reader = new FileReader();
   reader.onload = function(e) {
-    document.getElementById('upload-preview-' + num).src = e.target.result;
-    document.getElementById('upload-preview-' + num).style.display = 'block';
-    document.getElementById('upload-label-' + num).style.display = 'none';
+    document.getElementById('upload-preview-' + slot).src = e.target.result;
+    document.getElementById('upload-preview-' + slot).style.display = 'block';
+    document.getElementById('upload-label-' + slot).style.display = 'none';
   };
   reader.readAsDataURL(file);
 }
 
-function openProductModal(row) {
-  document.getElementById('productModal').classList.add('open');
-  document.getElementById('productModalTitle').textContent = row ? 'تعديل منتج' : 'إضافة منتج جديد';
-  document.getElementById('p_row').value = row || '';
-  uploadedImages = { 1: null, 2: null, 3: null };
-  [1, 2, 3].forEach(function(num) {
-    var preview = document.getElementById('upload-preview-' + num);
-    var label = document.getElementById('upload-label-' + num);
-    if (preview) { preview.style.display = 'none'; preview.src = ''; }
-    if (label) label.style.display = 'block';
-    var fileInput = document.querySelector('#upload-box-' + num + ' input[type="file"]');
-    if (fileInput) fileInput.value = '';
+function onPrimaryImageUrlInput() {
+  var url = document.getElementById('p_image_url').value;
+  var preview = document.getElementById('upload-preview-main');
+  var label = document.getElementById('upload-label-main');
+  if (url) { preview.src = url; preview.style.display = 'block'; label.style.display = 'none'; }
+  else { preview.style.display = 'none'; label.style.display = 'block'; }
+}
+
+function renderGalleryList() {
+  var el = document.getElementById('galleryList');
+  if (!el) return;
+  if (!currentGallery.length) { el.innerHTML = '<small style="color:var(--text3)">لا توجد صور معرض بعد</small>'; return; }
+  el.innerHTML = currentGallery.map(function(url, i) {
+    return '<div style="position:relative;width:60px;height:60px">' +
+      '<img src="' + esc(url) + '" style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" onerror="this.style.opacity=0.3">' +
+      '<button type="button" onclick="removeGalleryItem(' + i + ')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#dc3545;color:#fff;border:none;cursor:pointer;font-size:.7rem;line-height:1">✕</button>' +
+    '</div>';
+  }).join('');
+}
+
+function removeGalleryItem(index) {
+  currentGallery.splice(index, 1);
+  renderGalleryList();
+}
+
+function addGalleryUrlFromInput() {
+  var input = document.getElementById('p_gallery_url_input');
+  var url = (input.value || '').trim();
+  if (!url) return;
+  currentGallery.push(url);
+  input.value = '';
+  renderGalleryList();
+}
+
+function addGalleryUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  toast('جاري رفع صورة المعرض...');
+  resizeAndUpload(file, function(r) {
+    input.value = '';
+    if (r && r.url) { currentGallery.push(r.url); renderGalleryList(); toast('تم رفع الصورة'); }
+    else { toast('خطأ في رفع الصورة' + (r && r.error ? ': ' + r.error : '')); }
   });
-  if (!row) {
-    ['p_title_ar','p_title_en','p_price','p_old_price','p_image1','p_image2','p_image3','p_image4','p_image5','p_image6','p_category_ar','p_category_en','p_desc_ar','p_desc_en'].forEach(function(id) {
-      document.getElementById(id).value = '';
+}
+
+/** تصفير/رفع موحّد لأي ملف منتج (الرئيسية أو المعرض) — R2 folder: products/ */
+function resizeAndUpload(file, cb) {
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var maxW = 800, maxH = 800;
+      var w = img.width, h = img.height;
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      if (h > maxH) { w = w * maxH / h; h = maxH; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      var base64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+      apiPost('admin_upload_image', { data: base64, folder: 'products' }, cb);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Phase 10 — رفع شعار المتجر: يُضغط إلى WebP (أو JPEG) بعرض أقصى 600px ويُرفع إلى R2 folder: logos/
+// لا يمسّ resizeAndUpload (سلوك صور المنتجات يبقى كما هو).
+function resizeAndUploadLogo(file, cb) {
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var maxW = 600;
+      var w = img.width, h = img.height;
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      var mime = 'image/webp';
+      var base64 = null;
+      try { base64 = canvas.toDataURL('image/webp', 0.82); } catch(e) {}
+      if (!base64 || base64.indexOf('data:image/webp') !== 0) {
+        mime = 'image/jpeg';
+        base64 = canvas.toDataURL('image/jpeg', 0.82);
+      }
+      base64 = base64.split(',')[1];
+      apiPost('admin_upload_image', { data: base64, folder: 'logos' }, cb);
+    };
+    img.onerror = function() { cb({ error: 'تعذّر قراءة الصورة' }); };
+    img.src = ev.target.result;
+  };
+  reader.onerror = function() { cb({ error: 'تعذّر قراءة الملف' }); };
+  reader.readAsDataURL(file);
+}
+
+// Phase 10 — معالجة اختيار ملف الشعار: رفع فوري + حفظ store_logo + تحديث المعاينة
+function onLogoFileChange(input) {
+  var file = input && input.files && input.files[0];
+  var msg = document.getElementById('logo_msg');
+  function setMsg(text, isError) {
+    if (!msg) return;
+    msg.textContent = text;
+    msg.style.display = 'block';
+    msg.style.color = isError ? 'var(--danger,#d33)' : 'var(--success,#2a6f3c)';
+  }
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp)$/i.test(file.type)) {
+    setMsg('نوع الملف غير مدعوم — يُسمح فقط بـ PNG و JPG و WebP.', true);
+    return;
+  }
+  setMsg('جاري رفع الشعار...', false);
+  resizeAndUploadLogo(file, function(r) {
+    if (!r || r.ok !== true || !r.url) {
+      setMsg('فشل رفع الشعار' + (r && r.error ? ': ' + r.error : ''), true);
+      return;
+    }
+    // حفظ الرابط في الإعدادات المركزية (مصدر واحد)
+    apiPost('admin_update_settings', { store_logo: r.url }, function(res) {
+      if (res && res.ok === false) {
+        setMsg('فشل حفظ الشعار' + (res.error ? ': ' + res.error : ''), true);
+        return;
+      }
+      var preview = document.getElementById('logo_preview');
+      if (preview) preview.src = r.url;
+      if (typeof settings === 'object' && settings) settings.store_logo = r.url;
+      setMsg('تم تحديث شعار المتجر بنجاح.', false);
+      try { if (input) input.value = ''; } catch(e) {}
+    });
+  });
+}
+
+function restoreDefaultLogo() {
+  if(!confirm('هل أنت متأكد من استعادة شعار المتجر الافتراضي؟')) return;
+  var msg = document.getElementById('logo_msg');
+  msg.style.display = 'block'; msg.style.color = 'var(--text2)'; msg.innerText = 'جاري استعادة الشعار الافتراضي...';
+  
+  apiPost('admin_update_settings', { store_logo: '' }, function(res) {
+    if(res && res.ok) {
+      msg.style.color = 'var(--success)'; msg.innerText = 'تم استعادة الشعار الافتراضي.';
+      var preview = document.getElementById('logo_preview');
+      if(preview) preview.src = 'logo1.png';
+      if (typeof settings === 'object' && settings) settings.store_logo = '';
+    } else {
+      msg.style.color = 'var(--danger)'; msg.innerText = 'حدث خطأ: ' + (res.error || 'غير معروف');
+    }
+  });
+}
+
+// Phase 9: اقتراح الفئات الموجودة (منع تكرار الأسماء بسبب الأخطاء الإملائية)
+// يستخرج الفئات الفريدة من allProducts (بدون تغييرها) ويعرضها كاقتراحات datalist.
+function refreshCategoryList() {
+  var dl = document.getElementById('category_list');
+  if (!dl) return;
+  var seen = {}, cats = [];
+  (allProducts || []).forEach(function(p) {
+    var v = (p.category || '').trim();
+    if (!v) return;
+    var key = v.toLowerCase();
+    if (seen[key]) return;
+    seen[key] = 1;
+    cats.push(v);
+  });
+  cats.sort(function(a, b) { return a.localeCompare(b, 'ar'); });
+  dl.innerHTML = cats.map(function(c) { return '<option value="' + esc(c) + '">'; }).join('');
+}
+
+function openProductModal(id) {
+  document.getElementById('productModal').classList.add('open');
+  document.getElementById('productModalTitle').textContent = id ? 'تعديل منتج' : 'إضافة منتج جديد';
+  refreshCategoryList();
+  document.getElementById('p_id').value = id || '';
+  currentGallery = [];
+  renderGalleryList();
+  var mainPreview = document.getElementById('upload-preview-main');
+  var mainLabel = document.getElementById('upload-label-main');
+  if (mainPreview) { mainPreview.style.display = 'none'; mainPreview.src = ''; }
+  if (mainLabel) mainLabel.style.display = 'block';
+  var mainFileInput = document.querySelector('#upload-box-main input[type="file"]');
+  if (mainFileInput) mainFileInput.value = '';
+  var galleryFileInput = document.querySelector('#upload-box-gallery input[type="file"]');
+  if (galleryFileInput) galleryFileInput.value = '';
+  if (!id) {
+    ['p_name','p_price','p_old_price','p_image_url','p_category','p_sku','p_description','p_description_long','p_gallery_url_input'].forEach(function(fid) {
+      document.getElementById(fid).value = '';
     });
     document.getElementById('p_stock').value = '0';
     document.getElementById('p_active').value = 'true';
@@ -923,29 +1219,176 @@ function openProductModal(row) {
     document.getElementById('p_variant_sku').value = '';
     document.getElementById('p_variant_price').value = '';
     document.getElementById('p_variant_stock').value = '';
+    resetLpEditor();
   }
 }
 
 function closeProductModal() { document.getElementById('productModal').classList.remove('open'); }
 
-function editProduct(row) {
-  var p = allProducts.find(function(x) { return x._row === row; });
+// ===== Phase 7: محرر صفحة الهبوط (Landing Config) =====
+var lpFeatureRows = [];
+var lpFaqRows = [];
+
+function syncLpAccentColor(input) {
+  var v = (input.value || '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+    document.getElementById('lp_accent_picker').value = v.toLowerCase();
+  }
+}
+
+function resetLpEditor() {
+  document.getElementById('lp_mode').value = 'auto';
+  ['hero','gallery','features','details','reviews','faq','trust','form'].forEach(function(k) {
+    document.getElementById('lp_s_' + k).checked = true;
+  });
+  document.getElementById('lp_hero_title').value = '';
+  document.getElementById('lp_hero_subtitle').value = '';
+  document.getElementById('lp_cta_label').value = 'اطلب الآن';
+  document.getElementById('lp_accent_picker').value = '#e94560';
+  document.getElementById('lp_accent_color').value = '#e94560';
+  document.getElementById('lp_urgency_text').value = '';
+  lpFeatureRows = [];
+  lpFaqRows = [];
+  renderLpFeatures();
+  renderLpFaq();
+  document.getElementById('lp_seo_title').value = '';
+  document.getElementById('lp_seo_desc').value = '';
+  document.getElementById('lp_seo_image').value = '';
+  document.getElementById('lp_whatsapp_text').value = '';
+}
+
+function renderLpFeatures() {
+  var list = document.getElementById('lp_features');
+  list.innerHTML = lpFeatureRows.map(function(f, i) {
+    return '<div class="lp-row">'
+      + '<input id="lp_feat_icon_' + i + '" placeholder="أيقونة" value="' + esc(f.icon) + '">'
+      + '<input id="lp_feat_title_' + i + '" placeholder="العنوان" value="' + esc(f.title) + '">'
+      + '<input id="lp_feat_desc_' + i + '" placeholder="الوصف" value="' + esc(f.desc) + '">'
+      + '<button type="button" class="btn btn-danger btn-xs" onclick="removeLpFeature(' + i + ')">✕</button>'
+      + '</div>';
+  }).join('');
+}
+
+function addLpFeature() {
+  if (lpFeatureRows.length >= 6) { toast('الحد الأقصى 6 ميزات'); return; }
+  lpFeatureRows.push({ icon: '', title: '', desc: '' });
+  renderLpFeatures();
+}
+
+function removeLpFeature(i) { lpFeatureRows.splice(i, 1); renderLpFeatures(); }
+
+function renderLpFaq() {
+  var list = document.getElementById('lp_faq');
+  list.innerHTML = lpFaqRows.map(function(f, i) {
+    return '<div class="lp-row lp-row-faq">'
+      + '<input id="lp_faq_q_' + i + '" placeholder="السؤال" value="' + esc(f.q) + '">'
+      + '<input id="lp_faq_a_' + i + '" placeholder="الإجابة" value="' + esc(f.a) + '">'
+      + '<button type="button" class="btn btn-danger btn-xs" onclick="removeLpFaq(' + i + ')">✕</button>'
+      + '</div>';
+  }).join('');
+}
+
+function addLpFaq() {
+  if (lpFaqRows.length >= 10) { toast('الحد الأقصى 10 أسئلة'); return; }
+  lpFaqRows.push({ q: '', a: '' });
+  renderLpFaq();
+}
+
+function removeLpFaq(i) { lpFaqRows.splice(i, 1); renderLpFaq(); }
+
+// يبني كائن الإعدادات من حقول المحرر (يُرسل كنص JSON إلى admin_add/admin_edit)
+function collectLpEditorConfig() {
+  var sections = {};
+  ['hero','gallery','features','details','reviews','faq','trust','form'].forEach(function(k) {
+    sections[k] = document.getElementById('lp_s_' + k).checked;
+  });
+  var features = lpFeatureRows.map(function(f, i) {
+    return {
+      icon:  document.getElementById('lp_feat_icon_' + i).value,
+      title: document.getElementById('lp_feat_title_' + i).value,
+      desc:  document.getElementById('lp_feat_desc_' + i).value
+    };
+  }).filter(function(f) { return f.title || f.desc || f.icon; });
+  var faq = lpFaqRows.map(function(f, i) {
+    return {
+      q: document.getElementById('lp_faq_q_' + i).value,
+      a: document.getElementById('lp_faq_a_' + i).value
+    };
+  }).filter(function(f) { return f.q || f.a; });
+  return JSON.stringify({
+    mode: document.getElementById('lp_mode').value,
+    sections: sections,
+    hero: {
+      headline:     document.getElementById('lp_hero_title').value,
+      subtitle:     document.getElementById('lp_hero_subtitle').value,
+      cta_label:    document.getElementById('lp_cta_label').value,
+      urgency_text: document.getElementById('lp_urgency_text').value,
+      accent_color: document.getElementById('lp_accent_color').value.trim()
+    },
+    features: features,
+    faq: faq,
+    seo: {
+      title:       document.getElementById('lp_seo_title').value,
+      description: document.getElementById('lp_seo_desc').value,
+      image_url:   document.getElementById('lp_seo_image').value
+    },
+    whatsapp_text: document.getElementById('lp_whatsapp_text').value
+  });
+}
+
+// يملأ المحرر من إعداد محفوظ (نص JSON خام أو كائن)
+function loadLpEditorConfig(raw) {
+  resetLpEditor();
+  var cfg = {};
+  if (typeof raw === 'string' && raw.trim()) { try { cfg = JSON.parse(raw); } catch(e) {} }
+  else if (raw && typeof raw === 'object') { cfg = raw; }
+  document.getElementById('lp_mode').value = (cfg.mode === 'custom') ? 'custom' : 'auto';
+  ['hero','gallery','features','details','reviews','faq','trust','form'].forEach(function(k) {
+    var el = document.getElementById('lp_s_' + k);
+    if (cfg.sections && typeof cfg.sections[k] === 'boolean') el.checked = cfg.sections[k];
+  });
+  if (cfg.hero) {
+    if (cfg.hero.headline)     document.getElementById('lp_hero_title').value = cfg.hero.headline;
+    if (cfg.hero.subtitle)     document.getElementById('lp_hero_subtitle').value = cfg.hero.subtitle;
+    if (cfg.hero.cta_label)    document.getElementById('lp_cta_label').value = cfg.hero.cta_label;
+    if (cfg.hero.urgency_text) document.getElementById('lp_urgency_text').value = cfg.hero.urgency_text;
+    if (cfg.hero.accent_color) {
+      document.getElementById('lp_accent_color').value = cfg.hero.accent_color;
+      document.getElementById('lp_accent_picker').value = cfg.hero.accent_color;
+    }
+  }
+  lpFeatureRows = Array.isArray(cfg.features) ? cfg.features.slice(0, 6) : [];
+  renderLpFeatures();
+  lpFaqRows = Array.isArray(cfg.faq) ? cfg.faq.slice(0, 10) : [];
+  renderLpFaq();
+  if (cfg.seo) {
+    if (cfg.seo.title)       document.getElementById('lp_seo_title').value = cfg.seo.title;
+    if (cfg.seo.description) document.getElementById('lp_seo_desc').value = cfg.seo.description;
+    if (cfg.seo.image_url)   document.getElementById('lp_seo_image').value = cfg.seo.image_url;
+  }
+  if (cfg.whatsapp_text) document.getElementById('lp_whatsapp_text').value = cfg.whatsapp_text;
+}
+
+function openLpPreview() {
+  var id = document.getElementById('p_id').value;
+  if (!id) { toast('احفظ المنتج أولاً ثم معاينة صفحة الهبوط'); return; }
+  var origin = window.location.origin;
+  var path = window.location.pathname.replace(/admin\.html$/, 'index.html');
+  window.open(origin + path + '?product=' + id, '_blank');
+}
+
+function editProduct(id) {
+  var p = allProducts.find(function(x) { return String(x.id) === String(id); });
   if (!p) return;
-  openProductModal(row);
-  document.getElementById('p_title_ar').value = p.title_ar || '';
-  document.getElementById('p_title_en').value = p.title_en || '';
+  openProductModal(id);
+  document.getElementById('p_name').value = p.name || '';
   document.getElementById('p_price').value = p.price || '';
-  document.getElementById('p_old_price').value = p.old_price || '';
-  document.getElementById('p_image1').value = p.image1 || '';
-  document.getElementById('p_image2').value = p.image2 || '';
-  document.getElementById('p_image3').value = p.image3 || '';
-  document.getElementById('p_image4').value = p.image4 || '';
-  document.getElementById('p_image5').value = p.image5 || '';
-  document.getElementById('p_image6').value = p.image6 || '';
-  document.getElementById('p_category_ar').value = p.category_ar || '';
-  document.getElementById('p_category_en').value = p.category_en || '';
-  document.getElementById('p_desc_ar').value = p.desc_ar || '';
-  document.getElementById('p_desc_en').value = p.desc_en || '';
+  document.getElementById('p_old_price').value = p.price_old || '';
+  document.getElementById('p_image_url').value = p.image_url || '';
+  document.getElementById('p_category').value = p.category || '';
+  document.getElementById('p_sku').value = p.sku || '';
+  document.getElementById('p_description').value = p.description || '';
+  document.getElementById('p_description_long').value = p.description_long || '';
   document.getElementById('p_stock').value = p.stock || 0;
   document.getElementById('p_active').value = p.active ? 'true' : 'false';
   document.getElementById('p_size').value = p.size || '';
@@ -954,42 +1397,33 @@ function editProduct(row) {
   document.getElementById('p_variant_sku').value = p.variant_sku || '';
   document.getElementById('p_variant_price').value = p.variant_price || '';
   document.getElementById('p_variant_stock').value = p.variant_stock || '';
-  [1,2,3].forEach(function(num) {
-    var url = p['image' + num];
-    if (url) {
-      var preview = document.getElementById('upload-preview-' + num);
-      var label = document.getElementById('upload-label-' + num);
-      preview.src = url;
-      preview.style.display = 'block';
-      label.style.display = 'none';
-    }
-  });
+  if (p.image_url) { onPrimaryImageUrlInput(); }
+  // gallery_json يرد مفسوداً (parsed) من adminListProducts — نحفظه كما هو لمنع فقدان الصور
+  currentGallery = Array.isArray(p.gallery_json) ? p.gallery_json.slice() : [];
+  renderGalleryList();
+  // Phase 7: تحميل إعدادات صفحة الهبوط (نص JSON خام من adminListProducts)
+  loadLpEditorConfig(p.landing_config_json);
 }
 
 function saveProduct(e) {
   e.preventDefault();
-  var row = document.getElementById('p_row').value;
+  var id = document.getElementById('p_id').value;
   var submitBtn = e.target.querySelector('button[type="submit"]');
   submitBtn.disabled = true;
   submitBtn.textContent = 'جاري الحفظ...';
 
-  function doSave(urls) {
+  function doSave(mainUploadedUrl) {
+    var oldPriceVal = document.getElementById('p_old_price').value;
     var data = {
-      title_ar: document.getElementById('p_title_ar').value,
-      title_en: document.getElementById('p_title_en').value,
+      name: document.getElementById('p_name').value,
+      description: document.getElementById('p_description').value,
+      description_long: document.getElementById('p_description_long').value,
       price: Number(document.getElementById('p_price').value),
-      old_price: Number(document.getElementById('p_old_price').value) || 0,
-      currency: 'DZD',
-      image1: urls[1] || document.getElementById('p_image1').value,
-      image2: urls[2] || document.getElementById('p_image2').value,
-      image3: urls[3] || document.getElementById('p_image3').value,
-      image4: urls[4] || document.getElementById('p_image4').value,
-      image5: urls[5] || document.getElementById('p_image5').value,
-      image6: urls[6] || document.getElementById('p_image6').value,
-      category_ar: document.getElementById('p_category_ar').value,
-      category_en: document.getElementById('p_category_en').value,
-      desc_ar: document.getElementById('p_desc_ar').value,
-      desc_en: document.getElementById('p_desc_en').value,
+      price_old: oldPriceVal ? Number(oldPriceVal) : '',
+      image_url: mainUploadedUrl || document.getElementById('p_image_url').value,
+      gallery_json: JSON.stringify(currentGallery),
+      category: document.getElementById('p_category').value.trim(),
+      sku: document.getElementById('p_sku').value,
       stock: Number(document.getElementById('p_stock').value) || 0,
       active: document.getElementById('p_active').value === 'true',
       size: document.getElementById('p_size').value,
@@ -998,73 +1432,39 @@ function saveProduct(e) {
       variant_sku: document.getElementById('p_variant_sku').value,
       variant_price: document.getElementById('p_variant_price').value || '',
       variant_stock: document.getElementById('p_variant_stock').value || '',
-      variant_options: []
+      variant_options: [],
+      // Phase 7: إعداد قصبة الهبوط يُرسل كنص JSON
+      landing_config_json: collectLpEditorConfig()
     };
     if (data.size) data.size = data.size.split(',').map(function(s){return s.trim();}).filter(function(s){return s;}).join(', ');
     if (data.color) data.color = data.color.split(',').map(function(c){return c.trim();}).filter(function(c){return c;}).join(', ');
 
-    var endpoint = row ? 'admin_edit_product' : 'admin_add_product';
-    if (row) data._row = row;
-    else data.id = 'PROD-' + Date.now();
+    var endpoint = id ? 'admin_edit_product' : 'admin_add_product';
+    if (id) data.id = id;
 
-    apiPost(endpoint, data, function() {
-      closeProductModal();
-      toast(row ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح');
+    apiPost(endpoint, data, function(r) {
       submitBtn.disabled = false;
       submitBtn.textContent = 'حفظ';
-      setTimeout(loadProducts, 2000);
+      if (!r || r.ok === false) { toast('خطأ: ' + (r && r.error ? r.error : 'فشل الحفظ')); return; }
+      closeProductModal();
+      toast(id ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح');
+      setTimeout(loadProducts, 1200);
     });
   }
 
-  var filesToUpload = [];
-  [1, 2, 3].forEach(function(num) {
-    var input = document.querySelector('#upload-box-' + num + ' input[type="file"]');
-    if (input && input.files[0]) filesToUpload.push({ num: num, file: input.files[0] });
-  });
+  var mainFileInput = document.querySelector('#upload-box-main input[type="file"]');
+  var mainFile = mainFileInput && mainFileInput.files[0];
 
-  if (filesToUpload.length === 0) {
-    doSave({});
+  if (!mainFile) {
+    doSave(null);
     return;
   }
 
-  var urls = {};
-  var saved = false;
-  function doSaveOnce(u) {
-    if (saved) return;
-    saved = true;
-    doSave(u);
-  }
-
-  setTimeout(function() { doSaveOnce(urls); }, 20000);
-
-  var queue = filesToUpload.slice();
-  function processNext() {
-    if (queue.length === 0) { doSaveOnce(urls); return; }
-    var f = queue.shift();
-    toast('جاري رفع الصورة ' + f.num + '...');
-    var reader = new FileReader();
-    reader.onload = function(ev) {
-      var img = new Image();
-      img.onload = function() {
-        var canvas = document.createElement('canvas');
-        var maxW = 400, maxH = 400;
-        var w = img.width, h = img.height;
-        if (w > maxW) { h = h * maxW / w; w = maxW; }
-        if (h > maxH) { w = w * maxH / h; h = maxH; }
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        var base64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
-        apiPost('admin_upload_image', { imageData: base64, fileName: f.file.name, mimeType: 'image/jpeg', num: f.num }, function(r) {
-          if (r && r.url) { urls[f.num] = r.url; toast('تم رفع الصورة ' + f.num); }
-          else { toast('خطأ في الصورة ' + f.num + (r && r.error ? ': ' + r.error : '')); }
-          processNext();
-        });
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(f.file);
-  }
-  processNext();
+  toast('جاري رفع الصورة الرئيسية...');
+  resizeAndUpload(mainFile, function(r) {
+    if (r && r.url) { toast('تم رفع الصورة الرئيسية'); doSave(r.url); }
+    else { toast('خطأ في رفع الصورة الرئيسية' + (r && r.error ? ': ' + r.error : '')); doSave(null); }
+  });
 }
 
 function copyLandingLink(productId) {
@@ -1081,14 +1481,16 @@ function copyLandingLink(productId) {
   }
 }
 
-function deleteProduct(row, name) {
+function deleteProduct(id, name) {
   if (!confirm('هل تريد حذف "' + name + '"؟')) return;
-  apiPost('admin_delete_product', { _row: row }, function() {
-    toast('تم الحذف'); setTimeout(loadProducts, 2000);
+  apiPost('admin_delete_product', { id: id }, function() {
+    toast('تم الحذف'); setTimeout(loadProducts, 1200);
   });
 }
 
 // ===== ORDERS =====
+// ملاحظة (Phase 5C): orders.js يتوقّع order_id (نص "SK-...") للتحديد/الحذف
+// وليس _row أو id. لا يُمس منطق الملكية (customer_id/session) الموجود في orders.js.
 function loadOrders() {
   apiGet('admin_orders', {}, function(data) {
     if (!data || !data.orders) return;
@@ -1118,9 +1520,10 @@ function renderOrders() {
   var html = filtered.map(function(o) {
     var items = [];
     try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
-    var itemsText = items.map(function(it) { return esc(it.title) + ' x' + it.qty; }).join(', ');
+    var itemsText = items.map(function(it) { return esc(it.name || it.title || '') + ' x' + it.qty; }).join(', ');
+    var oid = esc(o.order_id || '');
     return '<tr>' +
-      '<td><input type="checkbox" class="order-check" value="' + o._row + '"></td>' +
+      '<td><input type="checkbox" class="order-check" value="' + oid + '"></td>' +
       '<td><strong>' + esc(o.order_id) + '</strong></td>' +
       '<td>' + esc((o.created_at || '').substring(0, 10)) + '</td>' +
       '<td>' + esc(o.name) + '</td>' +
@@ -1128,27 +1531,27 @@ function renderOrders() {
       '<td>' + esc(o.wilaya_ar) + '</td>' +
       '<td>' + (o.delivery_type === 'Office' ? 'مكتب' : 'منزل') + '</td>' +
       '<td>' + Number(o.subtotal).toLocaleString() + ' DZD</td>' +
-      '<td><select onchange="updateOrderStatus(\'' + o._row + '\',this.value)" style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:.75rem">' +
+      '<td><select onchange="updateOrderStatus(\'' + oid + '\',this.value)" style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:.75rem">' +
         '<option value="pending"' + (o.status === 'pending' ? ' selected' : '') + '>قيد الانتظار</option>' +
         '<option value="confirmed"' + (o.status === 'confirmed' ? ' selected' : '') + '>تم التأكيد</option>' +
         '<option value="shipped"' + (o.status === 'shipped' ? ' selected' : '') + '>تم الشحن</option>' +
         '<option value="delivered"' + (o.status === 'delivered' ? ' selected' : '') + '>تم التوصيل</option>' +
-        '<option value="cancelled"' + (o.status === 'cancelled' ? ' selected' : '') + '>ملغي</option>' +
+        '<option value="cancelled"' + (o.status === 'cancelled' ? ' selected' : '') + '>ملقي</option>' +
       '</select></td>' +
       '<td style="white-space:nowrap">' +
-        '<button class="btn btn-info btn-xs" onclick="viewOrder(' + o._row + ')">تفاصيل</button> ' +
+        '<button class="btn btn-info btn-xs" onclick="viewOrder(\'' + oid + '\')">تفاصيل</button> ' +
         '<a href="https://wa.me/' + esc(o.phone || '') + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-xs">واتساب</a> ' +
-        '<button class="btn btn-danger btn-xs" onclick="deleteOrder(' + o._row + ',\'' + esc(o.order_id || '') + '\')">حذف</button>' +
+        '<button class="btn btn-danger btn-xs" onclick="deleteOrder(\'' + oid + '\',\'' + oid + '\')">حذف</button>' +
       '</td>' +
     '</tr>';
   }).join('');
   document.getElementById('orders-list').innerHTML = html;
 }
 
-function updateOrderStatus(row, status) {
-  apiPost('admin_update_order', { _row: row, status: status }, function(data) {
+function updateOrderStatus(orderId, status) {
+  apiPost('admin_update_order', { order_id: orderId, status: status }, function(data) {
     if (data && data.ok) {
-      var o = allOrders.find(function(x) { return x._row === row; });
+      var o = allOrders.find(function(x) { return x.order_id === orderId; });
       if (o) { o.status = status; o._statusLocal = true; }
       toast('تم تحديث الحالة');
       if (o && o.phone) {
@@ -1168,13 +1571,13 @@ function updateOrderStatus(row, status) {
   });
 }
 
-function viewOrder(row) {
-  var o = allOrders.find(function(x) { return x._row === row; });
+function viewOrder(orderId) {
+  var o = allOrders.find(function(x) { return x.order_id === orderId; });
   if (!o) return;
   var items = [];
   try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
   var itemsHtml = items.map(function(it) {
-    return '<tr><td>' + esc(it.title) + '</td><td>' + it.qty + '</td><td>' + Number(it.price).toLocaleString() + ' DZD</td><td>' + Number(it.price * it.qty).toLocaleString() + ' DZD</td></tr>';
+    return '<tr><td>' + esc(it.name || it.title || '') + '</td><td>' + it.qty + '</td><td>' + Number(it.price).toLocaleString() + ' DZD</td><td>' + Number(it.price * it.qty).toLocaleString() + ' DZD</td></tr>';
   }).join('');
   var rawNote = String(o.notes || '');
   var addrMatch = rawNote.match(/\| (.+)$/);
@@ -1191,6 +1594,14 @@ function viewOrder(row) {
       '<div><strong>الهاتف:</strong><br><a href="https://wa.me/' + esc(o.phone) + '" target="_blank" style="color:var(--accent)">' + esc(o.phone) + '</a></div>' +
       '<div><strong>الولاية:</strong><br>' + esc(o.wilaya_ar || '') + ' (' + esc(o.wilaya_en || '') + ')</div>' +
       '<div><strong>التوصيل:</strong><br>' + (o.delivery_type === 'Office' ? 'مكتب' : 'منزل') + '</div>' +
+      '<div style="grid-column:1/-1"><strong>الشحن:</strong><br>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px">' +
+          '<label style="font-size:.75rem">سعر التوصيل (دج)</label><input id="o_ship_cost" type="number" style="width:90px" value="' + Number(o.shipping_cost || 0) + '">' +
+          '<label style="font-size:.75rem">شركة التوصيل</label><input id="o_ship_company" style="width:110px" value="' + esc(o.delivery_company || 'yalidine') + '">' +
+          '<label style="font-size:.75rem">رقم التتبع</label><input id="o_ship_tracking" style="width:140px" value="' + esc(o.tracking_code || '') + '">' +
+          '<button class="btn btn-accent btn-xs" onclick="saveOrderShipping(\'' + esc(o.order_id) + '\')">حفظ</button>' +
+        '</div>' +
+      '</div>' +
       (orderAddr ? '<div style="grid-column:1/-1"><strong>العنوان:</strong><br>' + orderAddr + '</div>' : '') +
       (orderNote ? '<div style="grid-column:1/-1"><strong>الملاحظة:</strong><br>' + orderNote + '</div>' : '') +
     '</div>' +
@@ -1207,6 +1618,26 @@ function viewOrder(row) {
 }
 
 function closeOrderModal() { document.getElementById('orderModal').classList.remove('open'); }
+
+function saveOrderShipping(orderId) {
+  var cost = (document.getElementById('o_ship_cost') || {}).value;
+  var company = (document.getElementById('o_ship_company') || {}).value;
+  var tracking = (document.getElementById('o_ship_tracking') || {}).value;
+  apiPost('admin_update_order', {
+    order_id: orderId,
+    shipping_cost: cost,
+    delivery_company: company,
+    tracking_code: tracking
+  }, function(data) {
+    if (data && data.ok) {
+      var o = allOrders.find(function(x) { return x.order_id === orderId; });
+      if (o) { o.shipping_cost = Number(cost) || 0; o.delivery_company = company; o.tracking_code = tracking; }
+      toast('تم حفظ بيانات الشحن');
+    } else {
+      toast('خطأ في حفظ الشحن: ' + ((data && data.error) || 'خطأ غير معروف'));
+    }
+  });
+}
 
 // ===== SETTINGS =====
 function loadSettings() {
@@ -1230,7 +1661,9 @@ function loadSettings() {
     document.getElementById('set_admin_password').value = '';
     if(document.getElementById('set_gemini_api_key')) document.getElementById('set_gemini_api_key').value = data.gemini_api_key || '';
     if(document.getElementById('set_ai_prompt')) document.getElementById('set_ai_prompt').value = data.ai_prompt || '';
-    if(document.getElementById('set_capi_enabled')) document.getElementById('set_capi_enabled').value = data.capi_enabled || 'true';
+    document.getElementById('set_capi_enabled').value = data.capi_enabled || 'true';
+    var logoPrev = document.getElementById('logo_preview');
+    if(logoPrev) logoPrev.src = (data.store_logo && String(data.store_logo).trim()) ? data.store_logo : 'logo1.png';
   });
 }
 
@@ -1272,6 +1705,8 @@ async function saveSettings() {
 }
 
 // ===== TESTIMONIALS =====
+// ملاحظة (Phase 5C): الحقول الحقيقية في admin.js/D1: id, author_name, author_location,
+// content, rating, avatar_url, active. لا يوجد _row/name/location/text.
 var allTestimonials = [];
 
 function loadTestimonials() {
@@ -1287,15 +1722,16 @@ function loadTestimonials() {
       var stars = '';
       for (var i = 0; i < (t.rating || 5); i++) stars += '★';
       for (var i = (t.rating || 5); i < 5; i++) stars += '☆';
+      var tid = esc(t.id);
       return '<tr>' +
-        '<td><strong>' + esc(t.name || '') + '</strong></td>' +
-        '<td>' + esc(t.location || '-') + '</td>' +
-        '<td style="max-width:300px">' + esc(t.text || '') + '</td>' +
+        '<td><strong>' + esc(t.author_name || '') + '</strong></td>' +
+        '<td>' + esc(t.author_location || '-') + '</td>' +
+        '<td style="max-width:300px">' + esc(t.content || '') + '</td>' +
         '<td style="color:#f59e0b">' + stars + '</td>' +
         '<td>' + (t.active ? '<span class="badge badge-confirmed">ظاهرة</span>' : '<span class="badge badge-cancelled">مخفية</span>') + '</td>' +
         '<td style="white-space:nowrap">' +
-          '<button class="btn btn-info btn-xs" onclick="editTestimonial(' + t._row + ')">تعديل</button> ' +
-          '<button class="btn btn-danger btn-xs" onclick="deleteTestimonial(' + t._row + ',\'' + esc(t.name || '') + '\')">حذف</button>' +
+          '<button class="btn btn-info btn-xs" onclick="editTestimonial(' + tid + ')">تعديل</button> ' +
+          '<button class="btn btn-danger btn-xs" onclick="deleteTestimonial(' + tid + ',\'' + esc(t.author_name || '') + '\')">حذف</button>' +
         '</td>' +
       '</tr>';
     }).join('');
@@ -1303,11 +1739,11 @@ function loadTestimonials() {
   });
 }
 
-function openTestimonialModal(row) {
+function openTestimonialModal(id) {
   document.getElementById('testimonialModal').classList.add('open');
-  document.getElementById('testimonialModalTitle').textContent = row ? 'تعديل شهادة' : 'إضافة شهادة';
-  document.getElementById('t_row').value = row || '';
-  if (!row) {
+  document.getElementById('testimonialModalTitle').textContent = id ? 'تعديل شهادة' : 'إضافة شهادة';
+  document.getElementById('t_id').value = id || '';
+  if (!id) {
     document.getElementById('t_name').value = '';
     document.getElementById('t_location').value = '';
     document.getElementById('t_text').value = '';
@@ -1318,37 +1754,38 @@ function openTestimonialModal(row) {
 
 function closeTestimonialModal() { document.getElementById('testimonialModal').classList.remove('open'); }
 
-function editTestimonial(row) {
-  var t = allTestimonials.find(function(x) { return x._row === row; });
+function editTestimonial(id) {
+  var t = allTestimonials.find(function(x) { return String(x.id) === String(id); });
   if (!t) return;
-  openTestimonialModal(row);
-  document.getElementById('t_name').value = t.name || '';
-  document.getElementById('t_location').value = t.location || '';
-  document.getElementById('t_text').value = t.text || '';
+  openTestimonialModal(id);
+  document.getElementById('t_name').value = t.author_name || '';
+  document.getElementById('t_location').value = t.author_location || '';
+  document.getElementById('t_text').value = t.content || '';
   document.getElementById('t_rating').value = t.rating || 5;
   document.getElementById('t_active').value = t.active ? 'true' : 'false';
 }
 
 function saveTestimonial(e) {
   e.preventDefault();
-  var row = document.getElementById('t_row').value;
+  var id = document.getElementById('t_id').value;
   var data = {
-    name: document.getElementById('t_name').value,
-    location: document.getElementById('t_location').value,
-    text: document.getElementById('t_text').value,
+    author_name: document.getElementById('t_name').value,
+    author_location: document.getElementById('t_location').value,
+    content: document.getElementById('t_text').value,
     rating: Number(document.getElementById('t_rating').value),
-    active: document.getElementById('t_active').value === 'true'
+    active: document.getElementById('t_active').value === 'true' ? '1' : '0'
   };
-  var endpoint = row ? 'admin_edit_testimonial' : 'admin_add_testimonial';
-  if (row) data._row = row;
-  apiPost(endpoint, data, function() {
-    closeTestimonialModal(); toast(row ? 'تم التعديل' : 'تمت الإضافة'); setTimeout(loadTestimonials, 2000);
+  if (id) data.id = id;
+  var endpoint = id ? 'admin_edit_testimonial' : 'admin_add_testimonial';
+  apiPost(endpoint, data, function(r) {
+    if (!r || r.ok === false) { toast('خطأ: ' + (r && r.error ? r.error : 'فشل الحفظ')); return; }
+    closeTestimonialModal(); toast(id ? 'تم التعديل' : 'تمت الإضافة'); setTimeout(loadTestimonials, 1200);
   });
 }
 
-function deleteTestimonial(row, name) {
+function deleteTestimonial(id, name) {
   if (!confirm('هل تريد حذف شهادة "' + name + '"؟')) return;
-  apiPost('admin_delete_testimonial', { _row: row }, function() {
+  apiPost('admin_delete_testimonial', { id: id }, function() {
     toast('تم الحذف'); setTimeout(loadTestimonials, 2000);
   });
 }
@@ -1360,34 +1797,27 @@ function loadReviews() {
     if (!data || !data.reviews || !data.reviews.length) { list.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:24px">لا توجد تقييمات</td></tr>'; return; }
     list.innerHTML = data.reviews.map(function(r) {
       var stars = ''; for (var i = 0; i < (r.rating || 5); i++) stars += '★';
-      var photosHtml = '—';
-      if (r.photos) {
-        try {
-          var photos = typeof r.photos === 'string' ? JSON.parse(r.photos) : r.photos;
-          if (photos && photos.length) {
-            photosHtml = '<div style="display:flex;gap:4px;flex-wrap:wrap">' + photos.map(function(url) {
-              return '<img src="' + esc(url) + '" style="width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:pointer" onclick="window.open(\'' + esc(url) + '\',\'_blank\')">';
-            }).join('') + '</div>';
-          }
-        } catch(e) {}
+      var photoHtml = '—';
+      if (r.image_url) {
+        photoHtml = '<img src="' + esc(r.image_url) + '" style="width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:pointer" onclick="window.open(\'' + esc(r.image_url) + '\',\'_blank\')">';
       }
       return '<tr>' +
-        '<td>' + esc(r.product_id || '') + '</td>' +
-        '<td>' + esc(r.name || '') + '</td>' +
-        '<td>' + esc(r.location || '') + '</td>' +
-        '<td>' + esc(r.text || '') + '</td>' +
-        '<td>' + photosHtml + '</td>' +
+        '<td>' + esc(r.product_name || r.product_id || '') + '</td>' +
+        '<td>' + esc(r.author_name || '') + '</td>' +
+        '<td>' + esc(r.author_phone || '') + '</td>' +
+        '<td>' + esc(r.content || '') + '</td>' +
+        '<td>' + photoHtml + '</td>' +
         '<td style="color:#f59e0b">' + stars + '</td>' +
         '<td>' + esc(r.created_at || '') + '</td>' +
-        '<td><button class="btn btn-danger btn-xs" onclick="deleteReview(' + r._row + ')">حذف</button></td>' +
+        '<td><button class="btn btn-danger btn-xs" onclick="deleteReview(' + r.id + ')">حذف</button></td>' +
       '</tr>';
     }).join('');
   });
 }
 
-function deleteReview(row) {
+function deleteReview(id) {
   if (!confirm('حذف هذا التقييم؟')) return;
-  apiPost('admin_delete_review', { _row: row }, function() {
+  apiPost('admin_delete_review', { id: id }, function() {
     loadReviews(); toast('تم الحذف');
   });
 }
@@ -1520,9 +1950,6 @@ function startAutoRefresh() {
   }, 15000);
 }
 
-loadDashboard();
-startAutoRefresh();
-
 // === Auth Functions ===
 var AUTH_KEY = 'admin_auth';
 var AUTH_TTL = 24 * 60 * 60 * 1000;
@@ -1552,8 +1979,12 @@ function getAuthToken() {
 function checkAuth() {
   try {
     var auth = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
-    if (!auth || !auth.hash || !auth.time) return false;
-    if (Date.now() - auth.time > AUTH_TTL) { localStorage.removeItem(AUTH_KEY); return false; }
+    if (!auth || !auth.time) return false;
+    if (!auth.token && !auth.hash) return false;
+    if (Date.now() - auth.time > AUTH_TTL) {
+      localStorage.removeItem(AUTH_KEY);
+      return false;
+    }
     return true;
   } catch(e) { return false; }
 }
@@ -1561,132 +1992,245 @@ function checkAuth() {
 async function doLogin() {
   var user = document.getElementById('loginUser').value.trim();
   var pass = document.getElementById('loginPass').value;
-  if (!user || !pass) return;
+  if (!user || !pass) {
+    var errEl = document.getElementById('loginError');
+    errEl.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور';
+    errEl.style.display = 'block';
+    return;
+  }
   var btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = 'جاري التحقق...';
+  btn.disabled = true; btn.textContent = 'جاري تسجيل الدخول...';
   document.getElementById('loginError').style.display = 'none';
-  var passHash = await hashPasswordAsync(pass);
-  apiGet('verify_admin', { password: passHash }, function(data) {
-    btn.disabled = false; btn.textContent = 'تسجيل الدخول';
-    if (data && data.ok) {
-      localStorage.setItem(AUTH_KEY, JSON.stringify({ hash: passHash, time: Date.now(), user: user, token: data.token || '' }));
-      showAdminPanel();
+
+  // إذا كان المدخل بريداً إلكترونياً -> استخدام auth_login الحديث (PBKDF2)
+  if (user.includes('@')) {
+    apiPost('auth_login', { email: user, password: pass }, function(res) {
+      btn.disabled = false; btn.textContent = 'تسجيل الدخول';
+      if (res && res.ok) {
+        localStorage.setItem(AUTH_KEY, JSON.stringify({
+          time: Date.now(),
+          user: (res.user && res.user.email) ? res.user.email : user,
+          name: (res.user && res.user.name) ? res.user.name : '',
+          token: res.token || '',
+          role: (res.user && res.user.role) ? res.user.role : 'OWNER',
+          tenant: res.tenant || null
+        }));
+        showAdminPanel();
+      } else {
+        var errEl = document.getElementById('loginError');
+        errEl.textContent = (res && res.error) ? res.error : 'بيانات الدخول غير صحيحة';
+        errEl.style.display = 'block';
+      }
+    });
+  } else {
+    // Fallback: استخدام verify_admin القديم
+    var passHash = await hashPasswordAsync(pass);
+    apiGet('verify_admin', { password: passHash }, function(data) {
+      btn.disabled = false; btn.textContent = 'تسجيل الدخول';
+      if (data && data.ok) {
+        localStorage.setItem(AUTH_KEY, JSON.stringify({ hash: passHash, time: Date.now(), user: user, token: data.token || '', role: 'OWNER' }));
+        showAdminPanel();
+      } else {
+        var errEl = document.getElementById('loginError');
+        errEl.textContent = (data && data.error) ? data.error : 'كلمة المرور خاطئة';
+        errEl.style.display = 'block';
+      }
+    });
+  }
+}
+
+async function doRegister() {
+  var storeName = document.getElementById('regStoreName').value.trim();
+  var email = document.getElementById('regEmail').value.trim();
+  var pass = document.getElementById('regPass').value;
+
+  var errEl = document.getElementById('signupError');
+  var succEl = document.getElementById('signupSuccess');
+  errEl.style.display = 'none'; succEl.style.display = 'none';
+
+  if (!storeName || !email || !pass) {
+    errEl.textContent = 'يرجى ملء كافة الحقول المطلوبة';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (pass.length < 8) {
+    errEl.textContent = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  var btn = document.getElementById('signupBtn');
+  btn.disabled = true; btn.textContent = 'جاري إنشاء المتجر...';
+
+  apiPost('auth_register', { store_name: storeName, email: email, password: pass }, function(res) {
+    btn.disabled = false; btn.textContent = 'إنشاء الحساب والبدء';
+    if (res && res.ok) {
+      succEl.textContent = res.message || '✅ تم إنشاء الحساب بنجاح! يرجى مراجعة بريدك الإلكتروني.';
+      succEl.style.display = 'block';
+      setTimeout(showLoginScreen, 3000);
     } else {
-      var errEl = document.getElementById('loginError');
-      errEl.textContent = (data && data.error) ? data.error : 'كلمة المرور خاطئة';
+      errEl.textContent = (res && res.error) ? res.error : 'تعذر إنشاء الحساب';
+      errEl.style.display = 'block';
+    }
+  });
+}
+
+function doForgotPassword() {
+  var email = document.getElementById('forgotEmail').value.trim();
+  var errEl = document.getElementById('forgotError');
+  var succEl = document.getElementById('forgotSuccess');
+  errEl.style.display = 'none'; succEl.style.display = 'none';
+
+  if (!email || !email.includes('@')) {
+    errEl.textContent = 'يرجى إدخال بريد إلكتروني صالح';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  var btn = document.getElementById('forgotBtn');
+  btn.disabled = true; btn.textContent = 'جاري الإرسال...';
+
+  apiPost('auth_forgot_password', { email: email }, function(res) {
+    btn.disabled = false; btn.textContent = 'إرسال رابط الاستعادة';
+    succEl.textContent = (res && res.message) ? res.message : 'إذا كان البريد مسجلاً، فستصلك تعليمات الاستعادة.';
+    succEl.style.display = 'block';
+  });
+}
+
+function doResetPassword() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var token = urlParams.get('token') || '';
+  var pass = document.getElementById('resetNewPass').value;
+  var confirm = document.getElementById('resetNewPassConfirm').value;
+
+  var errEl = document.getElementById('resetError');
+  var succEl = document.getElementById('resetSuccess');
+  errEl.style.display = 'none'; succEl.style.display = 'none';
+
+  if (!pass || pass.length < 8) {
+    errEl.textContent = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (pass !== confirm) {
+    errEl.textContent = 'كلمتا المرور غير متطابقتين';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  var btn = document.getElementById('resetBtn');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ...';
+
+  apiPost('auth_reset_password', { token: token, new_password: pass }, function(res) {
+    btn.disabled = false; btn.textContent = 'حفظ كلمة المرور الجديدة';
+    if (res && res.ok) {
+      succEl.textContent = res.message || '✅ تم تعيين كلمة المرور بنجاح.';
+      succEl.style.display = 'block';
+      setTimeout(showLoginScreen, 2500);
+    } else {
+      errEl.textContent = (res && res.error) ? res.error : 'رمز الاستعادة غير صالح أو منتهي الصلاحية';
       errEl.style.display = 'block';
     }
   });
 }
 
 function doLogout() {
+  var token = getAuthToken();
+  if (token) {
+    apiPost('auth_logout', { token: token }, function() {});
+  }
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
   localStorage.removeItem(AUTH_KEY);
   document.getElementById('adminPanel').classList.add('hidden');
+  hideAllAuthScreens();
   document.getElementById('loginScreen').style.display = 'flex';
-  var pw=document.getElementById('loginPass');if(pw)pw.value='';
+  var pw = document.getElementById('loginPass');
+  if (pw) pw.value = '';
 }
 
-function showAdminPanel() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('adminPanel').classList.remove('hidden');
-  // auto-open theme customizer if URL has ?customize=themeId
-  if (window.ThemeCustomizer) { ThemeCustomizer.autoOpen(); }
-}
-
-// Setup screen functions
-function doSetup() {
-  var pass = document.getElementById('setupPass').value;
-  var confirm = document.getElementById('setupPassConfirm').value;
-  if (!pass || pass.length < 6) {
-    document.getElementById('setupError').textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-    document.getElementById('setupError').style.display = 'block';
-    return;
-  }
-  if (pass !== confirm) {
-    document.getElementById('setupError').textContent = 'كلمة المرور غير متطابقة';
-    document.getElementById('setupError').style.display = 'block';
-    return;
-  }
-  var btn = document.getElementById('setupBtn');
-  btn.disabled = true; btn.textContent = 'جاري الحفظ...';
-  document.getElementById('setupError').style.display = 'none';
-  hashPasswordAsync(pass).then(function(passHash) {
-    apiPost('admin_update_settings', { admin_password: passHash }, function(res) {
-      btn.disabled = false; btn.textContent = '🔐 حفظ كلمة المرور';
-      if (res && res.recovery_code) {
-        document.getElementById('recoveryCodeDisplay').textContent = res.recovery_code;
-        document.getElementById('recoveryModal').style.display = 'flex';
-      }
-      showLoginScreen();
-      document.getElementById('loginError').textContent = '✅ تم إنشاء كلمة المرور. سجل الدخول الآن.';
-      document.getElementById('loginError').style.display = 'block';
-    });
+function hideAllAuthScreens() {
+  ['loginScreen', 'signupScreen', 'forgotScreen', 'resetScreen', 'verifyScreen', 'setupScreen'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
   });
 }
 
 function showLoginScreen() {
-  document.getElementById('setupScreen').style.display = 'none';
-  document.getElementById('forgotScreen').style.display = 'none';
+  hideAllAuthScreens();
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginPass').value = '';
 }
 
+function showSignupScreen() {
+  hideAllAuthScreens();
+  document.getElementById('signupScreen').style.display = 'flex';
+}
+
 function showForgotScreen() {
-  document.getElementById('loginScreen').style.display = 'none';
+  hideAllAuthScreens();
   document.getElementById('forgotScreen').style.display = 'flex';
-  document.getElementById('recoveryCode').value = '';
-  document.getElementById('forgotError').style.display = 'none';
 }
 
-function showSetupScreen() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('forgotScreen').style.display = 'none';
-  document.getElementById('setupScreen').style.display = 'flex';
-  document.getElementById('setupPass').value = '';
-  document.getElementById('setupPassConfirm').value = '';
-  document.getElementById('setupError').style.display = 'none';
+function showResetScreen() {
+  hideAllAuthScreens();
+  document.getElementById('resetScreen').style.display = 'flex';
 }
 
-function closeRecoveryModal() {
-  document.getElementById('recoveryModal').style.display = 'none';
+function showVerifyScreen() {
+  hideAllAuthScreens();
+  document.getElementById('verifyScreen').style.display = 'flex';
 }
 
-function doVerifyRecovery() {
-  var code = document.getElementById('recoveryCode').value.trim().toUpperCase();
-  if (!code) {
-    document.getElementById('forgotError').textContent = 'أدخل رمز الاسترجاع';
-    document.getElementById('forgotError').style.display = 'block';
+function showAdminPanel() {
+  hideAllAuthScreens();
+  document.getElementById('adminPanel').classList.remove('hidden');
+  try {
+    var auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
+    var labelEl = document.getElementById('adminUserLabel');
+    if (labelEl) {
+      var roleName = auth.role === 'OWNER' ? 'المالك' : (auth.role || 'Admin');
+      var storeTitle = (auth.tenant && auth.tenant.name) ? ' · ' + auth.tenant.name : '';
+      labelEl.textContent = (auth.name || auth.user || 'Admin') + ' (' + roleName + ')' + storeTitle;
+    }
+  } catch(e) {}
+  if (window.ThemeCustomizer) { ThemeCustomizer.autoOpen(); }
+  loadDashboard();
+  startAutoRefresh();
+}
+
+// URL-based Action Handler on Startup
+(function handleStartupParams() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var action = urlParams.get('action');
+  var token = urlParams.get('token');
+
+  if (action === 'verify_email' && token) {
+    showVerifyScreen();
+    apiPost('auth_verify_email', { token: token }, function(res) {
+      var msgEl = document.getElementById('verifyMessage');
+      if (res && res.ok) {
+        msgEl.innerHTML = '<span style="color:#10b981;font-weight:bold">✅ ' + (res.message || 'تم تأكيد البريد الإلكتروني بنجاح!') + '</span>';
+      } else {
+        msgEl.innerHTML = '<span style="color:#ef4444;font-weight:bold">❌ ' + ((res && res.error) || 'رمز التأكيد غير صالح أو منتهي الصلاحية') + '</span>';
+      }
+    });
     return;
   }
-  var btn = document.getElementById('forgotBtn');
-  btn.disabled = true; btn.textContent = 'جاري التحقق...';
-  document.getElementById('forgotError').style.display = 'none';
-  apiGet('verify_recovery', { code: code }, function(data) {
-    btn.disabled = false; btn.textContent = '🔍 تحقق';
-    if (data && data.ok) {
-      // Recovery verified — backend cleared the password, setup screen appears
-      document.getElementById('forgotError').textContent = '✅ تم التحقق. أنشئ كلمة مرور جديدة.';
-      document.getElementById('forgotError').style.display = 'block';
-      document.getElementById('forgotError').style.color = '#4CAF50';
-      showSetupScreen();
-    } else {
-      document.getElementById('forgotError').textContent = (data && data.error) || 'رمز الاسترجاع غير صحيح';
-      document.getElementById('forgotError').style.display = 'block';
-      document.getElementById('forgotError').style.color = '#ff5252';
-    }
-  });
-}
 
-// Check on load
-apiGet('verify_admin', { password: '' }, function(data) {
-  if (data && data.setupRequired) {
-    showSetupScreen();
-  } else if (checkAuth()) {
+  if (action === 'reset_password' && token) {
+    showResetScreen();
+    return;
+  }
+
+  if (checkAuth()) {
     showAdminPanel();
   } else {
-    doLogout();
+    showLoginScreen();
   }
-});
+})();
 </script>
 
 <!-- Theme Editor Modal -->
