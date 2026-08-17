@@ -59,13 +59,21 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
   try {
     // 1. تحقق مما إذا كان CAPI مفعلاً
     const { results } = await env.DB.prepare(`
-      SELECT key, value FROM settings WHERE key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id')
+      SELECT key, value FROM settings WHERE key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id')
     `).all();
 
     const settings = {};
     results.forEach(r => settings[r.key] = r.value);
 
-    if (settings.capi_enabled !== 'true' || !settings.fb_capi_token || !settings.fb_pixel_id) {
+    const pixelId = settings.fb_pixel_id || settings.pixel_id;
+
+    if (settings.capi_enabled !== 'true' || !settings.fb_capi_token || !pixelId) {
+      console.log('[CAPI Diagnostic Check]', {
+        capi_enabled: settings.capi_enabled,
+        has_token: !!settings.fb_capi_token,
+        has_pixel_id: !!pixelId,
+        aborted: true
+      });
       return; // غير مفعل أو غير مكتمل الإعدادات
     }
 
@@ -103,12 +111,19 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
                      undefined;
     const userAgent = requestObj?.headers?.get('User-Agent') || undefined;
 
+    // Event Source URL (الرابط الفعلي لصفحة المنتج من الطلب أو ترويسة Referer)
+    const eventSourceUrl = eventData?.event_source_url || 
+                           requestObj?.headers?.get('Referer') || 
+                           requestObj?.headers?.get('referer') || 
+                           undefined;
+
     const payload = {
       data: [
         {
           event_name: eventName,
           event_time: Math.floor(Date.now() / 1000),
           event_id: eventData.order_id ? String(eventData.order_id) : undefined,
+          event_source_url: eventSourceUrl || undefined,
           action_source: "website",
           user_data: {
             client_ip_address: clientIp,
@@ -132,7 +147,7 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
       payload.data[0].custom_data.order_id = String(eventData.order_id);
     }
 
-    const fbUrl = `https://graph.facebook.com/v19.0/${settings.fb_pixel_id}/events?access_token=${settings.fb_capi_token}`;
+    const fbUrl = `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${settings.fb_capi_token}`;
 
     const res = await fetch(fbUrl, {
       method: 'POST',
@@ -140,9 +155,30 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
       body: JSON.stringify(payload)
     });
 
+    let resText = '';
+    let resJson = null;
+    if (typeof res.text === 'function') {
+      resText = await res.text();
+      try { resJson = JSON.parse(resText); } catch (_) {}
+    } else if (typeof res.json === 'function') {
+      resJson = await res.json();
+      resText = JSON.stringify(resJson);
+    }
+
+    console.log('[CAPI Response Diagnostic]', {
+      capi_enabled: settings.capi_enabled,
+      has_token: !!settings.fb_capi_token,
+      pixel_id: pixelId,
+      event_id: payload.data[0].event_id,
+      event_name: eventName,
+      http_status: res.status,
+      events_received: resJson?.events_received ?? null,
+      fbtrace_id: resJson?.fbtrace_id ?? null,
+      response_body: resJson || resText
+    });
+
     if (!res.ok) {
-      const errText = await res.text();
-      console.error('Facebook CAPI Error:', errText);
+      console.error('Facebook CAPI Error:', resText);
     }
   } catch (err) {
     console.error('sendCapiEvent Error:', err.message);
@@ -155,13 +191,15 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
 export async function adminCapiTest(env, params, request) {
   try {
     const { results } = await env.DB.prepare(`
-      SELECT key, value FROM settings WHERE key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id')
+      SELECT key, value FROM settings WHERE key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id')
     `).all();
 
     const settings = {};
     results.forEach(r => settings[r.key] = r.value);
 
-    if (!settings.fb_capi_token || !settings.fb_pixel_id) {
+    const pixelId = settings.fb_pixel_id || settings.pixel_id;
+
+    if (!settings.fb_capi_token || !pixelId) {
       return { ok: false, error: 'إعدادات CAPI غير مكتملة (يرجى إدخال Pixel ID و Token)' };
     }
 
@@ -184,7 +222,7 @@ export async function adminCapiTest(env, params, request) {
       test_event_code: params.test_code || undefined // إذا كان المستخدم يريد اختباره عبر Events Manager
     };
 
-    const fbUrl = `https://graph.facebook.com/v19.0/${settings.fb_pixel_id}/events?access_token=${settings.fb_capi_token}`;
+    const fbUrl = `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${settings.fb_capi_token}`;
     
     const res = await fetch(fbUrl, {
       method: 'POST',

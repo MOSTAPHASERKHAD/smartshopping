@@ -1190,10 +1190,19 @@ function trackAddToCart(product){
   try{var ci=cart.find(function(c){return c.id===product.id});if(ci)qty=ci.qty;}catch(e){}
   trackEvent('AddToCart',{content_name:product.name,content_ids:[product.id],content_type:'product',value:product.price,currency:'DZD',num_items:qty});
 }
-function trackPurchase(orderId,total){
+function trackPurchase(orderId,total,items){
+  var ids=[];
   var tq=1;
-  try{tq=cart.reduce(function(s,c){return s+c.qty},0);if(!tq)tq=1;}catch(e){}
-  trackEvent('Purchase',{content_name:'Order',content_ids:[orderId],value:total,currency:'DZD',num_items:tq},{eventID:orderId});
+  if(Array.isArray(items)&&items.length>0){
+    ids=items.map(function(item){return String(item.id!=null?item.id:item);}).filter(Boolean);
+    tq=items.reduce(function(s,c){return s+(Number(c.qty)||1);},0);
+  }else if(Array.isArray(cart)&&cart.length>0){
+    ids=cart.map(function(c){return String(c.id);}).filter(Boolean);
+    tq=cart.reduce(function(s,c){return s+(Number(c.qty)||1);},0);
+  }
+  if(!ids.length)ids=[String(orderId)];
+  if(!tq)tq=1;
+  trackEvent('Purchase',{content_name:'Order',content_ids:ids,content_type:'product',value:total,currency:'DZD',num_items:tq},{eventID:String(orderId)});
 }
 function trackInitiateCheckout(total){
   trackEvent('InitiateCheckout',{value:total,currency:'DZD'});
@@ -1675,7 +1684,8 @@ function submitOrder(e){
     return;
   }
   var wil=WILAYAS.find(function(x){return x.code===w});
-  var items=JSON.stringify(cart.map(function(c){var x=allProducts.find(function(p){return p.id===c.id});return{id:c.id,title:x?(currentLang==='ar'?x.title_ar:x.title_en):'',price:x?x.price:0,qty:c.qty}}));
+  var purchasedItems=cart.map(function(c){var x=allProducts.find(function(p){return p.id===c.id});return{id:c.id,title:x?(currentLang==='ar'?x.title_ar:x.title_en):'',price:x?x.price:0,qty:c.qty}});
+  var items=JSON.stringify(purchasedItems);
   setLoading('submitBtn', true);
   var finalSub = sub - cartDiscount;
   if (finalSub < 0) finalSub = 0;
@@ -1686,7 +1696,8 @@ function submitOrder(e){
     municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note,
     coupon_code:cartCouponCode,
     utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||'',
-    fbc:metaTrack.fbc||'',fbp:metaTrack.fbp||''
+    fbc:metaTrack.fbc||'',fbp:metaTrack.fbp||'',
+    event_source_url:window.location.href||''
   },function(data){
     setLoading('submitBtn', false);
     if(!data||data.error||!data.ok){showToast((currentLang==='ar'?'خطأ: ':'Error: ')+(data?data.error||(currentLang==='ar'?'خطأ غير معروف':'Unknown error'):(currentLang==='ar'?'خطأ في الشبكة':'Network error')),'error');return}
@@ -1703,11 +1714,11 @@ function submitOrder(e){
       '<p style="color:var(--text2);font-size:.75rem;margin-top:6px">'+t('delivery_note')+'</p>'+
       '<a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn">'+t('whatsapp_btn')+'</a>'+
     '</div>';
+    try{trackPurchase(data.order_id,sub,purchasedItems)}catch(e){console.warn('trackPurchase',e)}
+    try{fireCapiSend({order_id:data.order_id,phone:p,subtotal:sub})}catch(e){console.warn('capi_send',e)}
     cart=[];saveCart();renderCart();renderProducts();
     cartDiscount=0;cartCouponCode='';
     var dr=document.getElementById('discountResult');if(dr)dr.style.display='none';
-    try{trackPurchase(data.order_id,sub)}catch(e){console.warn('trackPurchase',e)}
-    try{fireCapiSend({order_id:data.order_id,phone:p,subtotal:sub})}catch(e){console.warn('capi_send',e)}
   });
 }
 
@@ -1892,11 +1903,17 @@ function submitProductDetail(e){
   var variantNote='';
   if(pdVariantSize)variantNote+=' | المقاس: '+pdVariantSize;
   if(pdVariantColor)variantNote+=' | اللون: '+pdVariantColor;
-  var items=JSON.stringify([{id:pid,title:currentLang==='ar'?prod.title_ar:prod.title_en,price:finalPrice,qty:1,size:pdVariantSize||'',color:pdVariantColor||'',sku:getSelectedVariant(prod)?.sku||''}]);
+  var purchasedProduct=[{id:pid,title:currentLang==='ar'?prod.title_ar:prod.title_en,price:finalPrice,qty:1,size:pdVariantSize||'',color:pdVariantColor||'',sku:getSelectedVariant(prod)?.sku||''}];
+  var items=JSON.stringify(purchasedProduct);
+  var utmData=getUTM();
+  var metaTrack=getMetaTracking();
   setLoading('pdSubmit', true);
   apiPost('order',{
     name:n,phone:ph,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
-    municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note+variantNote
+    municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note+variantNote,
+    utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||'',
+    fbc:metaTrack.fbc||'',fbp:metaTrack.fbp||'',
+    event_source_url:window.location.href||''
   },function(data){
     setLoading('pdSubmit', false);
     if(!data||data.error||!data.ok){showToast((currentLang==='ar'?'خطأ: ':'Error: ')+(data?data.error||(currentLang==='ar'?'خطأ غير معروف':'Unknown error'):(currentLang==='ar'?'خطأ في الشبكة':'Network error')),'error');return}
@@ -1915,6 +1932,7 @@ function submitProductDetail(e){
       '<br><button type="button" class="btn btn-outline btn-sm" style="margin-top:12px" onclick="hideProductDetail()" data-i18n="back_products">← العودة للمنتجات</button>'+
     '</div>';
     document.querySelector('.pd-success .btn-outline').textContent=t('back_products');
+    try{trackPurchase(orderId,finalPrice,purchasedProduct)}catch(e){console.warn('trackPurchase',e)}
   });
 }
 
@@ -3176,13 +3194,17 @@ function submitLandingOrder(e,productId){
   btn.disabled=true;
   btn.textContent=(currentLang==='ar'?'جاري الإرسال...':'Sending...');
   var wil=WILAYAS.find(function(x){return x.code===w});
-  var items=JSON.stringify([{id:product.id,title:currentLang==='ar'?product.title_ar:product.title_en,price:product.price,qty:1}]);
+  var purchasedProduct=[{id:product.id,title:currentLang==='ar'?product.title_ar:product.title_en,price:product.price,qty:1}];
+  var items=JSON.stringify(purchasedProduct);
   var utmData=getUTM();
+  var metaTrack=getMetaTracking();
   apiPost('order',{
     name:n,phone:p,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
     municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note,
     coupon_code:'',
-    utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||''
+    utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||'',
+    fbc:metaTrack.fbc||'',fbp:metaTrack.fbp||'',
+    event_source_url:window.location.href||''
   },function(data){
     if(!data||data.error||!data.ok){
       btn.disabled=false;
@@ -3215,7 +3237,7 @@ function submitLandingOrder(e,productId){
       container.style.display='block';
       try{container.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){}
     }
-    try{trackPurchase(orderId,product.price)}catch(e){console.warn('trackPurchase',e)}
+    try{trackPurchase(orderId,product.price,purchasedProduct)}catch(e){console.warn('trackPurchase',e)}
     try{fireCapiSend({order_id:orderId,phone:p,subtotal:product.price})}catch(e){console.warn('capi_send',e)}
     try{localStorage.setItem(CUSTOMER_KEY,JSON.stringify({name:n,phone:p,address:addr}))}catch(e){console.warn('saveCustomer',e)}
   });

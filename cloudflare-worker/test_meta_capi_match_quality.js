@@ -88,7 +88,8 @@ async function runTests() {
   try {
     const mockHeaders = new Map([
       ['cf-connecting-ip', '197.200.10.5'],
-      ['user-agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)']
+      ['user-agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'],
+      ['referer', 'https://smartshopping.click/product.html?product=1&fbclid=MockClickId']
     ]);
     const mockRequest = {
       headers: {
@@ -103,7 +104,8 @@ async function runTests() {
       {
         order_id: orderId,
         value: 3000,
-        content_ids: ['1']
+        content_ids: ['1'],
+        event_source_url: 'https://smartshopping.click/product.html?product=1&fbclid=MockClickId'
       },
       {
         phone: '0555123456',
@@ -120,6 +122,7 @@ async function runTests() {
     const event = capturedPayload.data[0];
     assert(event.event_name === 'Purchase', 'Event name is Purchase');
     assert(event.event_id === orderId, 'Root event_id matches exact orderId');
+    assert(event.event_source_url === 'https://smartshopping.click/product.html?product=1&fbclid=MockClickId', 'event_source_url populated correctly');
     assert(event.custom_data.order_id === orderId, 'Custom data order_id matches exact orderId');
     assert(event.custom_data.currency === 'DZD', 'Currency is DZD');
     assert(event.custom_data.value === 3000, 'Order value is 3000');
