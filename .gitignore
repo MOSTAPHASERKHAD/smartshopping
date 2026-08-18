@@ -41,3 +41,8 @@ cloudflare-worker/.tmp-dryrun/
 .kilo/
 .zed/
 
+
+# Build & Release outputs
+dist/
+release/
+
