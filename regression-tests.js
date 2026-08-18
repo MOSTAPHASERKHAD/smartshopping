@@ -236,14 +236,17 @@ async function post(action, body) {
   // ---- PWA/static-host checks (must be deployed to smartshopping.click) --------------
   try {
     const sw = await (await timedFetch(BASE + '/sw.js')).text();
-    const v33 = sw.indexOf("'smartshopping-v33'") !== -1;
+    // الإصدار يزداد مع كل تعديل ملحوظ (CACHE_NAME) — نتحقق من وجود إصدار مُرقّم ديناميكياً
+    // بدلاً من ترقيم إصدار محدّد سلفاً (لا يتقادم مع الوقت).
+    const versionMatch = sw.match(/CACHE_NAME\s*=\s*'smartshopping-v(\d+)'/);
+    const hasVersion = !!versionMatch;
     const scoped = sw.indexOf('self.registration.scope') !== -1;
     const hardcodedPrecache = sw.indexOf("caches.match('/smartshopping/") !== -1;
-    check('PWA sw.js is v33 scope-relative', v33 && scoped && !hardcodedPrecache, `v33=${v33} scoped=${scoped} hardcodedFallback=${hardcodedPrecache}`);
-  } catch (e) { check('PWA sw.js v33', false, e.message); }
+    check('PWA sw.js is versioned + scope-relative + API SWR cache', hasVersion && scoped && !hardcodedPrecache && sw.indexOf('apiCacheKey') !== -1, `version=v${versionMatch?.[1]} scoped=${scoped} hardcodedFallback=${hardcodedPrecache}`);
+  } catch (e) { check('PWA sw.js version check', false, e.message); }
   try {
     const idx = await (await timedFetch(BASE + '/')).text();
-    check('PWA index REQUIRED_VER=v33', idx.indexOf("REQUIRED_VER = 'v33'") !== -1, '');
+    check('PWA index REQUIRED_VER=v34', idx.indexOf("REQUIRED_VER = 'v34'") !== -1, '');
   } catch (e) { check('PWA index REQUIRED_VER', false, e.message); }
   try {
     const man = JSON.parse(await (await timedFetch(BASE + '/manifest.json')).text());

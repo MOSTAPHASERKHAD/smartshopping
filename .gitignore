@@ -36,3 +36,8 @@ cloudflare-worker/.tmp-dryrun/
 .tmp-dryrun/
 *.o
 *.dll.so
+#  AI / Editor local state
+.agents/
+.kilo/
+.zed/
+
