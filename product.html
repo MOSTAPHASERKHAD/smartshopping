@@ -167,12 +167,36 @@
     }
 
     // --- Smooth Scroll to Order Form ---
+    var _initiateCheckoutFired = false;
     function scrollToOrderForm() {
       var formSec = document.getElementById('plOrderSection');
       if (formSec) {
         formSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
         var nameInput = document.getElementById('plName');
         if (nameInput) setTimeout(function(){ nameInput.focus(); }, 400);
+      }
+
+      if (!_initiateCheckoutFired && typeof currentProduct !== 'undefined' && currentProduct) {
+        _initiateCheckoutFired = true;
+        try {
+          if (window.fbq) {
+            window.fbq('track', 'InitiateCheckout', {
+              content_name: currentProduct.title_ar || currentProduct.name || 'Product',
+              content_ids: [String(currentProduct.id)],
+              content_type: 'product',
+              value: Number(currentProduct.price || 0),
+              currency: 'DZD'
+            });
+          }
+          if (window.ttq) {
+            window.ttq.track('InitiateCheckout', {
+              content_id: String(currentProduct.id),
+              content_type: 'product',
+              value: Number(currentProduct.price || 0),
+              currency: 'DZD'
+            });
+          }
+        } catch(e) {}
       }
     }
 
@@ -897,25 +921,31 @@
         var orderId = res.order_id || 'SK-' + Date.now();
 
         // Client-side Facebook / TikTok Pixel Purchase Tracking
-        try {
-          if (window.fbq) {
-            window.fbq('track', 'Purchase', {
-              currency: 'DZD',
-              value: (currentProduct && currentProduct.price) ? currentProduct.price : 0,
-              content_ids: [currentProduct ? String(currentProduct.id) : ''],
-              content_type: 'product',
-              order_id: String(orderId)
-            }, { eventID: String(orderId) });
+        if (typeof res.total !== 'number' || isNaN(res.total)) {
+          console.error('[Purchase] Valid total not returned from backend. Skipping Purchase event to prevent mismatched values.', res);
+        } else {
+          try {
+            if (window.fbq) {
+              window.fbq('track', 'Purchase', {
+                currency: 'DZD',
+                value: res.total,
+                content_ids: [currentProduct ? String(currentProduct.id) : ''],
+                content_type: 'product',
+                order_id: String(orderId)
+              }, { eventID: String(orderId) });
+            }
+            if (window.ttq) {
+              window.ttq.track('CompletePayment', {
+                content_id: currentProduct ? String(currentProduct.id) : '',
+                content_type: 'product',
+                value: res.total,
+                currency: 'DZD'
+              });
+            }
+          } catch(e) {
+            console.error('[Purchase] Exception during tracking', e);
           }
-          if (window.ttq) {
-            window.ttq.track('CompletePayment', {
-              content_id: currentProduct ? String(currentProduct.id) : '',
-              content_type: 'product',
-              value: (currentProduct && currentProduct.price) ? currentProduct.price : 0,
-              currency: 'DZD'
-            });
-          }
-        } catch(e) {}
+        }
 
         var formElement = document.getElementById('plOrderForm');
         if (formElement) formElement.style.display = 'none';

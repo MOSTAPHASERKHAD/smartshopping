@@ -1714,8 +1714,12 @@ function submitOrder(e){
       '<p style="color:var(--text2);font-size:.75rem;margin-top:6px">'+t('delivery_note')+'</p>'+
       '<a href="https://wa.me/'+wa+'?text='+msg+'" target="_blank" class="wa-btn">'+t('whatsapp_btn')+'</a>'+
     '</div>';
-    try{trackPurchase(data.order_id,sub,purchasedItems)}catch(e){console.warn('trackPurchase',e)}
-    try{fireCapiSend({order_id:data.order_id,phone:p,subtotal:sub})}catch(e){console.warn('capi_send',e)}
+    if (typeof data.total === 'number' && !isNaN(data.total)) {
+      try{trackPurchase(data.order_id,data.total,purchasedItems)}catch(e){console.warn('trackPurchase',e)}
+    } else {
+      console.error('[Purchase] Valid total not returned from backend. Skipping Purchase.', data);
+    }
+    try{fireCapiSend({order_id:data.order_id,phone:p,subtotal:data.total})}catch(e){console.warn('capi_send',e)}
     cart=[];saveCart();renderCart();renderProducts();
     cartDiscount=0;cartCouponCode='';
     var dr=document.getElementById('discountResult');if(dr)dr.style.display='none';
@@ -1932,7 +1936,11 @@ function submitProductDetail(e){
       '<br><button type="button" class="btn btn-outline btn-sm" style="margin-top:12px" onclick="hideProductDetail()" data-i18n="back_products">← العودة للمنتجات</button>'+
     '</div>';
     document.querySelector('.pd-success .btn-outline').textContent=t('back_products');
-    try{trackPurchase(orderId,finalPrice,purchasedProduct)}catch(e){console.warn('trackPurchase',e)}
+    if (typeof data.total === 'number' && !isNaN(data.total)) {
+      try{trackPurchase(orderId,data.total,purchasedProduct)}catch(e){console.warn('trackPurchase',e)}
+    } else {
+      console.error('[Purchase] Valid total not returned from backend. Skipping Purchase.', data);
+    }
   });
 }
 
@@ -3237,8 +3245,12 @@ function submitLandingOrder(e,productId){
       container.style.display='block';
       try{container.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){}
     }
-    try{trackPurchase(orderId,product.price,purchasedProduct)}catch(e){console.warn('trackPurchase',e)}
-    try{fireCapiSend({order_id:orderId,phone:p,subtotal:product.price})}catch(e){console.warn('capi_send',e)}
+    if (typeof data.total === 'number' && !isNaN(data.total)) {
+      try{trackPurchase(orderId,data.total,purchasedProduct)}catch(e){console.warn('trackPurchase',e)}
+    } else {
+      console.error('[Purchase] Valid total not returned from backend. Skipping Purchase.', data);
+    }
+    try{fireCapiSend({order_id:orderId,phone:p,subtotal:data.total})}catch(e){console.warn('capi_send',e)}
     try{localStorage.setItem(CUSTOMER_KEY,JSON.stringify({name:n,phone:p,address:addr}))}catch(e){console.warn('saveCustomer',e)}
   });
 }

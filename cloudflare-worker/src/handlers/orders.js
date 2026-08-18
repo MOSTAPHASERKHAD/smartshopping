@@ -69,10 +69,11 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
   const utmSource   = sanitize(params.utm_source,   100);
   const utmMedium   = sanitize(params.utm_medium,   100);
   const utmCampaign = sanitize(params.utm_campaign, 100);
-  const fbc         = sanitize(params.fbc,          250);
-  const fbp         = sanitize(params.fbp,          250);
-  const email       = sanitize(params.email,        150);
-  const couponCode  = sanitize(params.coupon_code,  50).toUpperCase();
+  const fbc            = sanitize(params.fbc,              250);
+  const fbp            = sanitize(params.fbp,              250);
+  const email          = sanitize(params.email,            150);
+  const eventSourceUrl = sanitize(params.event_source_url, 500);
+  const couponCode     = sanitize(params.coupon_code,      50).toUpperCase();
 
   // تنظيف العناصر (يقتل XSS المخزَّن)
   const itemsJson = sanitizeOrderItems(params.items_json);
@@ -213,7 +214,8 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
         {
           value: realSubtotal - finalDiscount + shippingCost,
           order_id: orderId,
-          content_ids: secureItems.map(i => i.id.toString())
+          content_ids: secureItems.map(i => i.id.toString()),
+          event_source_url: eventSourceUrl || undefined
         },
         { phone, email, fbc, fbp },
         request
@@ -221,7 +223,7 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
     );
   }
 
-  return { ok: true, order_id: orderId };
+  return { ok: true, order_id: orderId, total: realSubtotal - finalDiscount + shippingCost };
 }
 
 /**
