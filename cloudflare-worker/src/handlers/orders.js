@@ -71,6 +71,10 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
   const utmSource   = sanitize(params.utm_source,   100);
   const utmMedium   = sanitize(params.utm_medium,   100);
   const utmCampaign = sanitize(params.utm_campaign, 100);
+  const utmTerm     = sanitize(params.utm_term,     100);
+  const utmContent  = sanitize(params.utm_content,  150);
+  const fbclid      = sanitize(params.fbclid,       150);
+  const sessionId   = sanitize(params.session_id,   100);
   const fbc            = sanitize(params.fbc,              250);
   const fbp            = sanitize(params.fbp,              250);
   const email          = sanitize(params.email,            150);
@@ -185,29 +189,68 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
   const orderId   = generateOrderId();
   const createdAt = formatAlgeriaTime();
 
-  // ── حفظ الطلب في D1 مع tenant_id الموثوق ──
-  await env.DB.prepare(`
-    INSERT INTO orders (
-      tenant_id, order_id, created_at, name, phone,
-      wilaya_code, wilaya_ar, wilaya_en, municipality, delivery_type,
-      items_json, subtotal, shipping_cost, shipping_note, discount, coupon_code,
-      status, notes,
-      utm_source, utm_medium, utm_campaign, customer_id,
-      delivery_company, tracking_code
-    ) VALUES (
-      ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
-    )
-  `).bind(
-    tenantId, orderId, createdAt, name, phone,
-    wilayaCode, wilayaAr, wilayaEn, municipality, deliveryType,
-    secureItemsJson, realSubtotal, shippingCost, shippingNote, finalDiscount, couponCode,
-    'pending', note,
-    utmSource, utmMedium, utmCampaign, customerId,
-    deliveryCompany, '',
-  ).run();
+  // ── حفظ الطلب في D1 مع tenant_id الموثوق والإسناد التسويقي ──
+  try {
+    await env.DB.prepare(`
+      INSERT INTO orders (
+        tenant_id, order_id, created_at, name, phone,
+        wilaya_code, wilaya_ar, wilaya_en, municipality, delivery_type,
+        items_json, subtotal, shipping_cost, shipping_note, discount, coupon_code,
+        status, notes,
+        utm_source, utm_medium, utm_campaign, utm_term, utm_content, fbclid, session_id,
+        customer_id,
+        delivery_company, tracking_code
+      ) VALUES (
+        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+      )
+    `).bind(
+      tenantId, orderId, createdAt, name, phone,
+      wilayaCode, wilayaAr, wilayaEn, municipality, deliveryType,
+      secureItemsJson, realSubtotal, shippingCost, shippingNote, finalDiscount, couponCode,
+      'pending', note,
+      utmSource, utmMedium, utmCampaign, utmTerm, utmContent, fbclid, sessionId,
+      customerId,
+      deliveryCompany, '',
+    ).run();
+  } catch (dbErr) {
+    // التوافقية العكسية في حال عدم تطبيق الميجريشن 0003 بعد
+    await env.DB.prepare(`
+      INSERT INTO orders (
+        tenant_id, order_id, created_at, name, phone,
+        wilaya_code, wilaya_ar, wilaya_en, municipality, delivery_type,
+        items_json, subtotal, shipping_cost, shipping_note, discount, coupon_code,
+        status, notes,
+        utm_source, utm_medium, utm_campaign, customer_id,
+        delivery_company, tracking_code
+      ) VALUES (
+        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+      )
+    `).bind(
+      tenantId, orderId, createdAt, name, phone,
+      wilayaCode, wilayaAr, wilayaEn, municipality, deliveryType,
+      secureItemsJson, realSubtotal, shippingCost, shippingNote, finalDiscount, couponCode,
+      'pending', note,
+      utmSource, utmMedium, utmCampaign, customerId,
+      deliveryCompany, '',
+    ).run();
+  }
 
-  // ── إرسال حدث CAPI في الخلفية (Non-blocking) ──
+  // ── إرسال حدث CAPI وتسجيل التحليلات في الخلفية (Non-blocking) ──
   if (ctx && ctx.waitUntil) {
+    // تسجيل حدث الشراء في جدول التحليلات الداخلي
+    ctx.waitUntil(
+      env.DB.prepare(`
+        INSERT INTO analytics_events (
+          tenant_id, session_id, event_name, product_id,
+          utm_source, utm_medium, utm_campaign, utm_term, utm_content, fbclid, ip_country
+        ) VALUES (?, ?, 'Purchase', ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        tenantId, sessionId,
+        secureItems.map(i => i.id).join(','),
+        utmSource, utmMedium, utmCampaign, utmTerm, utmContent, fbclid,
+        request?.headers?.get('CF-IPCountry') || ''
+      ).run().catch(() => {})
+    );
     ctx.waitUntil(
       sendCapiEvent(
         env,
@@ -329,6 +372,7 @@ export async function adminListOrders(env, params = {}, tenantId = DEFAULT_MASTE
       items_json, subtotal, shipping_cost, discount, coupon_code,
       status, shipping_note, admin_note, notes,
       utm_source, utm_medium, utm_campaign,
+      utm_term, utm_content, fbclid, session_id,
       delivery_company, tracking_code
     FROM orders
     WHERE (tenant_id = ? OR tenant_id IS NULL)

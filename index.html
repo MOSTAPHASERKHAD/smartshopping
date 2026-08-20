@@ -1175,6 +1175,7 @@ function loadTrackingPixels(s){
   if(s.tiktok_pixel_id){
     (function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=['page','track','identify','instances','debug','on','off','once','ready','alias','group','enableCookie','disableCookie'];ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};ttq.load=function(e,n){var o='https://analytics.tiktok.com/i18n/pixel/events.js';ttq._i=ttq._i||{};ttq._i[e]=[];ttq._i[e]._u=o;ttq._t=ttq._t||{};ttq._t[e+'']=+new Date;ttq._o=ttq._o||{};ttq._o[e+'']=n||{};var a=document.createElement('script');a.type='text/javascript';a.async=!0;a.src=o+'?sdkid='+e+'&lib='+t;var r=document.getElementsByTagName('script')[0];r.parentNode.insertBefore(a,r)};ttq.load(s.tiktok_pixel_id);ttq.page();})(window,document,'ttq');
   }
+  try { if (typeof trackAnalyticsEvent === 'function') trackAnalyticsEvent(API_URL, 'PageView'); } catch(e) {}
 }
 
 function trackEvent(event,params,opts){
@@ -1188,6 +1189,7 @@ function trackEvent(event,params,opts){
 
 function trackViewContent(product){
   trackEvent('ViewContent',{content_name:product.name,content_ids:[product.id],content_type:'product',value:product.price,currency:'DZD'});
+  try { if (typeof trackAnalyticsEvent === 'function') trackAnalyticsEvent(API_URL, 'ViewContent', product.id); } catch(e) {}
 }
 function trackAddToCart(product){
   var qty=1;
@@ -1210,6 +1212,7 @@ function trackPurchase(orderId,total,items){
 }
 function trackInitiateCheckout(total){
   trackEvent('InitiateCheckout',{value:total,currency:'DZD'});
+  try { if (typeof trackAnalyticsEvent === 'function') trackAnalyticsEvent(API_URL, 'InitiateCheckout'); } catch(e) {}
 }
 
 function fireCapiSend(params){
@@ -1704,6 +1707,7 @@ function submitOrder(e){
     municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note,
     coupon_code:cartCouponCode,
     utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||'',
+    utm_term:utmData.utm_term||'',utm_content:utmData.utm_content||'',fbclid:utmData.fbclid||'',session_id:utmData.session_id||'',
     fbc:metaTrack.fbc||'',fbp:metaTrack.fbp||'',
     event_source_url:window.location.href||''
   },function(data){
@@ -1925,6 +1929,7 @@ function submitProductDetail(e){
     name:n,phone:ph,email:eml,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
     municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note+variantNote,
     utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||'',
+    utm_term:utmData.utm_term||'',utm_content:utmData.utm_content||'',fbclid:utmData.fbclid||'',session_id:utmData.session_id||'',
     fbc:metaTrack.fbc||'',fbp:metaTrack.fbp||'',
     event_source_url:window.location.href||''
   },function(data){
@@ -3259,6 +3264,7 @@ function submitLandingOrder(e,productId){
     municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note,
     coupon_code:'',
     utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||'',
+    utm_term:utmData.utm_term||'',utm_content:utmData.utm_content||'',fbclid:utmData.fbclid||'',session_id:utmData.session_id||'',
     fbc:metaTrack.fbc||'',fbp:metaTrack.fbp||'',
     event_source_url:window.location.href||''
   },function(data){

@@ -155,6 +155,10 @@ CREATE TABLE IF NOT EXISTS orders (
   utm_source    TEXT    DEFAULT '',
   utm_medium    TEXT    DEFAULT '',
   utm_campaign  TEXT    DEFAULT '',
+  utm_term      TEXT    DEFAULT '',
+  utm_content   TEXT    DEFAULT '',
+  fbclid        TEXT    DEFAULT '',
+  session_id    TEXT    DEFAULT '',
   customer_id   INTEGER REFERENCES customers(id),
   delivery_company TEXT DEFAULT 'yalidine',
   tracking_code    TEXT DEFAULT '',
@@ -345,3 +349,26 @@ CREATE TABLE IF NOT EXISTS themes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_themes_tenant ON themes(tenant_id, name);
+
+-- ─────────────────────────────────────────────────────────────
+-- 13. جدول أحداث التحليلات وتتبع الزوار (Analytics Events)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id     TEXT    DEFAULT 'tenant_master_default' REFERENCES tenants(id) ON DELETE CASCADE,
+  session_id    TEXT    DEFAULT '',
+  event_name    TEXT    NOT NULL,
+  product_id    TEXT    DEFAULT '',
+  utm_source    TEXT    DEFAULT '',
+  utm_medium    TEXT    DEFAULT '',
+  utm_campaign  TEXT    DEFAULT '',
+  utm_term      TEXT    DEFAULT '',
+  utm_content   TEXT    DEFAULT '',
+  fbclid        TEXT    DEFAULT '',
+  ip_country    TEXT    DEFAULT '',
+  created_at    TEXT    DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_analytics_tenant_event ON analytics_events(tenant_id, event_name, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_analytics_campaign ON analytics_events(tenant_id, utm_campaign, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events(created_at DESC);

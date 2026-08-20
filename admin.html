@@ -155,6 +155,7 @@
   </div>
   <nav class="sidebar-nav">
     <a href="#" onclick="showSection('dashboard')" class="active" id="nav-dashboard"><span class="icon">📊</span><span>الرئيسية</span></a>
+    <a href="#" onclick="showSection('analytics')" id="nav-analytics"><span class="icon">📈</span><span>تتبع الحملات والأرباح</span></a>
     <a href="#" onclick="showSection('products')" id="nav-products"><span class="icon">📦</span><span>المنتجات</span></a>
     <a href="#" onclick="showSection('orders')" id="nav-orders"><span class="icon">🛒</span><span>الطلبات</span></a>
     <a href="#" onclick="showSection('shipping')" id="nav-shipping"><span class="icon">🚚</span><span>الشحن والتوصيل</span></a>
@@ -207,6 +208,136 @@
       <div class="panel-body"><div class="table-wrap"><table><thead><tr>
         <th>رقم الطلب</th><th>العميل</th><th>الهاتف</th><th>الولاية</th><th>المبلغ</th><th>الحالة</th>
       </tr></thead><tbody id="dash-orders"></tbody></table></div></div>
+    </div>
+  </div>
+
+  <!-- Campaign Analytics & ROI -->
+  <div id="sec-analytics" class="hidden">
+    <div class="top-bar">
+      <div>
+        <h1>📈 تتبع أداء الحملات والأرباح</h1>
+        <div style="font-size:0.78rem;color:var(--text2);margin-top:2px">Meta Ads Manager Hierarchy & First-Party Marketing Attribution</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="analytics_preset_filter" onchange="loadAnalytics()" style="padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card);font-size:0.85rem;font-weight:600">
+          <option value="today">اليوم | Today</option>
+          <option value="yesterday">أمس | Yesterday</option>
+          <option value="last_7d">آخر 7 أيام | Last 7 Days</option>
+          <option value="last_30d">آخر 30 يوماً | Last 30 Days</option>
+          <option value="maximum">كل الأوقات | All Time</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="loadAnalytics()">🔄 تحديث البيانات</button>
+      </div>
+    </div>
+
+    <!-- Meta Connection Banner -->
+    <div class="analytics-meta-banner">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:1.1rem">🎯</span>
+        <div>
+          <div style="font-size:0.82rem;font-weight:700">مزامنة الإنفاق الإعلاني مع Meta Graph API</div>
+          <div style="font-size:0.72rem;color:var(--text2)" id="analytics_meta_status_text">جاري التحقق من إعدادات الحساب الإعلاني...</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:0.75rem;color:var(--text2)">الحساب:</span>
+          <input type="text" id="analytics_ad_account_input" placeholder="act_1234567890" style="padding:4px 8px;font-size:0.78rem;width:150px;border-radius:4px;border:1px solid var(--border);background:var(--bg)">
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-size:0.75rem;color:var(--text2)">سعر الصرف ($ = دج):</span>
+          <input type="number" id="analytics_usd_rate_input" value="230" style="padding:4px 8px;font-size:0.78rem;width:75px;border-radius:4px;border:1px solid var(--border);background:var(--bg)">
+        </div>
+        <button class="btn btn-accent btn-sm" onclick="saveAnalyticsQuickSettings()">حفظ</button>
+      </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-icon">💰</div>
+        <div class="label">إجمالي الإنفاق (الكوست)</div>
+        <div class="value" id="kpi-spend">0 DZD</div>
+        <div style="font-size:0.7rem;color:var(--text3);margin-top:4px" id="kpi-spend-usd">$0.00 USD</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="label">زوار المتجر (PageViews)</div>
+        <div class="value" id="kpi-visitors">0</div>
+        <div style="font-size:0.7rem;color:var(--text3);margin-top:4px">الزيارات الفريدة</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🛒</div>
+        <div class="label">بدء الشراء (Checkout)</div>
+        <div class="value" id="kpi-checkouts" style="color:var(--info)">0</div>
+        <div style="font-size:0.7rem;color:var(--text3);margin-top:4px" id="kpi-cr">CR: 0.00%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📦</div>
+        <div class="label">المبيعات المؤكدة (Purchases)</div>
+        <div class="value accent" id="kpi-orders">0</div>
+        <div style="font-size:0.7rem;color:var(--text3);margin-top:4px">طلبات مسجلة في D1</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💵</div>
+        <div class="label">إجمالي المبيعات (Revenue)</div>
+        <div class="value success" id="kpi-revenue">0 DZD</div>
+        <div style="font-size:0.7rem;color:var(--text3);margin-top:4px">قيمة الطلبات الإجمالية</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🎯</div>
+        <div class="label">العائد الإعلاني (ROAS)</div>
+        <div class="value" id="kpi-roas" style="color:#16a34a">0.00x</div>
+        <div style="font-size:0.7rem;color:var(--text3);margin-top:4px">الإيرادات / الإنفاق</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🏷️</div>
+        <div class="label">تكلفة الطلب الواحد (CPA)</div>
+        <div class="value" id="kpi-cpa" style="color:#d97706">0 DZD</div>
+        <div style="font-size:0.7rem;color:var(--text3);margin-top:4px">الإنفاق / عدد الطلبات</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📈</div>
+        <div class="label">صافي الربح التقديري</div>
+        <div class="value success" id="kpi-profit">0 DZD</div>
+        <div style="font-size:0.7rem;color:var(--text3);margin-top:4px">بعد حسم الكوست والسلعة</div>
+      </div>
+    </div>
+
+    <!-- Hierarchical Attribution Table -->
+    <div class="panel">
+      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center">
+        <h3>📊 تفصيل أداء الحملات والمجموعات والإعلانات (Meta Ads Hierarchy)</h3>
+        <div style="font-size:0.78rem;color:var(--text2)">
+          💡 اضغط على الحملة أو المجموعة لتوسيع الإعلانات التابعة لها
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="table-wrap" style="max-height:650px">
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width:220px">الحملة / المجموعة / الإعلان<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Campaign / AdSet / Ad</span></th>
+                <th style="width:90px">الحالة<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Status</span></th>
+                <th style="min-width:110px">الإنفاق (دج / $)<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Amount Spent</span></th>
+                <th style="min-width:100px">الظهور / النقرات<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Impr. / Clicks</span></th>
+                <th style="width:75px">CTR %<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Link CTR</span></th>
+                <th style="width:75px">الزوار<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Visitors</span></th>
+                <th style="width:75px">بدء الشراء<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Checkouts</span></th>
+                <th style="width:80px">المبيعات<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Purchases</span></th>
+                <th style="width:75px">التحويل %<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">CR %</span></th>
+                <th style="min-width:110px">قيمة المبيعات<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Conv. Value</span></th>
+                <th style="min-width:100px">تكلفة الطلب (CPA)<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Cost Per Result</span></th>
+                <th style="width:80px">العائد (ROAS)<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">ROAS</span></th>
+                <th style="min-width:110px">صافي الربح<br><span style="font-size:0.68rem;font-weight:normal;color:var(--text3)">Net Profit</span></th>
+              </tr>
+            </thead>
+            <tbody id="analytics-table-body">
+              <tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text2)">جاري تحميل بيانات التحليلات والأرباح...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -379,6 +510,8 @@
           <div class="form-group"><label>Gemini API Key</label><input id="set_gemini_api_key" type="password" placeholder="AIzaSy..."></div>
           <div class="form-group"><label>Facebook CAPI</label><select id="set_capi_enabled"><option value="true">مفعّل</option><option value="false">معطّل</option></select></div>
           <div class="form-group"><label>Facebook CAPI Token</label><input id="set_fb_capi_token" type="password" placeholder="EAAb... (اتركه فارغاً للحفاظ على الحالي)"></div>
+          <div class="form-group"><label>Meta Ad Account ID (لمزامنة الإنفاق)</label><input id="set_fb_ad_account_id" placeholder="act_1234567890 أو 1234567890"></div>
+          <div class="form-group"><label>سعر تحويل الدولار (1 USD = X DZD)</label><input id="set_usd_to_dzd_rate" type="number" value="230" placeholder="230"></div>
           <div class="form-group"><label>AI System Prompt (Custom instructions)</label><textarea id="set_ai_prompt" rows="5" placeholder="Leave empty for default (honest + transparent)">You are Smart Assistant for Smart Shopping Algeria. Help customers with product search, prices, shipping, returns, payment, order tracking. Reply in Arabic or Darja as the customer prefers. Be friendly and professional. If asked about a product defect, mention it honestly without exaggeration. If a product is not suitable, tell them honestly instead of pushing them to buy. If you are not sure, say you are not sure and give WhatsApp 0557543177. Do not exaggerate or make up information.</textarea></div>
         </div>
         <button class="btn btn-accent" onclick="saveSettings()" style="margin-top:8px">حفظ الإعدادات</button>
@@ -854,13 +987,14 @@ function apiGet(action, params, callback, retries) {
 
 // ===== NAV =====
 function showSection(name) {
-  ['dashboard','products','orders','shipping','settings','coupons','testimonials','reviews','banners','themes','newsletter','pages'].forEach(function(s) {
+  ['dashboard','analytics','products','orders','shipping','settings','coupons','testimonials','reviews','banners','themes','newsletter','pages'].forEach(function(s) {
     var sec = document.getElementById('sec-' + s);
     if (sec) sec.classList.toggle('hidden', s !== name);
     var nav = document.getElementById('nav-' + s);
     if (nav) nav.classList.toggle('active', s === name);
   });
   if (name === 'dashboard') loadDashboard();
+  if (name === 'analytics') loadAnalytics();
   if (name === 'products') loadProducts();
   if (name === 'orders') loadOrders();
   if (name === 'shipping') loadShippingSection();
@@ -2121,6 +2255,217 @@ function saveNewCarrier(e) {
   toast('تمت إضافة شركة ' + name + ' بنجاح');
 }
 
+// ===== CAMPAIGN ANALYTICS & ROI =====
+var currentAnalyticsData = null;
+
+function formatDzd(val) {
+  var n = Number(val) || 0;
+  return n.toLocaleString('fr-DZ') + ' دج';
+}
+
+function loadAnalytics() {
+  var preset = (document.getElementById('analytics_preset_filter') || {}).value || 'today';
+  var adAcc = (document.getElementById('analytics_ad_account_input') || {}).value || '';
+  var usdRate = (document.getElementById('analytics_usd_rate_input') || {}).value || '230';
+
+  var tbody = document.getElementById('analytics-table-body');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text2)"><div class="spinner" style="margin:0 auto 12px"></div>جاري تحميل بيانات Meta Insights ومبيعات D1...</td></tr>';
+  }
+
+  apiGet('admin_campaign_analytics', { preset: preset, ad_account_id: adAcc, usd_to_dzd: usdRate }, function(res) {
+    if (!res || !res.ok || !res.data) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--danger)">تعذر تحميل التحليلات: ' + (res && res.error ? (res.error.message || res.error) : 'خطأ غير معروف') + '</td></tr>';
+      return;
+    }
+
+    currentAnalyticsData = res.data;
+    var summary = res.data.summary || {};
+    var campaigns = res.data.campaigns || [];
+
+    // 1. Update KPI Summary Cards
+    document.getElementById('kpi-spend').textContent = formatDzd(summary.total_spend_dzd);
+    document.getElementById('kpi-spend-usd').textContent = '$' + (Number(summary.total_spend_usd) || 0).toFixed(2) + ' USD';
+    document.getElementById('kpi-visitors').textContent = (summary.total_visitors || 0).toLocaleString();
+    document.getElementById('kpi-checkouts').textContent = (summary.total_checkouts || 0).toLocaleString();
+    document.getElementById('kpi-cr').textContent = 'CR: ' + (summary.overall_cr || '0.00%') + ' | CTR: ' + (summary.overall_ctr || '0.00%');
+    document.getElementById('kpi-orders').textContent = (summary.total_orders || 0).toLocaleString();
+    document.getElementById('kpi-revenue').textContent = formatDzd(summary.total_revenue_dzd);
+    document.getElementById('kpi-roas').textContent = summary.overall_roas || '0.00x';
+    document.getElementById('kpi-cpa').textContent = formatDzd(summary.overall_cpa_dzd);
+    document.getElementById('kpi-profit').textContent = formatDzd(summary.total_net_profit_dzd);
+
+    // Highlight ROAS
+    var roasEl = document.getElementById('kpi-roas');
+    var roasNum = parseFloat(summary.overall_roas) || 0;
+    if (roasNum >= 3) roasEl.style.color = '#16a34a';
+    else if (roasNum >= 1.5) roasEl.style.color = '#d97706';
+    else roasEl.style.color = '#dc2626';
+
+    // 2. Update Meta Status Banner & Inputs
+    if (res.data.ad_account_id && !document.getElementById('analytics_ad_account_input').value) {
+      document.getElementById('analytics_ad_account_input').value = res.data.ad_account_id;
+    }
+    if (res.data.currency_rate) {
+      document.getElementById('analytics_usd_rate_input').value = res.data.currency_rate;
+    }
+
+    var statusTextEl = document.getElementById('analytics_meta_status_text');
+    if (statusTextEl) {
+      if (res.data.meta_connected) {
+        statusTextEl.innerHTML = '<span style="color:#16a34a;font-weight:700">🟢 متصل بنجاح:</span> تم جلب الإنفاق المباشر من الحساب الإعلاني ' + esc(res.data.ad_account_id);
+      } else if (res.data.meta_error) {
+        statusTextEl.innerHTML = '<span style="color:#d97706;font-weight:700">⚠️ تنبيه Meta API:</span> ' + esc(res.data.meta_error) + ' (يتم عرض مبيعات D1 فقط)';
+      } else {
+        statusTextEl.innerHTML = '<span style="color:var(--text3)">⚪ غير مرتبط بـ Meta Insights:</span> أدخل معرّف الحساب الإعلاني (act_XXXX) أعلاه لمزامنة الإنفاق تلقائياً';
+      }
+    }
+
+    // 3. Render Hierarchical Table
+    renderAnalyticsTable(campaigns);
+  });
+}
+
+function renderAnalyticsTable(campaigns) {
+  var tbody = document.getElementById('analytics-table-body');
+  if (!tbody) return;
+
+  if (!campaigns || !campaigns.length) {
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text2)">لا توجد حملات أو زيارات مسجلة في هذا النطاق الزمني</td></tr>';
+    return;
+  }
+
+  var html = '';
+
+  campaigns.forEach(function(camp, cIdx) {
+    var cId = 'camp_' + cIdx;
+    var hasAdSets = camp.children && camp.children.length > 0;
+    var roasVal = parseFloat(camp.roas) || 0;
+    var roasClass = roasVal >= 3 ? 'analytics-metric-roas-high' : (roasVal >= 1.5 ? 'analytics-metric-roas-med' : 'analytics-metric-roas-low');
+
+    // Campaign Row
+    html += '<tr class="analytics-row-campaign" id="row_' + cId + '">';
+    html += '<td>';
+    if (hasAdSets) {
+      html += '<button class="analytics-expand-btn" onclick="toggleAnalyticsGroup(\'' + cId + '\', this)">➕</button> ';
+    } else {
+      html += '<span style="display:inline-block;width:24px"></span>';
+    }
+    html += '<span class="analytics-badge-campaign">حملة</span> <strong>' + esc(camp.name) + '</strong>';
+    html += '</td>';
+    html += '<td><span class="badge" style="font-size:0.7rem">' + esc(camp.status_badge) + '</span></td>';
+    html += '<td><strong>' + formatDzd(camp.spend_dzd) + '</strong><br><span style="font-size:0.7rem;color:var(--text3)">$' + (camp.spend_usd || 0).toFixed(2) + '</span></td>';
+    html += '<td>' + (camp.impressions || 0).toLocaleString() + '<br><span style="font-size:0.7rem;color:var(--text3)">' + (camp.clicks || 0).toLocaleString() + ' نقرة</span></td>';
+    html += '<td>' + esc(camp.ctr) + '</td>';
+    html += '<td>' + (camp.visitors || 0).toLocaleString() + '</td>';
+    html += '<td>' + (camp.initiate_checkout || 0).toLocaleString() + '</td>';
+    html += '<td><strong style="color:var(--accent)">' + (camp.purchases || 0) + '</strong>' + (camp.confirmed_orders > 0 ? ' <span style="font-size:0.7rem;color:#16a34a">(' + camp.confirmed_orders + '✓)</span>' : '') + '</td>';
+    html += '<td>' + esc(camp.cr) + '</td>';
+    html += '<td><strong style="color:#16a34a">' + formatDzd(camp.revenue_dzd) + '</strong></td>';
+    html += '<td>' + formatDzd(camp.cpa_dzd) + '</td>';
+    html += '<td><strong class="' + roasClass + '">' + esc(camp.roas) + '</strong></td>';
+    html += '<td><strong style="color:' + (camp.estimated_profit_dzd >= 0 ? '#16a34a' : '#dc2626') + '">' + formatDzd(camp.estimated_profit_dzd) + '</strong></td>';
+    html += '</tr>';
+
+    // AdSets Rows
+    if (hasAdSets) {
+      camp.children.forEach(function(adset, sIdx) {
+        var sId = cId + '_set_' + sIdx;
+        var hasAds = adset.children && adset.children.length > 0;
+        var sRoasVal = parseFloat(adset.roas) || 0;
+        var sRoasClass = sRoasVal >= 3 ? 'analytics-metric-roas-high' : (sRoasVal >= 1.5 ? 'analytics-metric-roas-med' : 'analytics-metric-roas-low');
+
+        html += '<tr class="analytics-row-adset child_of_' + cId + ' hidden" id="row_' + sId + '">';
+        html += '<td style="padding-right:28px">';
+        if (hasAds) {
+          html += '<button class="analytics-expand-btn" onclick="toggleAnalyticsGroup(\'' + sId + '\', this)">➕</button> ';
+        } else {
+          html += '<span style="display:inline-block;width:20px"></span>';
+        }
+        html += '<span class="analytics-badge-adset">مجموعة</span> ' + esc(adset.name);
+        html += '</td>';
+        html += '<td><span class="badge" style="font-size:0.68rem">' + esc(adset.status_badge) + '</span></td>';
+        html += '<td>' + formatDzd(adset.spend_dzd) + '<br><span style="font-size:0.68rem;color:var(--text3)">$' + (adset.spend_usd || 0).toFixed(2) + '</span></td>';
+        html += '<td>' + (adset.impressions || 0).toLocaleString() + '<br><span style="font-size:0.68rem;color:var(--text3)">' + (adset.clicks || 0).toLocaleString() + ' نقرة</span></td>';
+        html += '<td>' + esc(adset.ctr) + '</td>';
+        html += '<td>' + (adset.visitors || 0).toLocaleString() + '</td>';
+        html += '<td>' + (adset.initiate_checkout || 0).toLocaleString() + '</td>';
+        html += '<td><strong>' + (adset.purchases || 0) + '</strong></td>';
+        html += '<td>' + esc(adset.cr) + '</td>';
+        html += '<td>' + formatDzd(adset.revenue_dzd) + '</td>';
+        html += '<td>' + formatDzd(adset.cpa_dzd) + '</td>';
+        html += '<td><strong class="' + sRoasClass + '">' + esc(adset.roas) + '</strong></td>';
+        html += '<td><strong style="color:' + (adset.estimated_profit_dzd >= 0 ? '#16a34a' : '#dc2626') + '">' + formatDzd(adset.estimated_profit_dzd) + '</strong></td>';
+        html += '</tr>';
+
+        // Ads Rows
+        if (hasAds) {
+          adset.children.forEach(function(ad, aIdx) {
+            var aId = sId + '_ad_' + aIdx;
+            var aRoasVal = parseFloat(ad.roas) || 0;
+            var aRoasClass = aRoasVal >= 3 ? 'analytics-metric-roas-high' : (aRoasVal >= 1.5 ? 'analytics-metric-roas-med' : 'analytics-metric-roas-low');
+
+            html += '<tr class="analytics-row-ad child_of_' + cId + ' child_of_' + sId + ' hidden" id="row_' + aId + '">';
+            html += '<td style="padding-right:52px">';
+            html += '<span class="analytics-badge-ad">إعلان</span> ' + esc(ad.name);
+            html += '</td>';
+            html += '<td><span class="badge" style="font-size:0.65rem">' + esc(ad.status_badge) + '</span></td>';
+            html += '<td>' + formatDzd(ad.spend_dzd) + '<br><span style="font-size:0.65rem;color:var(--text3)">$' + (ad.spend_usd || 0).toFixed(2) + '</span></td>';
+            html += '<td>' + (ad.impressions || 0).toLocaleString() + '<br><span style="font-size:0.65rem;color:var(--text3)">' + (ad.clicks || 0).toLocaleString() + ' نقرة</span></td>';
+            html += '<td>' + esc(ad.ctr) + '</td>';
+            html += '<td>' + (ad.visitors || 0).toLocaleString() + '</td>';
+            html += '<td>' + (ad.initiate_checkout || 0).toLocaleString() + '</td>';
+            html += '<td><strong>' + (ad.purchases || 0) + '</strong></td>';
+            html += '<td>' + esc(ad.cr) + '</td>';
+            html += '<td>' + formatDzd(ad.revenue_dzd) + '</td>';
+            html += '<td>' + formatDzd(ad.cpa_dzd) + '</td>';
+            html += '<td><strong class="' + aRoasClass + '">' + esc(ad.roas) + '</strong></td>';
+            html += '<td><strong style="color:' + (ad.estimated_profit_dzd >= 0 ? '#16a34a' : '#dc2626') + '">' + formatDzd(ad.estimated_profit_dzd) + '</strong></td>';
+            html += '</tr>';
+          });
+        }
+      });
+    }
+  });
+
+  tbody.innerHTML = html;
+}
+
+function toggleAnalyticsGroup(groupId, btn) {
+  var isExpanded = btn.textContent.indexOf('➖') > -1;
+  btn.textContent = isExpanded ? '➕' : '➖';
+
+  var childRows = document.querySelectorAll('.child_of_' + groupId);
+  childRows.forEach(function(row) {
+    if (isExpanded) {
+      row.classList.add('hidden');
+      var subBtns = row.querySelectorAll('.analytics-expand-btn');
+      subBtns.forEach(function(sb) { sb.textContent = '➕'; });
+    } else {
+      if (groupId.indexOf('_set_') === -1) {
+        if (row.classList.contains('analytics-row-adset')) {
+          row.classList.remove('hidden');
+        }
+      } else {
+        row.classList.remove('hidden');
+      }
+    }
+  });
+}
+
+function saveAnalyticsQuickSettings() {
+  var adAcc = (document.getElementById('analytics_ad_account_input') || {}).value || '';
+  var usdRate = (document.getElementById('analytics_usd_rate_input') || {}).value || '230';
+
+  apiPost('admin_update_settings', {
+    fb_ad_account_id: adAcc.trim(),
+    usd_to_dzd_rate: usdRate.trim()
+  }, function(res) {
+    toast('تم حفظ إعدادات التحليلات');
+    loadAnalytics();
+  });
+}
+
 // ===== SETTINGS =====
 function loadSettings() {
   apiGet('admin_settings', {}, function(data) {
@@ -2143,6 +2488,8 @@ function loadSettings() {
     document.getElementById('set_admin_password').value = '';
     if(document.getElementById('set_gemini_api_key')) document.getElementById('set_gemini_api_key').value = data.gemini_api_key || '';
     if(document.getElementById('set_ai_prompt')) document.getElementById('set_ai_prompt').value = data.ai_prompt || '';
+    if(document.getElementById('set_fb_ad_account_id')) document.getElementById('set_fb_ad_account_id').value = data.fb_ad_account_id || data.ad_account_id || '';
+    if(document.getElementById('set_usd_to_dzd_rate')) document.getElementById('set_usd_to_dzd_rate').value = data.usd_to_dzd_rate || '230';
     document.getElementById('set_capi_enabled').value = data.capi_enabled || 'true';
     var logoPrev = document.getElementById('logo_preview');
     if(logoPrev) logoPrev.src = (data.store_logo && String(data.store_logo).trim()) ? data.store_logo : 'logo1.png';
@@ -2166,6 +2513,8 @@ async function saveSettings() {
     shipping_home: document.getElementById('set_shipping_home').value || '0',
     shipping_office: document.getElementById('set_shipping_office').value || '0',
     shipping_remote: document.getElementById('set_shipping_remote').value || '0',
+    fb_ad_account_id: (document.getElementById('set_fb_ad_account_id')||{}).value || '',
+    usd_to_dzd_rate: (document.getElementById('set_usd_to_dzd_rate')||{}).value || '230',
     ai_prompt: (document.getElementById('set_ai_prompt')||{}).value || '',
     capi_enabled: (document.getElementById('set_capi_enabled')||{}).value || 'true'
   };

@@ -62,8 +62,9 @@ import {
   publicUploadImage, adminUploadImage, adminDeleteMedia, serveMedia,
 } from './handlers/uploads.js';
 
-// ── استيراد معالجات التسويق (CAPI) ──
+// ── استيراد معالجات التسويق والتحليلات (CAPI & Analytics) ──
 import { adminCapiTest } from './handlers/marketing.js';
+import { trackPublicAnalyticsEvent, getCampaignAnalytics } from './handlers/analytics.js';
 
 // ── استيراد معالجات الذكاء الاصطناعي ──
 import { adminAiChat } from './handlers/ai.js';
@@ -343,6 +344,9 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   // ── الكوبونات (التحقق العام) ──
   if (action === 'validate_coupon') return validateCoupon(env, params, tenantId);
 
+  // ── أحداث التحليلات العامة ──
+  if (action === 'track_analytics_event') return trackPublicAnalyticsEvent(env, params, request, tenantId);
+
   // ── الطلبات ──
   if (action === 'order')           return createOrder(env, params, request, ctx, token, tenantId);
   if (action === 'track')           return trackOrder(env, params.order_id, tenantId);
@@ -430,8 +434,9 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   // ── سجل التدقيق ──
   if (action === 'admin_list_audit_logs') return adminListAuditLogs(env, params, tenantId);
 
-  // ── التسويق ──
+  // ── التسويق والتحليلات ──
   if (action === 'admin_capi_test') return adminCapiTest(env, params, request);
+  if (action === 'admin_campaign_analytics') return getCampaignAnalytics(env, params, tenantId);
 
   // ── الذكاء الاصطناعي ──
   if (action === 'admin_ai_chat')   return adminAiChat(env, params);

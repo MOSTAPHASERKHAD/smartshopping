@@ -144,24 +144,38 @@
     try {
       if (typeof window === 'undefined' || !window.location) return;
       var p = new URLSearchParams(window.location.search);
-      var utm = {};
+      var utm = getUTM();
       ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function(k){
         var v = p.get(k);
         if (v) utm[k] = v;
       });
-      if (Object.keys(utm).length > 0) {
-        localStorage.setItem('sk_utm', JSON.stringify(utm));
-      }
+
+      // Session ID generation / retention
+      var sid = '';
+      try {
+        sid = sessionStorage.getItem('sk_sid') || localStorage.getItem('sk_sid') || '';
+        if (!sid) {
+          sid = 'sid_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
+          sessionStorage.setItem('sk_sid', sid);
+          localStorage.setItem('sk_sid', sid);
+        }
+        utm.session_id = sid;
+      } catch(_) {}
 
       // Meta Click ID (fbclid -> fbc)
       var fbclid = p.get('fbclid');
       if (fbclid) {
+        utm.fbclid = fbclid;
         var creationTime = Date.now();
         var fbc = 'fb.1.' + creationTime + '.' + fbclid;
         localStorage.setItem('sk_fbc', fbc);
         try {
           document.cookie = '_fbc=' + encodeURIComponent(fbc) + ';path=/;max-age=7776000;SameSite=Lax';
         } catch(_) {}
+      }
+
+      if (Object.keys(utm).length > 0) {
+        localStorage.setItem('sk_utm', JSON.stringify(utm));
       }
     } catch(e) {}
   }
@@ -173,7 +187,14 @@
   function getUTM() {
     try {
       if (typeof localStorage === 'undefined') return {};
-      return JSON.parse(localStorage.getItem('sk_utm') || '{}');
+      var utm = JSON.parse(localStorage.getItem('sk_utm') || '{}');
+      if (!utm.session_id) {
+        try {
+          utm.session_id = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('sk_sid') : '') ||
+                           (typeof localStorage !== 'undefined' ? localStorage.getItem('sk_sid') : '') || '';
+        } catch(_) {}
+      }
+      return utm;
     } catch(e) {
       return {};
     }
@@ -197,6 +218,55 @@
   }
 
   /**
+   * Non-blocking first-party analytics event logger
+   * @param {string} apiUrl 
+   * @param {string} eventName 
+   * @param {string|number} productId 
+   * @param {object} extraData 
+   */
+  function trackAnalyticsEvent(apiUrl, eventName, productId, extraData) {
+    try {
+      if (typeof window === 'undefined') return;
+      var utm = getUTM();
+      var meta = getMetaTracking();
+      var payload = {
+        action: 'track_analytics_event',
+        event_name: String(eventName || 'PageView'),
+        product_id: productId ? String(productId) : '',
+        session_id: utm.session_id || '',
+        utm_source: utm.utm_source || '',
+        utm_medium: utm.utm_medium || '',
+        utm_campaign: utm.utm_campaign || '',
+        utm_term: utm.utm_term || '',
+        utm_content: utm.utm_content || '',
+        fbclid: utm.fbclid || '',
+        fbc: meta.fbc || '',
+        fbp: meta.fbp || ''
+      };
+      if (extraData && typeof extraData === 'object') {
+        for (var k in extraData) {
+          if (payload[k] === undefined) payload[k] = extraData[k];
+        }
+      }
+
+      var endpoint = (apiUrl || '') + (apiUrl && apiUrl.indexOf('?') > -1 ? '&' : '?') + 'action=track_analytics_event';
+      var bodyStr = JSON.stringify(payload);
+
+      if (navigator && typeof navigator.sendBeacon === 'function') {
+        var blob = new Blob([bodyStr], { type: 'application/json' });
+        navigator.sendBeacon(endpoint, blob);
+      } else if (typeof fetch === 'function') {
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: bodyStr,
+          keepalive: true
+        }).catch(function() {});
+      }
+    } catch(e) {}
+  }
+
+  /**
    * Safely escape text for insertion into HTML attributes/content
    * @param {string} str 
    * @returns {string}
@@ -217,6 +287,12 @@
    * @param {string} currency 
    * @returns {string}
    */
+  function formatPrice(num, currency) {
+    var c = currency || 'DZD';
+    var n = Number(num) || 0;
+    return n.toLocaleString('fr-DZ') + ' ' + c;
+  }
+
   var YALIDINE_DEFAULT_RATES = {
     "01":{home:1400,office:900},"02":{home:750,office:450},"03":{home:950,office:600},"04":{home:800,office:500},
     "05":{home:800,office:500},"06":{home:750,office:450},"07":{home:900,office:550},"08":{home:1200,office:800},
@@ -359,7 +435,8 @@
     getMetaTracking: getMetaTracking,
     escHtml: escHtml,
     formatPrice: formatPrice,
-    calculateClientShippingCost: calculateClientShippingCost
+    calculateClientShippingCost: calculateClientShippingCost,
+    trackAnalyticsEvent: trackAnalyticsEvent
   };
 
   for (var key in exports) {

@@ -197,6 +197,7 @@
             });
           }
         } catch(e) {}
+        try { if (typeof trackAnalyticsEvent === 'function') trackAnalyticsEvent(API_URL, 'InitiateCheckout', currentProduct ? currentProduct.id : ''); } catch(e) {}
       }
     }
 
@@ -213,11 +214,13 @@
           currency: 'DZD'
         });
       } catch(e) {}
+      try { if (typeof trackAnalyticsEvent === 'function') trackAnalyticsEvent(API_URL, 'ViewContent', p.id); } catch(e) {}
     }
 
     function loadTrackingPixels(s) {
       if (_pixelsLoaded || !s) return;
       _pixelsLoaded = true;
+      try { if (typeof trackAnalyticsEvent === 'function') trackAnalyticsEvent(API_URL, 'PageView', currentProduct ? currentProduct.id : ''); } catch(e) {}
       var pid = s.pixel_id || s.fb_pixel_id;
       if (pid) {
         !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -951,6 +954,10 @@
         utm_source: utm.utm_source || '',
         utm_medium: utm.utm_medium || '',
         utm_campaign: utm.utm_campaign || '',
+        utm_term: utm.utm_term || '',
+        utm_content: utm.utm_content || '',
+        fbclid: utm.fbclid || '',
+        session_id: utm.session_id || '',
         fbc: metaTrack.fbc || '',
         fbp: metaTrack.fbp || ''
       };
