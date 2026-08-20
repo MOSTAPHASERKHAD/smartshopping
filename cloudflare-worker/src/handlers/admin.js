@@ -76,7 +76,8 @@ export async function adminUpdateSettings(env, params, tenantId = DEFAULT_MASTER
     if (IMMUTABLE_KEYS.has(key)) continue;
 
     const cleanKey   = sanitize(key,   100);
-    let   cleanValue = sanitize(value, 5000);
+    const maxLen     = (cleanKey === 'shipping_config' || cleanKey === 'custom_css' || cleanKey === 'ai_prompt') ? 100000 : 5000;
+    let   cleanValue = sanitize(value, maxLen);
 
     if (cleanKey === 'admin_password' && cleanValue) {
       cleanValue = await sha256(cleanValue);

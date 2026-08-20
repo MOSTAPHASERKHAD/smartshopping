@@ -25,7 +25,9 @@ import {
   generateOrderId,
   formatAlgeriaTime,
 } from '../utils/sanitize.js';
-import { orderSpamGuard, validateCustomerToken, DEFAULT_MASTER_TENANT_ID } from '../utils/auth.js';
+import { orderSpamGuard, validateCustomerToken, isValidEmail, DEFAULT_MASTER_TENANT_ID } from '../utils/auth.js';
+import { EmailProvider } from '../utils/email.js';
+import { calculateShippingCost } from '../utils/shipping.js';
 
 // ─────────────────────────────────────────────
 // ── معالجات العامة (Public Handlers) ──
@@ -89,7 +91,7 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
   const placeholders = productIds.map(() => '?').join(',');
   const { results: realProducts } = await env.DB.prepare(
-    `SELECT id, name, price, active, stock FROM products WHERE id IN (${placeholders}) AND (tenant_id = ? OR tenant_id IS NULL)`
+    `SELECT id, name, price, active, stock, weight FROM products WHERE id IN (${placeholders}) AND (tenant_id = ? OR tenant_id IS NULL)`
   ).bind(...productIds, tenantId).all();
 
   const productsMap = new Map(realProducts.map(p => [p.id, p]));
@@ -153,32 +155,31 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
     }
   }
 
-  // ── حساب سعر التوصيل (Server-Side Authoritative) ──
-  const shippingSettings = { shipping_home: '', shipping_office: '', shipping_remote: '' };
+  // ── حساب سعر التوصيل (Server-Side Authoritative & Multi-Carrier Engine) ──
+  const shippingSettings = { shipping_config: '', shipping_home: '', shipping_office: '', shipping_remote: '' };
   try {
     const { results: shipRows } = await env.DB.prepare(
-      `SELECT key, value FROM settings WHERE key IN ('shipping_home','shipping_office','shipping_remote') AND (tenant_id = ? OR tenant_id IS NULL)`
+      `SELECT key, value FROM settings WHERE key IN ('shipping_config','shipping_home','shipping_office','shipping_remote') AND (tenant_id = ? OR tenant_id IS NULL)`
     ).bind(tenantId).all();
     for (const row of shipRows) shippingSettings[row.key] = row.value;
   } catch (e) { /* defaults remain '' */ }
 
-  const shippingMethod = String(deliveryType || 'home').toLowerCase();
-  const REMOTE_WILAYAS = new Set(['01','08','11','30','33','37','47','50','51','52','53','54','55','56','57','58']);
+  const shippingCalc = calculateShippingCost({
+    shippingConfig: shippingSettings.shipping_config,
+    wilayaCode,
+    deliveryType,
+    items: itemsArr,
+    productsMap,
+    legacySettings: shippingSettings
+  });
 
-  let shippingCost = 0;
-  if (shippingMethod === 'home' || shippingMethod === 'office') {
-    const base = parseInt(shippingSettings['shipping_' + shippingMethod]) || 0;
-    if (base > 0) {
-      shippingCost = base;
-      const remote = parseInt(shippingSettings.shipping_remote) || 0;
-      if (remote > 0 && REMOTE_WILAYAS.has(wilayaCode)) {
-        shippingCost += remote;
-      }
-    }
+  if (!shippingCalc.ok) {
+    return { ok: false, error: shippingCalc.error || 'طريقة التوصيل المحددة غير متوفرة' };
   }
-  const shippingNote = shippingCost > 0
-    ? ''
-    : 'سعر التوصيل يُحدد بعد التأكيد هاتفياً';
+
+  const shippingCost = shippingCalc.shippingCost;
+  const shippingNote = shippingCalc.shippingNote;
+  const deliveryCompany = shippingCalc.deliveryCompany || 'yalidine';
 
   // ── إنشاء معرّف الطلب ──
   const orderId   = generateOrderId();
@@ -202,7 +203,7 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
     secureItemsJson, realSubtotal, shippingCost, shippingNote, finalDiscount, couponCode,
     'pending', note,
     utmSource, utmMedium, utmCampaign, customerId,
-    'yalidine', '',
+    deliveryCompany, '',
   ).run();
 
   // ── إرسال حدث CAPI في الخلفية (Non-blocking) ──
@@ -221,6 +222,24 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
         request
       )
     );
+
+    // ── إرسال إيميل تأكيد الطلب للعميل (إن وُجد) ──
+    if (isValidEmail(email)) {
+      const formattedItems = secureItems.map(i => `${i.name} (x${i.qty})`).join('، ');
+      ctx.waitUntil(
+        EmailProvider.sendOrderConfirmationEmail({
+          to: email,
+          orderId: orderId,
+          customerName: name,
+          items: formattedItems,
+          total: realSubtotal - finalDiscount + shippingCost,
+          shippingNote: shippingNote || (shippingCost > 0 ? `${shippingCost} دج` : 'مجاني'),
+          env: env
+        }).catch(err => {
+          console.error('[EMAIL] Order confirmation failed', { order_id: orderId, error: err?.message });
+        })
+      );
+    }
   }
 
   return { ok: true, order_id: orderId, total: realSubtotal - finalDiscount + shippingCost };

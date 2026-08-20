@@ -217,10 +217,136 @@
    * @param {string} currency 
    * @returns {string}
    */
-  function formatPrice(num, currency) {
-    var val = Number(num) || 0;
-    var cur = currency || 'د.ج';
-    return val.toLocaleString('fr-DZ') + ' ' + cur;
+  var YALIDINE_DEFAULT_RATES = {
+    "01":{home:1400,office:900},"02":{home:750,office:450},"03":{home:950,office:600},"04":{home:800,office:500},
+    "05":{home:800,office:500},"06":{home:750,office:450},"07":{home:900,office:550},"08":{home:1200,office:800},
+    "09":{home:550,office:350},"10":{home:700,office:400},"11":{home:1600,office:1100},"12":{home:850,office:550},
+    "13":{home:800,office:500},"14":{home:800,office:500},"15":{home:700,office:400},"16":{home:500,office:350},
+    "17":{home:850,office:550},"18":{home:800,office:500},"19":{home:750,office:450},"20":{home:850,office:550},
+    "21":{home:800,office:500},"22":{home:800,office:500},"23":{home:800,office:500},"24":{home:800,office:500},
+    "25":{home:800,office:500},"26":{home:700,office:400},"27":{home:750,office:450},"28":{home:800,office:500},
+    "29":{home:800,office:500},"30":{home:1000,office:650},"31":{home:750,office:450},"32":{home:1000,office:650},
+    "33":{home:1600,office:1100},"34":{home:750,office:450},"35":{home:550,office:350},"36":{home:850,office:550},
+    "37":{home:1600,office:1100},"38":{home:800,office:500},"39":{home:950,office:600},"40":{home:850,office:550},
+    "41":{home:850,office:550},"42":{home:550,office:350},"43":{home:800,office:500},"44":{home:750,office:450},
+    "45":{home:1000,office:650},"46":{home:800,office:500},"47":{home:950,office:600},"48":{home:750,office:450},
+    "49":{home:1400,office:900},"50":{home:1700,office:1200},"51":{home:950,office:600},"52":{home:1400,office:900},
+    "53":{home:1500,office:1000},"54":{home:1700,office:1200},"55":{home:1000,office:650},"56":{home:1700,office:1200},
+    "57":{home:1000,office:650},"58":{home:1100,office:700}
+  };
+
+  /**
+   * Universal client-side shipping calculation helper
+   * @param {object|string} shippingConfig - storeSettings.shipping_config (JSON or object)
+   * @param {string} wilayaCode - 2-digit code '01'-'58'
+   * @param {string} deliveryType - 'Home' / 'Office'
+   * @param {Array<{ weight?: number, qty?: number }>} items - List of items with optional weights
+   * @param {object} legacySettings - storeSettings with shipping_home, shipping_office, shipping_remote
+   * @returns {{ cost: number, note: string, ok: boolean, carrier: string, hasWeight: boolean, totalWeight: number }}
+   */
+  function calculateClientShippingCost(shippingConfig, wilayaCode, deliveryType, items, legacySettings) {
+    var normType = String(deliveryType || 'home').toLowerCase() === 'office' ? 'office' : 'home';
+    var cleanWilaya = String(wilayaCode || '').padStart(2, '0');
+    if (!cleanWilaya || cleanWilaya === '00') return { cost: 0, note: '', ok: true, carrier: '', hasWeight: false, totalWeight: 0 };
+
+    var cfg = null;
+    if (typeof shippingConfig === 'string' && shippingConfig.trim()) {
+      try { cfg = JSON.parse(shippingConfig); } catch(e) {}
+    } else if (shippingConfig && typeof shippingConfig === 'object') {
+      cfg = shippingConfig;
+    }
+
+    if (!cfg && (!legacySettings || (!Number(legacySettings.shipping_home) && !Number(legacySettings.shipping_office)))) {
+      cfg = {
+        version: "2.0",
+        active_carrier: "yalidine",
+        enable_home: true,
+        enable_office: true,
+        carriers: [{
+          id: "yalidine",
+          name: "Yalidine Express",
+          active: true,
+          is_default: true,
+          base_weight_kg: 5,
+          extra_kg_price: 50,
+          rates: YALIDINE_DEFAULT_RATES
+        }]
+      };
+    }
+
+    var hasWeight = false;
+    var totalWeight = 0;
+    if (Array.isArray(items)) {
+      items.forEach(function(it) {
+        if (it && it.weight != null && it.weight !== '' && !isNaN(Number(it.weight))) {
+          var w = Number(it.weight);
+          if (w > 0) {
+            hasWeight = true;
+            totalWeight += w * (Math.max(1, Number(it.qty) || 1));
+          }
+        }
+      });
+    }
+
+    if (cfg && Array.isArray(cfg.carriers) && cfg.carriers.length > 0) {
+      if (normType === 'home' && cfg.enable_home === false) {
+        return { cost: 0, note: 'التوصيل للمنزل غير متاح', ok: false, carrier: '', hasWeight: false, totalWeight: 0 };
+      }
+      if (normType === 'office' && cfg.enable_office === false) {
+        return { cost: 0, note: 'الاستلام من المكتب غير متاح', ok: false, carrier: '', hasWeight: false, totalWeight: 0 };
+      }
+
+      var targetId = cfg.active_carrier;
+      var carrier = cfg.carriers.find(function(c){ return c.id === targetId && c.active !== false; });
+      if (!carrier) {
+        carrier = cfg.carriers.find(function(c){ return c.is_default && c.active !== false; }) || cfg.carriers.find(function(c){ return c.active !== false; });
+      }
+
+      if (carrier && carrier.rates) {
+        var wilRate = carrier.rates[cleanWilaya] || carrier.rates[String(parseInt(cleanWilaya, 10))];
+        if (wilRate && wilRate.active !== false) {
+          var base = Number(normType === 'office' ? wilRate.office : wilRate.home) || 0;
+          var extraFee = 0;
+          if (hasWeight) {
+            var limit = Number(carrier.base_weight_kg) > 0 ? Number(carrier.base_weight_kg) : 5;
+            if (totalWeight > limit) {
+              var extraKg = Math.ceil(totalWeight - limit);
+              var extraRate = Number(carrier.extra_kg_price) >= 0 ? Number(carrier.extra_kg_price) : 50;
+              extraFee = extraKg * extraRate;
+            }
+          }
+          return {
+            cost: Math.max(0, base + extraFee),
+            note: '',
+            ok: true,
+            carrier: carrier.name || carrier.id,
+            hasWeight: hasWeight,
+            totalWeight: Math.round(totalWeight * 100) / 100
+          };
+        }
+      }
+    }
+
+    // Fallback to legacy settings
+    var legacy = legacySettings || {};
+    var REMOTE_WILAYAS = ['01','08','11','30','33','37','47','50','51','52','53','54','55','56','57','58'];
+    var baseLeg = parseInt(legacy['shipping_' + normType], 10) || 0;
+    var legCost = 0;
+    if (baseLeg > 0) {
+      legCost = baseLeg;
+      var remote = parseInt(legacy.shipping_remote, 10) || 0;
+      if (remote > 0 && REMOTE_WILAYAS.indexOf(cleanWilaya) > -1) {
+        legCost += remote;
+      }
+    }
+    return {
+      cost: legCost,
+      note: legCost > 0 ? '' : 'سعر التوصيل يُحدد بعد التأكيد',
+      ok: true,
+      carrier: 'Yalidine',
+      hasWeight: false,
+      totalWeight: 0
+    };
   }
 
   // Universal Export (Browser Global / Node Module)
@@ -232,7 +358,8 @@
     getCookie: getCookie,
     getMetaTracking: getMetaTracking,
     escHtml: escHtml,
-    formatPrice: formatPrice
+    formatPrice: formatPrice,
+    calculateClientShippingCost: calculateClientShippingCost
   };
 
   for (var key in exports) {

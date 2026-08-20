@@ -1,0 +1,14 @@
+node_modules/
+cloudflare-worker/
+backups/
+google-apps-script/
+.git/
+.agents/
+.kilo/
+.zed/
+.wrangler/
+*.sql
+*.md
+server.js
+package.json
+package-lock.json

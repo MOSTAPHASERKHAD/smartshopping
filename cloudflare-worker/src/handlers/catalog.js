@@ -51,7 +51,7 @@ export async function getCatalog(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
           id, name, description, description_long,
           price, price_old, image_url, gallery_json,
           variant_options, category, stock, tags_json,
-          sku, sort_order, created_at, landing_config_json
+          sku, weight, sort_order, created_at, landing_config_json
         FROM products
         WHERE active = 1 AND (tenant_id = ? OR tenant_id IS NULL)
         ORDER BY sort_order ASC, id DESC
@@ -61,7 +61,7 @@ export async function getCatalog(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
           id, name, description, description_long,
           price, price_old, image_url, gallery_json,
           variant_options, category, stock, tags_json,
-          sku, sort_order, created_at, landing_config_json
+          sku, weight, sort_order, created_at, landing_config_json
         FROM products
         WHERE active = 1 AND tenant_id = ?
         ORDER BY sort_order ASC, id DESC
@@ -395,13 +395,16 @@ export async function adminAddProduct(env, params, tenantId = DEFAULT_MASTER_TEN
   const galleryJson    = serializeJson(params.gallery_json,    '[]');
   const tagsJson       = serializeJson(params.tags_json,       '[]');
   const landingConfig  = JSON.stringify(normalizeLandingConfig(params.landing_config_json));
+  const weight         = params.weight !== undefined && params.weight !== null && params.weight !== '' && !isNaN(Number(params.weight))
+    ? Math.max(0, parseFloat(params.weight))
+    : null;
 
   const result = await env.DB.prepare(`
     INSERT INTO products
       (tenant_id, name, description, description_long, price, price_old,
        image_url, gallery_json, variant_options, category,
-       stock, active, sort_order, tags_json, sku, landing_config_json)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+       stock, active, sort_order, tags_json, sku, weight, landing_config_json)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).bind(
     tenantId,
     name,
@@ -418,6 +421,7 @@ export async function adminAddProduct(env, params, tenantId = DEFAULT_MASTER_TEN
     parseInt(params.sort_order ?? 0),
     tagsJson,
     sanitize(params.sku, 100),
+    weight,
     landingConfig,
   ).run();
 
@@ -441,6 +445,10 @@ export async function adminEditProduct(env, params, tenantId = DEFAULT_MASTER_TE
 
   if (!existing) return { ok: false, error: 'المنتج غير موجود أو لا تملك صلاحية تعديله' };
 
+  const weight = params.weight !== undefined && params.weight !== null && params.weight !== '' && !isNaN(Number(params.weight))
+    ? Math.max(0, parseFloat(params.weight))
+    : null;
+
   await env.DB.prepare(`
     UPDATE products SET
       name             = ?,
@@ -457,6 +465,7 @@ export async function adminEditProduct(env, params, tenantId = DEFAULT_MASTER_TE
       sort_order       = ?,
       tags_json        = ?,
       sku              = ?,
+      weight           = ?,
       landing_config_json = ?,
       updated_at       = strftime('%Y-%m-%dT%H:%M:%SZ','now')
     WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)
@@ -475,6 +484,7 @@ export async function adminEditProduct(env, params, tenantId = DEFAULT_MASTER_TE
     parseInt(params.sort_order ?? 0),
     serializeJson(params.tags_json, '[]'),
     sanitize(params.sku, 100),
+    weight,
     JSON.stringify(normalizeLandingConfig(params.landing_config_json)),
     id,
     tenantId,

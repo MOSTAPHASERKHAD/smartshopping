@@ -115,4 +115,57 @@ export class EmailProvider {
     }
     return { delivered: false, status: 'EMAIL_PROVIDER_UNCONFIGURED', provider: 'mock' };
   }
+
+  /**
+   * إرسال رسالة تأكيد الطلب للعميل
+   * @returns {Promise<{ delivered: boolean, status: string, provider: string }>}
+   */
+  static async sendOrderConfirmationEmail({ to, orderId, customerName, items, total, shippingNote, env = {} }) {
+    if (env && env.RESEND_API_KEY) {
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: env.EMAIL_FROM || 'SmartShopping <noreply@smartshopping.click>',
+            to: [to],
+            subject: `تأكيد طلبك من SmartShopping — ${orderId}`,
+            html: `
+              <div dir="rtl" style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+                <h2 style="color: #333;">مرحباً ${customerName}،</h2>
+                <p>شكراً لطلبك من SmartShopping.</p>
+                <p>تم استلام طلبك بنجاح.</p>
+                <p><strong>رقم الطلب:</strong><br>${orderId}</p>
+                <p><strong>المنتجات:</strong><br>${items}</p>
+                <p><strong>المجموع:</strong><br>${total} دج</p>
+                <p><strong>ملاحظة التوصيل:</strong><br>${shippingNote}</p>
+                <p>سنقوم بالتواصل معك لتأكيد الطلب والتوصيل.</p>
+                <p>شكراً لثقتك بنا.</p>
+                <p><strong>SmartShopping</strong><br><a href="https://smartshopping.click" style="color: #2563eb;">smartshopping.click</a></p>
+              </div>
+            `,
+          })
+        });
+        if (res.ok) {
+          return { delivered: true, status: 'DELIVERED', provider: 'resend' };
+        }
+        console.error('[Email Error] Resend API returned error status for order confirmation:', res.status);
+        return { delivered: false, status: 'PROVIDER_ERROR', provider: 'resend' };
+      } catch (e) {
+        console.error('[Email Error] Failed to send order confirmation via Resend transport');
+        return { delivered: false, status: 'DISPATCH_ERROR', provider: 'resend' };
+      }
+    }
+
+    // Mock / Local Fallback عندما لا يكون مزود البريد مهيأ
+    if (env && env.ENVIRONMENT !== 'production') {
+      console.log(`[Email Mock] Order confirmation email to: ${to} | Order ID: ${orderId}`);
+    } else {
+      console.warn('[Email Warning] RESEND_API_KEY is not configured. Order confirmation email skipped.');
+    }
+    return { delivered: false, status: 'EMAIL_PROVIDER_UNCONFIGURED', provider: 'mock' };
+  }
 }

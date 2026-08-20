@@ -459,6 +459,12 @@
       html += '<input type="tel" id="plPhone" required placeholder="مثال: 0555123456" autocomplete="tel" dir="ltr" style="text-align:right">';
       html += '</div>';
 
+      // Email (Optional)
+      html += '<div class="pl-field-group">';
+      html += '<label for="plEmail">البريد الإلكتروني (اختياري)</label>';
+      html += '<input type="email" id="plEmail" placeholder="example@email.com" autocomplete="email" dir="ltr" style="text-align:right">';
+      html += '</div>';
+
       // Wilaya
       html += '<div class="pl-field-group">';
       html += '<label for="plWilaya">الولاية *</label>';
@@ -477,17 +483,29 @@
       html += '</div>';
 
       // Delivery Type
-      html += '<div class="pl-field-group full-width">';
-      html += '<label>مكان التوصيل المفصل:</label>';
-      html += '<div class="pl-delivery-selector">';
-      html += '<label class="pl-radio-card active" id="plRadioHome" onclick="selectDeliveryType(\'Home\')">';
-      html += '<input type="radio" name="plDelivery" value="Home" checked><span>🏠 توصيل إلى باب المنزل</span>';
-      html += '</label>';
-      html += '<label class="pl-radio-card" id="plRadioOffice" onclick="selectDeliveryType(\'Office\')">';
-      html += '<input type="radio" name="plDelivery" value="Office"><span>🏢 استلام من المكتب</span>';
-      html += '</label>';
-      html += '</div>';
-      html += '</div>';
+      var shipCfg = null;
+      try { if (storeSettings && storeSettings.shipping_config) shipCfg = typeof storeSettings.shipping_config === 'string' ? JSON.parse(storeSettings.shipping_config) : storeSettings.shipping_config; } catch(_) {}
+      var showHome = !shipCfg || shipCfg.enable_home !== false;
+      var showOffice = !shipCfg || shipCfg.enable_office !== false;
+      var defaultType = showHome ? 'Home' : (showOffice ? 'Office' : '');
+
+      if (showHome || showOffice) {
+        html += '<div class="pl-field-group full-width">';
+        html += '<label>مكان التوصيل المفصل:</label>';
+        html += '<div class="pl-delivery-selector">';
+        if (showHome) {
+          html += '<label class="pl-radio-card ' + (defaultType === 'Home' ? 'active' : '') + '" id="plRadioHome" onclick="selectDeliveryType(\'Home\')">';
+          html += '<input type="radio" name="plDelivery" value="Home" ' + (defaultType === 'Home' ? 'checked' : '') + '><span>🏠 توصيل إلى باب المنزل</span>';
+          html += '</label>';
+        }
+        if (showOffice) {
+          html += '<label class="pl-radio-card ' + (defaultType === 'Office' ? 'active' : '') + '" id="plRadioOffice" onclick="selectDeliveryType(\'Office\')">';
+          html += '<input type="radio" name="plDelivery" value="Office" ' + (defaultType === 'Office' ? 'checked' : '') + '><span>🏢 استلام من المكتب</span>';
+          html += '</label>';
+        }
+        html += '</div>';
+        html += '</div>';
+      }
 
       // Address
       html += '<div class="pl-field-group full-width">';
@@ -507,9 +525,8 @@
       html += '<div class="pl-order-summary">';
       html += '<div class="pl-summary-row"><span>المنتج:</span><span>' + escHtml(title) + ' × 1</span></div>';
       html += '<div class="pl-summary-row"><span>سعر المنتج:</span><span>' + priceStr + '</span></div>';
-      html += '<div class="pl-summary-row"><span>الشحن:</span><span id="plShippingLabel">حسب الولاية (يُحدد هاتفياً)</span></div>';
+      html += '<div class="pl-summary-row"><span>الشحن:</span><span id="plShippingLabel">اختر ولايتك لحساب الشحن</span></div>';
       html += '<div class="pl-summary-row total"><span>المجموع المستحق:</span><span class="price" id="plTotalSummaryPrice">' + priceStr + '</span></div>';
-      html += '<div class="pl-delivery-note"><span>ℹ️</span><span>تكلفة التوصيل الدقيقة يتم إبلاغك بها عند الاتصال بك لتأكيد الطلب قبل الشحن.</span></div>';
       html += '</div>';
 
       // Submit Button
@@ -830,10 +847,52 @@
         if (officeCard) officeCard.classList.add('active');
         if (homeCard) homeCard.classList.remove('active');
       }
+      updateShippingSummary();
     }
 
     function handleWilayaChange() {
-      // Placeholder for dynamic wilaya delivery rates if provided
+      updateShippingSummary();
+    }
+
+    function updateShippingSummary() {
+      if (!currentProduct) return;
+      var wilayaEl = document.getElementById('plWilaya');
+      var wilayaCode = wilayaEl ? wilayaEl.value : '';
+      var checkedDelivery = document.querySelector('input[name="plDelivery"]:checked');
+      var deliveryType = checkedDelivery ? checkedDelivery.value : 'Home';
+
+      var shipLabel = document.getElementById('plShippingLabel');
+      var totalLabel = document.getElementById('plTotalSummaryPrice');
+      var stickyPriceEl = document.getElementById('plStickyPriceVal');
+
+      if (!wilayaCode) {
+        if (shipLabel) shipLabel.textContent = 'اختر ولايتك لحساب الشحن';
+        if (totalLabel) totalLabel.textContent = formatPrice(currentProduct.price, storeSettings.currency || 'د.ج');
+        if (stickyPriceEl) stickyPriceEl.textContent = formatPrice(currentProduct.price, storeSettings.currency || 'د.ج');
+        return;
+      }
+
+      var items = [{ id: currentProduct.id, weight: currentProduct.weight, qty: 1 }];
+      var res = (typeof calculateClientShippingCost === 'function')
+        ? calculateClientShippingCost(storeSettings.shipping_config, wilayaCode, deliveryType, items, storeSettings)
+        : { cost: 0, note: '' };
+
+      var total = Number(currentProduct.price) + Number(res.cost || 0);
+
+      if (shipLabel) {
+        if (res.cost > 0) {
+          shipLabel.innerHTML = '<span style="color:#10b981;font-weight:700">+' + Number(res.cost).toLocaleString() + ' دج</span>' + (res.carrier ? ' <small style="color:var(--text3)">(' + escHtml(res.carrier) + ')</small>' : '');
+        } else {
+          shipLabel.textContent = 'شحن مجاني';
+        }
+      }
+
+      if (totalLabel) {
+        totalLabel.textContent = Number(total).toLocaleString() + ' DZD';
+      }
+      if (stickyPriceEl) {
+        stickyPriceEl.textContent = Number(total).toLocaleString() + ' DZD';
+      }
     }
 
     // --- Order Form Submit Handler ---
@@ -843,6 +902,7 @@
 
       var name = document.getElementById('plName').value.trim();
       var phone = document.getElementById('plPhone').value.trim();
+      var email = document.getElementById('plEmail').value.trim();
       var wilayaCode = document.getElementById('plWilaya').value;
       var commune = document.getElementById('plCommune').value.trim();
       var address = document.getElementById('plAddress').value.trim();
@@ -879,6 +939,7 @@
         action: 'order',
         name: name,
         phone: phone,
+        email: email,
         wilaya_code: wilayaCode,
         wilaya_ar: wilNameAr,
         wilaya_en: wilNameEn,

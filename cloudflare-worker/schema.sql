@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS products (
   landing_config_json TEXT    DEFAULT '{}',
   tags_json       TEXT    DEFAULT '[]',
   sku             TEXT    DEFAULT '',
+  weight          REAL    DEFAULT NULL,
   created_at      TEXT    DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
   updated_at      TEXT    DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );

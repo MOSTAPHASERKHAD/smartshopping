@@ -46,7 +46,7 @@ export function formatFbc(fbcVal, creationTime) {
   if (!fbcVal) return undefined;
   const clean = String(fbcVal).trim();
   if (!clean) return undefined;
-  if (clean.startsWith('fb.1.')) return clean;
+  if (clean.startsWith('fb.1.') || clean.startsWith('fb.2.')) return clean;
   const time = creationTime || Date.now();
   return `fb.1.${time}.${clean}`;
 }

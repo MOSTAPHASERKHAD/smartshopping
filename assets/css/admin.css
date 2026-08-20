@@ -98,6 +98,11 @@ body.rtl{font-family:var(--font-ar)}
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(233,69,96,.08)}
 .form-group textarea{resize:vertical;min-height:55px}
 .form-group.full{grid-column:1/-1}
+.input-group{display:flex;align-items:stretch;position:relative;width:100%}
+.input-group input{flex:1;min-width:0;border-top-left-radius:0!important;border-bottom-left-radius:0!important}
+.input-group .input-addon{display:inline-flex;align-items:center;justify-content:center;padding:0 14px;background:var(--bg);color:var(--text2);font-weight:700;font-size:var(--ds-text-xs);border:1px solid var(--border);border-right:none;border-top-left-radius:var(--radius-sm);border-bottom-left-radius:var(--radius-sm);user-select:none;white-space:nowrap}
+.input-group:focus-within input{z-index:1}
+.input-group:focus-within .input-addon{border-color:var(--accent);color:var(--accent);background:rgba(233,69,96,.05)}
 
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:all var(--ds-transition-fast);padding:var(--ds-space-4)}

@@ -171,6 +171,12 @@ document.head.appendChild(ld);
           </div>
         </div>
         <div class="pd-row">
+          <div class="pd-group" style="width: 100%;">
+            <label>البريد الإلكتروني (اختياري)</label>
+            <input type="email" id="pdEmail" placeholder="example@email.com" autocomplete="email">
+          </div>
+        </div>
+        <div class="pd-row">
           <div class="pd-group">
             <label data-i18n="form_wilaya">الولاية</label>
             <select id="pdWilaya" required>
@@ -198,10 +204,6 @@ document.head.appendChild(ld);
         <div class="pd-group">
           <label data-i18n="form_note">ملاحظة (اختياري)</label>
           <textarea id="pdNote" rows="2" placeholder="..."></textarea>
-        </div>
-        <div class="pd-note">
-          <span>⚠️</span>
-          <span data-i18n="delivery_note">تكلفة التوصيل (حسب الولاية ونوع التوصيل) تُحدَّد بعد التأكيد معك هاتفياً.</span>
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="pdSubmit" data-i18n="submit_order"><span class="btn-text">تأكيد الطلب</span> <span class="btn-spinner" style="display:none"></span></button>
         <a href="#" onclick="orderViaWhatsApp(event)" class="btn btn-block btn-lg" style="margin-top:10px; background:#25d366; color:#fff; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px;">
@@ -487,6 +489,12 @@ document.head.appendChild(ld);
         </div>
       </div>
       <div class="form-row">
+        <div class="form-group" style="width: 100%;">
+          <label>البريد الإلكتروني (اختياري)</label>
+          <input type="email" id="orderEmail" placeholder="example@email.com" autocomplete="email">
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label data-i18n="form_wilaya">الولاية</label>
           <select id="orderWilaya" required>
@@ -510,10 +518,6 @@ document.head.appendChild(ld);
       <div class="form-group">
         <label data-i18n="form_note">ملاحظة</label>
         <textarea id="orderNote" rows="2" placeholder="مثال: الحي السكني ب، الطابق 3"></textarea>
-      </div>
-      <div class="delivery-note">
-        <span>⚠️</span>
-        <span data-i18n="delivery_note">تكلفة التوصيل (حسب الولاية ونوع التوصيل) تُحدَّد بعد التأكيد معك هاتفياً.</span>
       </div>
       <div class="summary-box" id="orderSummary"></div>
       <button type="submit" class="btn btn-primary btn-block btn-lg" id="submitBtn" data-i18n="submit_order"><span class="btn-text">تأكيد الطلب</span> <span class="btn-spinner" style="display:none"></span></button>
@@ -726,7 +730,7 @@ var I18N = {
     form_wilaya:"الولاية",form_wilaya_select:"اختر الولاية",
     form_municipality:"البلدية",form_municipality_ph:"بلدية...",
     form_delivery:"التوصيل",form_home:"المنزل",form_office:"المكتب",
-    form_note:"ملاحظة",delivery_note:"تكلفة التوصيل (حسب الولاية ونوع التوصيل) تُحدَّد بعد التأكيد معك هاتفياً.",
+    form_note:"ملاحظة",delivery_note:"التوصيل متاح لجميع الولايات الـ 58 مع الدفع عند الاستلام.",
     submit_order:"تأكيد الطلب",order_success:"تم إرسال طلبك بنجاح!",
     order_num:"رقم طلبك",track_ph:"أدخل رقم الطلب",track_btn:"تتبع",
     track_not_found:"الطلب غير موجود",track_status:"حالة الطلب",
@@ -766,7 +770,7 @@ var I18N = {
     account_my_orders:"طلباتي",
     account_no_orders:"لا توجد طلبات بعد",
     shipping_cost:"الشحن",
-    shipping_tbd:"يُحدَّد بعد التأكيد هاتفياً",
+    shipping_tbd:"اختر الولاية",
     newsletter_title:"النشرة البريدية",
     newsletter_ph:"بريدك الإلكتروني",
     newsletter_btn:"اشترك",
@@ -1654,11 +1658,14 @@ function renderOrderSummary(){
   if (cartDiscount > 0) {
     h+='<div class="summary-line" style="color:var(--success)"><span>خصم ('+cartCouponCode+')</span><span>-'+Number(cartDiscount).toLocaleString()+' '+t('currency')+'</span></div>';
   }
+  var wilayaSelected = (document.getElementById('orderWilaya') || {}).value;
   var shippingCost = getShippingCost();
   if (shippingCost > 0) {
-    h+='<div class="summary-line"><span>'+t('shipping_cost')+'</span><span>'+Number(shippingCost).toLocaleString()+' '+t('currency')+'</span></div>';
+    h+='<div class="summary-line"><span>'+t('shipping_cost')+'</span><span>+'+Number(shippingCost).toLocaleString()+' '+t('currency')+'</span></div>';
+  } else if (wilayaSelected) {
+    h+='<div class="summary-line"><span>'+t('shipping_cost')+'</span><span style="color:var(--success)">شحن مجاني</span></div>';
   } else {
-    h+='<div class="summary-line"><span>'+t('shipping_cost')+'</span><span style="color:var(--text2)">'+t('shipping_tbd')+'</span></div>';
+    h+='<div class="summary-line"><span>'+t('shipping_cost')+'</span><span style="color:var(--text2)">اختر الولاية</span></div>';
   }
   var total = s - cartDiscount + shippingCost;
   if (total < 0) total = 0;
@@ -1670,6 +1677,7 @@ function submitOrder(e){
   e.preventDefault();
   var n=document.getElementById('orderName').value.trim();
   var p=document.getElementById('orderPhone').value.trim();
+  var eml=document.getElementById('orderEmail') ? document.getElementById('orderEmail').value.trim() : '';
   var w=document.getElementById('orderWilaya').value;
   var m=document.getElementById('orderMunicipality').value.trim();
   var d=document.getElementById('orderDelivery').value;
@@ -1692,7 +1700,7 @@ function submitOrder(e){
   var utmData=getUTM();
   var metaTrack=getMetaTracking();
   apiPost('order',{
-    name:n,phone:p,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
+    name:n,phone:p,email:eml,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
     municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note,
     coupon_code:cartCouponCode,
     utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||'',
@@ -1882,6 +1890,7 @@ function submitProductDetail(e){
   e.preventDefault();
   var n=document.getElementById('pdName').value.trim();
   var ph=document.getElementById('pdPhone').value.trim();
+  var eml=document.getElementById('pdEmail') ? document.getElementById('pdEmail').value.trim() : '';
   var w=document.getElementById('pdWilaya').value;
   var m=document.getElementById('pdMunicipality').value.trim();
   var d=document.getElementById('pdDelivery').value;
@@ -1913,7 +1922,7 @@ function submitProductDetail(e){
   var metaTrack=getMetaTracking();
   setLoading('pdSubmit', true);
   apiPost('order',{
-    name:n,phone:ph,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
+    name:n,phone:ph,email:eml,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
     municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note+variantNote,
     utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||'',
     fbc:metaTrack.fbc||'',fbp:metaTrack.fbp||'',
@@ -2028,13 +2037,15 @@ function getShippingCost() {
   try {
     var delivery = (document.getElementById('orderDelivery') || {}).value || 'home';
     var wilaya = (document.getElementById('orderWilaya') || {}).value || '';
-    var base = parseInt(storeSettings['shipping_' + delivery]) || 0;
-    if (base <= 0) return 0;
-    var remote = parseInt(storeSettings.shipping_remote) || 0;
-    if (remote > 0 && REMOTE_WILAYAS.indexOf(wilaya) > -1) {
-      return base + remote;
-    }
-    return base;
+    if (!wilaya) return 0;
+    var items = cart.map(function(c) {
+      var prod = allProducts.find(function(p) { return String(p.id) === String(c.id); });
+      return { id: c.id, weight: prod ? prod.weight : null, qty: c.qty };
+    });
+    var res = (typeof calculateClientShippingCost === 'function')
+      ? calculateClientShippingCost(storeSettings.shipping_config, wilaya, delivery, items, storeSettings)
+      : { cost: 0 };
+    return Number(res.cost) || 0;
   } catch(e) { return 0; }
 }
 
@@ -3133,12 +3144,17 @@ function buildLandingPageHTML(p){
   html+='<form id="lpForm" onsubmit="submitLandingOrder(event,\''+p.id+'\')">';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'الاسم الكامل':'Full Name')+'</label><input type="text" id="lpName" required placeholder="'+(lang==='ar'?'اسمك الكامل':'Your full name')+'"></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'رقم الهاتف':'Phone Number')+'</label><input type="tel" id="lpPhone" required placeholder="0555 XX XX XX"></div>';
-  html+='<div class="lp-field"><label>'+(lang==='ar'?'الولاية':'Wilaya')+'</label><select id="lpWilaya" required><option value="">'+(lang==='ar'?'اختر الولاية':'Select Wilaya')+'</option></select></div>';
+  html+='<div class="lp-field"><label>'+(lang==='ar'?'البريد الإلكتروني (اختياري)':'Email (Optional)')+'</label><input type="email" id="lpEmail" placeholder="example@email.com" autocomplete="email"></div>';
+  html+='<div class="lp-field"><label>'+(lang==='ar'?'الولاية':'Wilaya')+'</label><select id="lpWilaya" required onchange="updateLpShippingSummary(\''+p.id+'\')"><option value="">'+(lang==='ar'?'اختر الولاية':'Select Wilaya')+'</option></select></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'البلدية':'Municipality')+'</label><input type="text" id="lpMunicipality" required placeholder="'+(lang==='ar'?'بلدية...':'Municipality...')+'"></div>';
-  html+='<div class="lp-field"><label>'+(lang==='ar'?'نوع التوصيل':'Delivery Type')+'</label><div class="lp-delivery-type"><label><input type="radio" name="lpDelivery" value="home" checked><span>🏠 '+(lang==='ar'?'المنزل':'Home')+'</span></label><label><input type="radio" name="lpDelivery" value="office"><span>🏢 '+(lang==='ar'?'المكتب':'Office')+'</span></label></div></div>';
+  html+='<div class="lp-field"><label>'+(lang==='ar'?'نوع التوصيل':'Delivery Type')+'</label><div class="lp-delivery-type"><label><input type="radio" name="lpDelivery" value="home" checked onchange="updateLpShippingSummary(\''+p.id+'\')"><span>🏠 '+(lang==='ar'?'المنزل':'Home')+'</span></label><label><input type="radio" name="lpDelivery" value="office" onchange="updateLpShippingSummary(\''+p.id+'\')"><span>🏢 '+(lang==='ar'?'المكتب':'Office')+'</span></label></div></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'العنوان (الحي، الشارع، رقم المبنى)':'Address')+'</label><input type="text" id="lpAddress" required placeholder="'+(lang==='ar'?'حي السلام، شارع 5، رقم 12':'Neighborhood, street, building')+'"></div>';
   html+='<div class="lp-field"><label>'+(lang==='ar'?'ملاحظة (اختياري)':'Note (optional)')+'</label><textarea id="lpNote" rows="2" placeholder="'+(lang==='ar'?'أي ملاحظات إضافية':'Any additional notes')+'"></textarea></div>';
-  html+='<div class="lp-note"><span>⚠️</span><span>'+(lang==='ar'?'تكلفة التوصيل تُحدَّد بعد التأكيد معك هاتفياً.':'Delivery cost confirmed with you by phone.')+'</span></div>';
+  html+='<div class="lp-summary-box" style="background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:12px;margin:12px 0;font-size:0.9rem">';
+  html+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>'+(lang==='ar'?'سعر المنتج:':'Product Price:')+'</span><strong>'+Number(p.price).toLocaleString()+' DZD</strong></div>';
+  html+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>'+(lang==='ar'?'الشحن:':'Shipping:')+'</span><span id="lpShippingCostLabel">'+(lang==='ar'?'اختر الولاية':'Select Wilaya')+'</span></div>';
+  html+='<div style="display:flex;justify-content:space-between;font-weight:bold;border-top:1px solid var(--border,#e2e8f0);padding-top:6px"><span>'+(lang==='ar'?'المجموع:':'Total:')+'</span><span id="lpTotalCostLabel" style="color:var(--accent,#e94560)">'+Number(p.price).toLocaleString()+' DZD</span></div>';
+  html+='</div>';
   html+='<button type="submit" class="lp-submit" id="lpSubmitBtn">🛒 '+(lang==='ar'?'تأكيد الطلب':'Place Order')+'</button>';
   html+='</form>';
   html+='<a href="https://wa.me/'+wa+'?text='+waMsg+'" target="_blank" class="lp-wa-btn">💬 '+(lang==='ar'?'تواصل واتساب':'WhatsApp Us')+'</a>';
@@ -3149,6 +3165,37 @@ function buildLandingPageHTML(p){
   html+='<div class="lp-footer">© 2026 Smart Shopping — '+(lang==='ar'?'جميع الحقوق محفوظة':'All rights reserved')+'</div>';
   html+='<button type="button" class="lp-float-btn" onclick="document.getElementById(\'lpFormSection\').scrollIntoView({behavior:\'smooth\',block:\'start\'})">🛒 '+(lang==='ar'?'اطلب الآن':'Buy Now')+'</button>';
   return html;
+}
+
+function updateLpShippingSummary(productId){
+  var product=allProducts.find(function(x){return String(x.id)===String(productId)});
+  if(!product)return;
+  var wEl=document.getElementById('lpWilaya');
+  var w=wEl?wEl.value:'';
+  var dChecked=document.querySelector('input[name="lpDelivery"]:checked');
+  var d=dChecked?dChecked.value:'home';
+  var shipLabel=document.getElementById('lpShippingCostLabel');
+  var totalLabel=document.getElementById('lpTotalCostLabel');
+  if(!w){
+    if(shipLabel) shipLabel.textContent=(currentLang==='ar'?'اختر الولاية':'Select Wilaya');
+    if(totalLabel) totalLabel.textContent=Number(product.price).toLocaleString()+' DZD';
+    return;
+  }
+  var items=[{id:product.id,weight:product.weight,qty:1}];
+  var res=(typeof calculateClientShippingCost==='function')
+    ? calculateClientShippingCost(storeSettings.shipping_config,w,d,items,storeSettings)
+    : {cost:0};
+  var total=Number(product.price)+Number(res.cost||0);
+  if(shipLabel){
+    if(res.cost>0){
+      shipLabel.innerHTML='<span style="color:#10b981;font-weight:700">+'+Number(res.cost).toLocaleString()+' DZD</span>'+(res.carrier?' <small style="color:var(--text3)">('+escHtml(res.carrier)+')</small>':'');
+    } else {
+      shipLabel.textContent=(currentLang==='ar'?'شحن مجاني':'Free Shipping');
+    }
+  }
+  if(totalLabel){
+    totalLabel.textContent=Number(total).toLocaleString()+' DZD';
+  }
 }
 
 function lpCarouselNav(dir){
@@ -3190,6 +3237,7 @@ function submitLandingOrder(e,productId){
   e.preventDefault();
   var n=document.getElementById('lpName').value.trim();
   var p=document.getElementById('lpPhone').value.trim();
+  var eml=document.getElementById('lpEmail') ? document.getElementById('lpEmail').value.trim() : '';
   var w=document.getElementById('lpWilaya').value;
   var m=document.getElementById('lpMunicipality').value.trim();
   var d=document.querySelector('input[name="lpDelivery"]:checked').value;
@@ -3207,7 +3255,7 @@ function submitLandingOrder(e,productId){
   var utmData=getUTM();
   var metaTrack=getMetaTracking();
   apiPost('order',{
-    name:n,phone:p,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
+    name:n,phone:p,email:eml,wilaya_code:w,wilaya_ar:wil?wil.ar:'',wilaya_en:wil?wil.en:'',
     municipality:m,delivery_type:d==='office'?'Office':'Home',items_json:items,note:note,
     coupon_code:'',
     utm_source:utmData.utm_source||'',utm_medium:utmData.utm_medium||'',utm_campaign:utmData.utm_campaign||'',
