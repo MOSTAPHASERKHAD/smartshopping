@@ -59,7 +59,7 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
   try {
     // 1. تحقق مما إذا كان CAPI مفعلاً
     const { results } = await env.DB.prepare(`
-      SELECT key, value FROM settings WHERE key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id')
+      SELECT key, value FROM settings WHERE key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id', 'fb_test_event_code', 'test_event_code')
     `).all();
 
     const settings = {};
@@ -140,7 +140,8 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
             content_type: "product",
           }
         }
-      ]
+      ],
+      test_event_code: settings.fb_test_event_code || settings.test_event_code || 'TEST72175'
     };
 
     if (eventName === 'Purchase' && eventData.order_id) {
