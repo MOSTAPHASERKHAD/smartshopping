@@ -2303,7 +2303,7 @@ function loadAnalytics() {
     else roasEl.style.color = '#dc2626';
 
     // 2. Update Meta Status Banner & Inputs
-    if (res.data.ad_account_id && !document.getElementById('analytics_ad_account_input').value) {
+    if (res.data.ad_account_id) {
       document.getElementById('analytics_ad_account_input').value = res.data.ad_account_id;
     }
     if (res.data.currency_rate) {
@@ -2459,10 +2459,15 @@ function saveAnalyticsQuickSettings() {
 
   apiPost('admin_update_settings', {
     fb_ad_account_id: adAcc.trim(),
+    ad_account_id: adAcc.trim(),
     usd_to_dzd_rate: usdRate.trim()
   }, function(res) {
-    toast('تم حفظ إعدادات التحليلات');
-    loadAnalytics();
+    if (res && res.error) {
+      toast('خطأ في حفظ الإعدادات: ' + (res.error.message || res.error));
+    } else {
+      toast('تم حفظ إعدادات التحليلات بنجاح');
+      loadAnalytics();
+    }
   });
 }
 

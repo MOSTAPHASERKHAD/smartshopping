@@ -83,7 +83,7 @@ export async function adminUpdateSettings(env, params, tenantId = DEFAULT_MASTER
       cleanValue = await sha256(cleanValue);
       updates.push([
         `INSERT INTO settings(tenant_id, key, value) VALUES(?, 'admin_password_hash', ?)
-         ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value`,
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, tenant_id = excluded.tenant_id`,
         [tenantId, cleanValue],
       ]);
       continue;
@@ -91,7 +91,7 @@ export async function adminUpdateSettings(env, params, tenantId = DEFAULT_MASTER
 
     updates.push([
       `INSERT INTO settings(tenant_id, key, value, updated_at) VALUES(?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
-       ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at, tenant_id = excluded.tenant_id`,
       [tenantId, cleanKey, cleanValue],
     ]);
   }
