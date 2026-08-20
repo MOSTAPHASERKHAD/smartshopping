@@ -535,6 +535,22 @@ async function parseParams(request) {
       for (const [key, value] of formData.entries()) {
         params[key] = value;
       }
+    } else {
+      // دعم نداءات sendBeacon و text/plain و fallback
+      try {
+        const text = await request.text();
+        if (text && text.trim()) {
+          try {
+            const json = JSON.parse(text);
+            Object.assign(params, json);
+          } catch {
+            const formParams = new URLSearchParams(text);
+            for (const [key, value] of formParams.entries()) {
+              params[key] = value;
+            }
+          }
+        }
+      } catch {}
     }
   }
 

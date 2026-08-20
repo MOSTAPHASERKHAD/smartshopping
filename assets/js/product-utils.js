@@ -249,19 +249,41 @@
         }
       }
 
-      var endpoint = (apiUrl || '') + (apiUrl && apiUrl.indexOf('?') > -1 ? '&' : '?') + 'action=track_analytics_event';
+      var q = [];
+      for (var k in payload) {
+        if (payload[k] !== undefined && payload[k] !== '') {
+          q.push(encodeURIComponent(k) + '=' + encodeURIComponent(payload[k]));
+        }
+      }
+      var qs = q.join('&');
+      var baseApi = apiUrl || (window.API_URL || '');
+      if (!baseApi) baseApi = 'https://smart-shopping-api.mostaphaserkhad.workers.dev';
+      var endpoint = baseApi + (baseApi.indexOf('?') > -1 ? '&' : '?') + qs;
       var bodyStr = JSON.stringify(payload);
 
-      if (navigator && typeof navigator.sendBeacon === 'function') {
-        var blob = new Blob([bodyStr], { type: 'application/json' });
-        navigator.sendBeacon(endpoint, blob);
-      } else if (typeof fetch === 'function') {
+      var sent = false;
+      if (typeof fetch === 'function') {
         fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: bodyStr,
-          keepalive: true
-        }).catch(function() {});
+          keepalive: true,
+          mode: 'cors'
+        }).catch(function() {
+          var img = new Image();
+          img.src = endpoint;
+        });
+        sent = true;
+      } else if (navigator && typeof navigator.sendBeacon === 'function') {
+        try {
+          var blob = new Blob([bodyStr], { type: 'application/json' });
+          sent = navigator.sendBeacon(endpoint, blob);
+        } catch(_) {}
+      }
+
+      if (!sent) {
+        var img = new Image();
+        img.src = endpoint;
       }
     } catch(e) {}
   }
