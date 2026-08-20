@@ -268,7 +268,9 @@
     function loadProductPage() {
       captureUTM();
       var params = new URLSearchParams(window.location.search);
-      var pid = params.get('product');
+      var pid = params.get('product') || params.get('id');
+
+      try { if (typeof trackAnalyticsEvent === 'function') trackAnalyticsEvent(API_URL, 'PageView', pid); } catch(e) {}
 
       if (!pid) {
         showNotFound();
@@ -295,6 +297,18 @@
 
           currentProduct = normalizeProduct(rawProduct);
           renderProductPage(currentProduct);
+
+          // Listen to form focus as InitiateCheckout trigger
+          function onFormFocus() {
+            if (!_initiateCheckoutFired && currentProduct) {
+              _initiateCheckoutFired = true;
+              try { if (typeof trackAnalyticsEvent === 'function') trackAnalyticsEvent(API_URL, 'InitiateCheckout', currentProduct.id); } catch(e) {}
+            }
+          }
+          var nInput = document.getElementById('plName');
+          var pInput = document.getElementById('plPhone');
+          if (nInput) nInput.addEventListener('focus', onFormFocus, { once: true });
+          if (pInput) pInput.addEventListener('focus', onFormFocus, { once: true });
         })
         .catch(function(err) {
           console.error('Failed to load product', err);

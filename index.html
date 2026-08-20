@@ -1255,6 +1255,8 @@ function setLoading(id, loading) {
   btn.querySelectorAll('.btn-text').forEach(function(el){el.style.display=loading?'none':'inline'});
 }
 function init(){
+  captureUTM();
+  try { if (typeof trackAnalyticsEvent === 'function') trackAnalyticsEvent(API_URL, 'PageView'); } catch(e) {}
   document.querySelectorAll('button:not([type])').forEach(function(b){b.type='button';});
   if(window.ThemeEngine){
     try{ThemeEngine.init();}catch(e){console.error('ThemeEngine init',e);}
@@ -2969,40 +2971,14 @@ function processChatInput(text) {
 }
 
 // ===== UTM & META TRACKING =====
-function getCookie(name){
-  try{
-    var match=document.cookie.match(new RegExp('(?:^|;\\s*)'+name+'=([^;]*)'));
-    return match?decodeURIComponent(match[1]):'';
-  }catch(e){return '';}
-}
-function captureUTM(){
-  try{
-    var p=new URLSearchParams(window.location.search);
-    var utm={};
-    ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function(k){
-      var v=p.get(k);if(v)utm[k]=v;
-    });
-    if(Object.keys(utm).length)localStorage.setItem('sk_utm',JSON.stringify(utm));
-
-    // Meta Click ID (fbclid -> fbc)
-    var fbclid=p.get('fbclid');
-    if(fbclid){
-      var fbc='fb.1.'+Date.now()+'.'+fbclid;
-      localStorage.setItem('sk_fbc',fbc);
-      try{document.cookie='_fbc='+encodeURIComponent(fbc)+';path=/;max-age=7776000;SameSite=Lax';}catch(_){}
-    }
-  }catch(e){}
-}
-function getUTM(){
-  try{return JSON.parse(localStorage.getItem('sk_utm')||'{}')}catch(e){return {}}
-}
-function getMetaTracking(){
-  var fbc='';var fbp='';
-  try{
-    fbc=getCookie('_fbc')||localStorage.getItem('sk_fbc')||'';
-    fbp=getCookie('_fbp')||localStorage.getItem('sk_fbp')||'';
-  }catch(e){}
-  return {fbc:fbc,fbp:fbp};
+// Note: functions are provided authoritatively by assets/js/product-utils.js
+if (typeof getCookie === 'undefined') {
+  function getCookie(name){
+    try{
+      var match=document.cookie.match(new RegExp('(?:^|;\\s*)'+name+'=([^;]*)'));
+      return match?decodeURIComponent(match[1]):'';
+    }catch(e){return '';}
+  }
 }
 
 // ===== PRODUCT LANDING PAGE =====
