@@ -141,7 +141,7 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
           }
         }
       ],
-      test_event_code: settings.fb_test_event_code || settings.test_event_code || 'TEST72175'
+      test_event_code: settings.fb_test_event_code || settings.test_event_code || undefined
     };
 
     if (eventName === 'Purchase' && eventData.order_id) {
