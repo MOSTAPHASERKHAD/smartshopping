@@ -529,6 +529,31 @@ export async function recordAuditLog(db, { tenant_id = DEFAULT_MASTER_TENANT_ID,
 }
 
 /**
+ * جلب هاش كلمة مرور الأدمن الموثوق من البيئة أو قاعدة البيانات
+ * @param {D1Database} db
+ * @param {Env} env
+ * @returns {Promise<string|null>}
+ */
+export async function resolveAdminPasswordHash(db, env = {}) {
+  // 1. سر البيئة أولاً
+  if (env.ADMIN_PASSWORD_HASH) {
+    return String(env.ADMIN_PASSWORD_HASH).trim();
+  }
+
+  // 2. جدول الإعدادات في D1
+  try {
+    const row = await db.prepare(
+      `SELECT value FROM settings WHERE key IN ('admin_password_hash', 'admin_password') ORDER BY CASE WHEN key = 'admin_password_hash' THEN 1 ELSE 2 END LIMIT 1`
+    ).first();
+    if (row && row.value) {
+      return String(row.value).trim();
+    }
+  } catch (e) {}
+
+  return null;
+}
+
+/**
  * التحقق من كلمة مرور الأدمن (login)
  * نحوّل كلمة المرور (التي تأتي مُهاشةً مرة من الواجهة: sha256(raw))
  * إلى هاش ثانوي: sha256(sha256(raw)) ثم نقارنها في زمن ثابت.

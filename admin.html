@@ -1005,6 +1005,9 @@ function apiGet(action, params, callback, retries) {
       if (attempt < maxRetries) { attempt++; setTimeout(tryCall, 1000 * attempt); } else { callback({ error: 'Network error' }); }
     });
   }
+  tryCall();
+}
+
 // ===== ADMIN I18N SYSTEM (Bilingual AR / EN) =====
 var currentAdminLang = (function() {
   try { return localStorage.getItem('admin_lang') || 'ar'; } catch(e) { return 'ar'; }
@@ -3079,7 +3082,7 @@ async function doLogin() {
   var pass = document.getElementById('loginPass').value;
   if (!user || !pass) {
     var errEl = document.getElementById('loginError');
-    errEl.textContent = 'يرجى إدخال البريد الإلكتروني وكلمة المرور';
+    errEl.textContent = 'يرجى إدخال البريد الإلكتروني أو اسم المستخدم وكلمة المرور';
     errEl.style.display = 'block';
     return;
   }
@@ -3087,40 +3090,85 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = 'جاري تسجيل الدخول...';
   document.getElementById('loginError').style.display = 'none';
 
-  // إذا كان المدخل بريداً إلكترونياً -> استخدام auth_login الحديث (PBKDF2)
+  function onLoginSuccess(authObj) {
+    btn.disabled = false; btn.textContent = 'تسجيل الدخول';
+    localStorage.setItem(AUTH_KEY, JSON.stringify(authObj));
+    showAdminPanel();
+  }
+
+  function onLoginFailure(msg) {
+    btn.disabled = false; btn.textContent = 'تسجيل الدخول';
+    var errEl = document.getElementById('loginError');
+    errEl.textContent = msg || 'بيانات الدخول غير صحيحة';
+    errEl.style.display = 'block';
+  }
+
   if (user.includes('@')) {
-    apiPost('auth_login', { email: user, password: pass }, function(res) {
-      btn.disabled = false; btn.textContent = 'تسجيل الدخول';
+    apiPost('auth_login', { email: user, password: pass }, async function(res) {
       if (res && res.ok) {
-        localStorage.setItem(AUTH_KEY, JSON.stringify({
+        onLoginSuccess({
           time: Date.now(),
           user: (res.user && res.user.email) ? res.user.email : user,
           name: (res.user && res.user.name) ? res.user.name : '',
           token: res.token || '',
           role: (res.user && res.user.role) ? res.user.role : 'OWNER',
           tenant: res.tenant || null
-        }));
-        showAdminPanel();
+        });
       } else {
-        var errEl = document.getElementById('loginError');
-        errEl.textContent = (res && res.error) ? res.error : 'بيانات الدخول غير صحيحة';
-        errEl.style.display = 'block';
+        // Try fallback to verify_admin in case password is the store master password
+        try {
+          var passHash = await hashPasswordAsync(pass);
+          apiPost('verify_admin', { password: passHash }, function(data) {
+            if (data && data.ok) {
+              onLoginSuccess({
+                hash: passHash,
+                time: Date.now(),
+                user: user,
+                token: data.token || '',
+                role: 'OWNER'
+              });
+            } else {
+              onLoginFailure((res && res.error) || (data && data.error) || 'بيانات الدخول غير صحيحة');
+            }
+          });
+        } catch(e) {
+          onLoginFailure((res && res.error) || 'بيانات الدخول غير صحيحة');
+        }
       }
     });
   } else {
-    // Fallback: استخدام verify_admin القديم
-    var passHash = await hashPasswordAsync(pass);
-    apiGet('verify_admin', { password: passHash }, function(data) {
-      btn.disabled = false; btn.textContent = 'تسجيل الدخول';
-      if (data && data.ok) {
-        localStorage.setItem(AUTH_KEY, JSON.stringify({ hash: passHash, time: Date.now(), user: user, token: data.token || '', role: 'OWNER' }));
-        showAdminPanel();
-      } else {
-        var errEl = document.getElementById('loginError');
-        errEl.textContent = (data && data.error) ? data.error : 'كلمة المرور خاطئة';
-        errEl.style.display = 'block';
-      }
-    });
+    // Non-email username (e.g. "admin") -> try verify_admin first, then auth_login
+    try {
+      var passHash = await hashPasswordAsync(pass);
+      apiPost('verify_admin', { password: passHash }, function(data) {
+        if (data && data.ok) {
+          onLoginSuccess({
+            hash: passHash,
+            time: Date.now(),
+            user: user,
+            token: data.token || '',
+            role: 'OWNER'
+          });
+        } else {
+          apiPost('auth_login', { email: user, password: pass }, function(res) {
+            if (res && res.ok) {
+              onLoginSuccess({
+                time: Date.now(),
+                user: (res.user && res.user.email) ? res.user.email : user,
+                name: (res.user && res.user.name) ? res.user.name : '',
+                token: res.token || '',
+                role: (res.user && res.user.role) ? res.user.role : 'OWNER',
+                tenant: res.tenant || null
+              });
+            } else {
+              onLoginFailure((data && data.error) || (res && res.error) || 'كلمة المرور غير صحيحة');
+            }
+          });
+        }
+      });
+    } catch(e) {
+      onLoginFailure('حدث خطأ أثناء معالجة تسجيل الدخول');
+    }
   }
 }
 
