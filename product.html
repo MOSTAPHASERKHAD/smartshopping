@@ -450,74 +450,7 @@
       // Assemble Hero Section
       var html = '<div class="pl-hero-grid">' + galleryHtml + infoHtml + '</div>';
 
-      // Trust Signals Strip
-      if (showTrust) {
-        html += '<div class="pl-trust-strip">';
-        html += '<div class="pl-trust-item"><div class="pl-trust-icon">🚚</div><div class="pl-trust-text"><h4>توصيل لـ 58 ولاية</h4><p>شحن سريع إلى باب منزلك</p></div></div>';
-        html += '<div class="pl-trust-item"><div class="pl-trust-icon">💵</div><div class="pl-trust-text"><h4>الدفع عند الاستلام</h4><p>ادفع فقط عندما تستلم المنتج</p></div></div>';
-        html += '<div class="pl-trust-item"><div class="pl-trust-icon">🛡️</div><div class="pl-trust-text"><h4>معاينة قبل الدفع</h4><p>تأكد من طلبك مع الموزع</p></div></div>';
-        html += '<div class="pl-trust-item"><div class="pl-trust-icon">💬</div><div class="pl-trust-text"><h4>دعم متواصل</h4><p>متابعة وتأكيد الطلب هاتفياً</p></div></div>';
-        html += '</div>';
-      }
-
-      // Full Description Section
-      var descriptionText = p.description_long || p.description || p.desc_ar || '';
-      if (showDetails && descriptionText) {
-        html += '<div class="pl-card-section">';
-        html += '<h2 class="pl-section-title"><span>📝</span><span>تفاصيل ومميزات المنتج</span></h2>';
-        html += '<div class="pl-desc-body">' + formatDescriptionText(descriptionText) + '</div>';
-        html += '</div>';
-      }
-
-      // Custom Features Section / Media Infographics
-      if (showFeatures) {
-        if (Array.isArray(lpCfg.features) && lpCfg.features.length > 0) {
-          html += '<div class="pl-card-section">';
-          html += '<h2 class="pl-section-title"><span>✨</span><span>مميزات وخصائص المنتج</span></h2>';
-          html += '<div class="pl-custom-features-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px">';
-          lpCfg.features.forEach(function(feat) {
-            html += '<div class="pl-custom-feat-card" style="background:var(--ds-surface,#f8fafc);border:1px solid var(--ds-border,#e2e8f0);border-radius:12px;padding:16px;text-align:center">';
-            if (feat.icon) html += '<div style="font-size:2rem;margin-bottom:8px">' + escHtml(feat.icon) + '</div>';
-            if (feat.title) html += '<h4 style="font-size:1.05rem;font-weight:700;margin-bottom:6px;color:var(--ds-text,#1e293b)">' + escHtml(feat.title) + '</h4>';
-            if (feat.desc) html += '<p style="font-size:0.88rem;color:var(--ds-text2,#64748b);line-height:1.5;margin:0">' + escHtml(feat.desc) + '</p>';
-            html += '</div>';
-          });
-          html += '</div>';
-          html += '</div>';
-        } else if (images.length > 1) {
-          html += '<div class="pl-card-section pl-content-media-section">';
-          html += '<h2 class="pl-section-title"><span>✨</span><span>معاينة وتفاصيل ومميزات المنتج</span></h2>';
-          html += '<div class="pl-feature-stack">';
-          for (var i = 1; i < images.length; i++) {
-            html += '<div class="pl-feature-image-card" onclick="openLightbox(' + i + ')" style="cursor:zoom-in" title="انقر لتكبير الصورة">';
-            html += '<img src="' + escHtml(images[i]) + '" alt="' + escHtml(title) + ' - ميزة تفصيلية ' + i + '" class="pl-feature-full-img" loading="lazy" decoding="async">';
-            html += '</div>';
-          }
-          html += '</div>';
-          html += '</div>';
-        }
-      }
-
-      // FAQ Section
-      if (showFaq) {
-        html += '<div class="pl-card-section">';
-        html += '<h2 class="pl-section-title"><span>❓</span><span>الأسئلة الشائعة حول الطلب</span></h2>';
-        html += '<div class="pl-faq-list">';
-        if (Array.isArray(lpCfg.faq) && lpCfg.faq.length > 0) {
-          lpCfg.faq.forEach(function(item) {
-            html += createFaqItem(item.q || 'سؤال', item.a || 'إجابة');
-          });
-        } else {
-          html += createFaqItem('كيف تتم عملية الشراء والدفع؟', 'الأمر بسيط جداً: تملأ استمارة الطلب أدناه باسمك ورقم هاتفك، ثم يتصل بك فريقنا لتأكيد العنوان وشحن المنتج، والدفع يكون نقداً عند استلام الطرد.');
-          html += createFaqItem('كم تستغرق مدة التوصيل؟', 'يتم توصيل الطلب خلال 24 إلى 72 ساعة عمل حسب ولايتك وبلديتك.');
-          html += createFaqItem('هل يمكنني اختيار التوصيل إلى المكتب أو المنزل؟', 'نعم، نوفر خياري التوصيل للمنزل مباشرة أو الاستلام من أقرب مكتب شحن في ولايتك.');
-          html += createFaqItem('هل أستطيع معاينة المنتج قبل الدفع؟', 'نعم بالتأكيد، يمكنك معاينة الطرد والتأكد من سلامته ومطابقته للطلب قبل تسليم المبلغ للموزع.');
-        }
-        html += '</div>';
-        html += '</div>';
-      }
-
-      // Order Form Section
+      // ── Position 2: Order Form Section (Immediately After Hero / Gallery) ──
       html += '<div class="pl-order-card" id="plOrderSection">';
       html += '<div class="pl-order-header">';
       html += '<h3>استمارة الطلب السريع (الدفع عند الاستلام)</h3>';
@@ -617,6 +550,71 @@
       html += '<div id="plSuccessBox" style="display:none;" class="pl-success-card"></div>';
       html += '</div>'; // End Order Card
 
+      // ── Position 3: Trust Signals Strip ──
+      if (showTrust) {
+        html += '<div class="pl-trust-strip">';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">🚚</div><div class="pl-trust-text"><h4>توصيل لـ 58 ولاية</h4><p>شحن سريع إلى باب منزلك</p></div></div>';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">💵</div><div class="pl-trust-text"><h4>الدفع عند الاستلام</h4><p>ادفع فقط عندما تستلم المنتج</p></div></div>';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">🛡️</div><div class="pl-trust-text"><h4>معاينة قبل الدفع</h4><p>تأكد من طلبك مع الموزع</p></div></div>';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">💬</div><div class="pl-trust-text"><h4>دعم متواصل</h4><p>متابعة وتأكيد الطلب هاتفياً</p></div></div>';
+        html += '</div>';
+      }
+
+      // ── Position 4: Full Description / Details Section ──
+      var descriptionText = p.description_long || p.description || p.desc_ar || '';
+      if (showDetails && descriptionText) {
+        html += '<div class="pl-card-section">';
+        html += '<h2 class="pl-section-title"><span>📝</span><span>تفاصيل ومميزات المنتج</span></h2>';
+        html += '<div class="pl-desc-body">' + formatDescriptionText(descriptionText) + '</div>';
+        html += '</div>';
+      }
+
+      // ── Position 5: Custom Features Section / Media Infographics ──
+      if (showFeatures) {
+        if (Array.isArray(lpCfg.features) && lpCfg.features.length > 0) {
+          html += '<div class="pl-card-section">';
+          html += '<h2 class="pl-section-title"><span>✨</span><span>مميزات وخصائص المنتج</span></h2>';
+          html += '<div class="pl-custom-features-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px">';
+          lpCfg.features.forEach(function(feat) {
+            html += '<div class="pl-custom-feat-card" style="background:var(--ds-surface,#f8fafc);border:1px solid var(--ds-border,#e2e8f0);border-radius:12px;padding:16px;text-align:center">';
+            if (feat.icon) html += '<div style="font-size:2rem;margin-bottom:8px">' + escHtml(feat.icon) + '</div>';
+            if (feat.title) html += '<h4 style="font-size:1.05rem;font-weight:700;margin-bottom:6px;color:var(--ds-text,#1e293b)">' + escHtml(feat.title) + '</h4>';
+            if (feat.desc) html += '<p style="font-size:0.88rem;color:var(--ds-text2,#64748b);line-height:1.5;margin:0">' + escHtml(feat.desc) + '</p>';
+            html += '</div>';
+          });
+          html += '</div>';
+          html += '</div>';
+        } else if (images.length > 1) {
+          html += '<div class="pl-card-section pl-content-media-section">';
+          html += '<h2 class="pl-section-title"><span>✨</span><span>معاينة وتفاصيل ومميزات المنتج</span></h2>';
+          html += '<div class="pl-feature-stack">';
+          for (var i = 1; i < images.length; i++) {
+            html += '<div class="pl-feature-image-card" onclick="openLightbox(' + i + ')" style="cursor:zoom-in" title="انقر لتكبير الصورة">';
+            html += '<img src="' + escHtml(images[i]) + '" alt="' + escHtml(title) + ' - ميزة تفصيلية ' + i + '" class="pl-feature-full-img" loading="lazy" decoding="async">';
+            html += '</div>';
+          }
+          html += '</div>';
+          html += '</div>';
+        }
+      }
+
+      // ── Position 6: FAQ Section ──
+      if (showFaq) {
+        html += '<div class="pl-card-section">';
+        html += '<h2 class="pl-section-title"><span>❓</span><span>الأسئلة الشائعة حول الطلب</span></h2>';
+        html += '<div class="pl-faq-list">';
+        if (Array.isArray(lpCfg.faq) && lpCfg.faq.length > 0) {
+          lpCfg.faq.forEach(function(item) {
+            html += createFaqItem(item.q || 'سؤال', item.a || 'إجابة');
+          });
+        } else {
+          html += createFaqItem('كيف تتم عملية الشراء والدفع؟', 'الأمر بسيط جداً: تملأ استمارة الطلب أعلاه باسمك ورقم هاتفك، ثم يتصل بك فريقنا لتأكيد العنوان وشحن المنتج، والدفع يكون نقداً عند استلام الطرد.');
+          html += createFaqItem('كم تستغرق مدة التوصيل؟', 'يتم توصيل الطلب خلال 24 إلى 72 ساعة عمل حسب ولايتك وبلديتك.');
+          html += createFaqItem('هل يمكنني اختيار التوصيل إلى المكتب أو المنزل؟', 'نعم، نوفر خياري التوصيل للمنزل مباشرة أو الاستلام من أقرب مكتب شحن في ولايتك.');
+          html += createFaqItem('هل أستطيع معاينة المنتج قبل الدفع؟', 'نعم بالتأكيد، يمكنك معاينة الطرد والتأكد من سلامته ومطابقته للطلب قبل تسليم المبلغ للموزع.');
+        }
+        html += '</div>';
+        html += '</div>';
       container.innerHTML = html;
 
       // Update sticky bottom price
