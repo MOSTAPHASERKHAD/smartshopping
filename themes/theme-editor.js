@@ -254,26 +254,77 @@
     });
   }
 
-  // ── Import from file ──
+  // ── Import from file (JSON or Shopify ZIP archive) ──
   function importThemeFile(input) {
     var file = input.files && input.files[0];
     if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function (e) {
-      try {
-        var parsed = JSON.parse(e.target.result);
-        var theme = Engine.importFile(parsed);
-        editorState.isNew = true;
-        editorState.current = null;
-        editorState.draft = theme;
-        renderEditor();
-        openEditorModal();
-        global.toast('تم استيراد الثيم: ' + theme.name + ' — راجع الألوان ثم احفظه', true);
-      } catch (err) {
-        global.toast('❌ فشل الاستيراد: ' + err.message, true);
+
+    function processParsed(parsed, themeName) {
+      if (parsed && typeof parsed === 'object' && themeName && !parsed.name && !parsed.theme_name) {
+        parsed.theme_name = themeName;
       }
-    };
-    reader.readAsText(file);
+      var theme = global.ThemeImporter ? global.ThemeImporter.normalize(parsed) : (Engine && Engine.importFile ? Engine.importFile(parsed) : parsed);
+      editorState.isNew = true;
+      editorState.current = null;
+      editorState.draft = theme;
+      renderEditor();
+      openEditorModal();
+      global.toast('✅ تم استيراد الثيم بنجاح: ' + (theme.title || theme.name) + ' — راجع الإعدادات ثم احفظه', true);
+    }
+
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      if (global.toast) global.toast('⏳ جاري فك ضغط واستيراد حزمة الثيم...', false);
+      function doUnzip() {
+        if (!window.JSZip) {
+          if (global.toast) global.toast('❌ تعذر تحميل مكتبة فك الضغط JSZip', true);
+          return;
+        }
+        window.JSZip.loadAsync(file).then(function(zip) {
+          var targetFile = zip.file('config/settings_data.json') || (zip.file(/^.*config\/settings_data\.json$/i) ? zip.file(/^.*config\/settings_data\.json$/i)[0] : null) || zip.file('settings_data.json');
+          if (!targetFile) {
+            var jsonFiles = zip.file(/config\/.*\.json$/i);
+            if (jsonFiles && jsonFiles.length > 0) targetFile = jsonFiles[0];
+          }
+
+          if (targetFile) {
+            targetFile.async('string').then(function(content) {
+              try {
+                var json = JSON.parse(content);
+                var baseName = file.name.replace(/\.zip$/i, '');
+                processParsed(json, baseName);
+              } catch(e) {
+                if (global.toast) global.toast('❌ خطأ في قراءة ملف إعدادات الثيم: ' + e.message, true);
+              }
+            });
+          } else {
+            if (global.toast) global.toast('❌ لم يتم العثور على config/settings_data.json داخل ملف الـ ZIP', true);
+          }
+        }).catch(function(err) {
+          if (global.toast) global.toast('❌ فشل فك ضغط ملف الثيم: ' + err.message, true);
+        });
+      }
+
+      if (!window.JSZip) {
+        var s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        s.onload = doUnzip;
+        s.onerror = function() { if (global.toast) global.toast('❌ تعذر تحميل مكتبة JSZip من الشبكة', true); };
+        document.head.appendChild(s);
+      } else {
+        doUnzip();
+      }
+    } else {
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          var parsed = JSON.parse(e.target.result);
+          processParsed(parsed, file.name.replace(/\.json$/i, ''));
+        } catch (err) {
+          if (global.toast) global.toast('❌ فشل الاستيراد: ' + err.message, true);
+        }
+      };
+      reader.readAsText(file);
+    }
     input.value = '';
   }
 

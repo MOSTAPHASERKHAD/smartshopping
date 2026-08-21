@@ -592,8 +592,8 @@
       <h1>🎨 إدارة الثيمات</h1>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <label class="btn btn-outline btn-sm" style="cursor:pointer">
-          📥 استيراد ثيم (Shrine / Shopify / أي صيغة)
-          <input type="file" accept=".json,application/json" style="display:none" onchange="ThemeEditor.importThemeFile(this)">
+          📥 استيراد ثيم (ZIP / JSON / Shrine / Shopify)
+          <input type="file" accept=".zip,.json,application/zip,application/json,application/x-zip-compressed" style="display:none" onchange="ThemeEditor.importThemeFile(this)">
         </label>
         <button class="btn btn-accent btn-sm" onclick="ThemeEditor.editTheme()">➕ ثيم جديد</button>
       </div>
