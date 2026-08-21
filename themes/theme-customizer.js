@@ -99,8 +99,10 @@
 
   ThemeCustomizerClass.prototype.close = function() {
     state.customizerOpen = false;
-    var modal = document.getElementById('sk-customizer-modal');
-    if (modal) modal.style.display = 'none';
+    if (typeof document !== 'undefined') {
+      var modal = document.getElementById('sk-customizer-modal');
+      if (modal) modal.style.display = 'none';
+    }
     if (global.ThemeEditor && global.ThemeEditor.load) {
       global.ThemeEditor.load();
     }
@@ -160,16 +162,20 @@
   ThemeCustomizerClass.prototype.setDeviceMode = function(mode) {
     if (['desktop', 'tablet', 'mobile'].includes(mode)) {
       state.deviceMode = mode;
-      var frame = (typeof document !== 'undefined') ? document.getElementById('sk-preview-frame') : null;
-      if (frame) {
-        if (mode === 'mobile') { frame.style.width = '375px'; }
-        else if (mode === 'tablet') { frame.style.width = '768px'; }
-        else { frame.style.width = '100%'; }
+      if (typeof document !== 'undefined') {
+        var frame = document.getElementById('sk-preview-frame');
+        if (frame) {
+          if (mode === 'mobile') { frame.style.width = '375px'; }
+          else if (mode === 'tablet') { frame.style.width = '768px'; }
+          else { frame.style.width = '100%'; }
+        }
+        var btns = document.querySelectorAll('.sk-dev-btn');
+        if (btns) {
+          btns.forEach(function(b) {
+            b.classList.toggle('active', b.dataset.mode === mode);
+          });
+        }
       }
-      var btns = document.querySelectorAll('.sk-dev-btn');
-      btns.forEach(function(b) {
-        b.classList.toggle('active', b.dataset.mode === mode);
-      });
     }
   };
 
@@ -184,11 +190,15 @@
       targetId: state.targetId
     };
 
-    var iframe = document.getElementById('sk-preview-frame');
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.postMessage(msg, '*');
+    if (typeof document !== 'undefined') {
+      var iframe = document.getElementById('sk-preview-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage(msg, '*');
+      }
     }
-    window.postMessage(msg, '*');
+    if (typeof window.postMessage === 'function') {
+      window.postMessage(msg, '*');
+    }
   };
 
   ThemeCustomizerClass.prototype.save = function() {

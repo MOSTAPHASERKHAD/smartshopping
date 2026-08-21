@@ -190,9 +190,10 @@ export const ACTION_PERMISSIONS = {
   admin_list_subscribers: PERMISSIONS.SUBSCRIBERS_READ,
 
   // Themes
-  admin_list_themes:   PERMISSIONS.THEMES_READ,
-  admin_save_theme:    PERMISSIONS.THEMES_UPDATE,
-  admin_delete_theme:  PERMISSIONS.THEMES_DELETE,
+  admin_list_themes:        PERMISSIONS.THEMES_READ,
+  admin_save_theme:         PERMISSIONS.THEMES_UPDATE,
+  admin_delete_theme:       PERMISSIONS.THEMES_DELETE,
+  admin_set_default_theme:  PERMISSIONS.THEMES_UPDATE,
 
   // Media
   admin_list_media:    PERMISSIONS.MEDIA_READ,

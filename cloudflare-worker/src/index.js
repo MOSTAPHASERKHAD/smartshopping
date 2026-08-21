@@ -54,7 +54,7 @@ import {
 
 // ── استيراد معالجات الثيمات والأقسام الديناميكية ──
 import {
-  adminListThemes, adminSaveTheme, adminDeleteTheme,
+  adminListThemes, adminSaveTheme, adminDeleteTheme, adminSetDefaultTheme,
   adminSaveThemeSections, getThemeSections
 } from './handlers/themes.js';
 
@@ -430,6 +430,7 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   if (action === 'admin_list_themes')          return adminListThemes(env, tenantId);
   if (action === 'admin_save_theme')           return adminSaveTheme(env, params, tenantId);
   if (action === 'admin_delete_theme')         return adminDeleteTheme(env, params, tenantId);
+  if (action === 'admin_set_default_theme')    return adminSetDefaultTheme(env, params, tenantId);
   if (action === 'admin_save_theme_sections')  return adminSaveThemeSections(env, params, tenantId);
 
   // ── رفع الملفات ──

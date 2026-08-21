@@ -75,14 +75,33 @@ async function runPhase5Tests() {
             };
           }
           if (sql.includes('FROM settings')) {
-            return { value: '{"rates":{"16":{"home":500,"office":350}}}' };
+            return {
+              value: JSON.stringify({
+                active_carrier: 'yalidine',
+                carriers: [
+                  {
+                    id: 'yalidine',
+                    active: true,
+                    rates: {
+                      '16': { home: 500, office: 350, active: true }
+                    }
+                  }
+                ]
+              })
+            };
           }
           return null;
         },
         async all() {
+          if (sql.includes('FROM products')) {
+            return {
+              results: [{ id: 2, name: 'ساعة Sabr الفاخرة', price: 2500, active: 1, stock: 10, weight: null }]
+            };
+          }
           if (sql.includes('FROM settings')) {
             return {
               results: [
+                { key: 'shipping_config', value: JSON.stringify({ active_carrier: 'yalidine', carriers: [{ id: 'yalidine', active: true, rates: { '16': { home: 500, office: 350, active: true } } }] }) },
                 { key: 'capi_enabled', value: 'true' },
                 { key: 'fb_capi_token', value: 'EAAB_TEST_TOKEN' },
                 { key: 'fb_pixel_id', value: '928523816193898' }

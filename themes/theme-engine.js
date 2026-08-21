@@ -116,12 +116,19 @@
   };
 
   // ── Apply theme to DOM (Browser Only) ──
-  ThemeEngine.prototype.apply = function (themeId, mode) {
-    if (typeof document === 'undefined') return;
+  ThemeEngine.prototype.apply = function (themeId, mode, isPreview) {
     var t = this.themes[themeId];
     if (!t) return;
     this.activeId = themeId;
     this.mode = mode || this.mode;
+
+    try {
+      if (typeof localStorage !== 'undefined' && themeId && !isPreview && !String(themeId).startsWith('preview')) {
+        localStorage.setItem(STORAGE_KEY, themeId);
+      }
+    } catch (e) {}
+
+    if (typeof document === 'undefined') return;
 
     var css = this._tokensToCSS(t.tokens, this.mode, t.base);
     var el = document.getElementById('sk-theme-vars');
@@ -131,6 +138,160 @@
       document.head.appendChild(el);
     }
     el.textContent = css;
+    if (typeof this._onChange === 'function') {
+      this._onChange({ themeId: this.activeId, mode: this.mode });
+    }
+  };
+
+  // ── Unregister / remove a custom theme from memory (does not delete built-ins) ──
+  ThemeEngine.prototype.unregister = function (id) {
+    if (!id) return false;
+    var builtins = (typeof global !== 'undefined' && global.SmartKioskThemes) ||
+                   (typeof window !== 'undefined' && window.SmartKioskThemes) || [];
+    var isBuiltin = Array.isArray(builtins) && builtins.some(function (b) { return b.id === id; });
+    if (isBuiltin) return false;
+
+    if (this.themes[id]) {
+      delete this.themes[id];
+      if (this.activeId === id) {
+        this.activeId = this.defaultThemeId || DEFAULT_THEME_ID;
+      }
+      return true;
+    }
+    return false;
+  };
+
+  // ── Get theme by id ──
+  ThemeEngine.prototype.get = function (id) {
+    return (id && this.themes[id]) || null;
+  };
+
+  // ── List all registered themes ──
+  ThemeEngine.prototype.list = function () {
+    var self = this;
+    return Object.keys(this.themes).map(function (k) {
+      return self.themes[k];
+    });
+  };
+
+  // ── Get currently active theme ID ──
+  ThemeEngine.prototype.getActiveThemeId = function () {
+    return this.activeId || this.defaultThemeId || DEFAULT_THEME_ID;
+  };
+
+  // ── Set Mode (light | dark | auto) ──
+  ThemeEngine.prototype.setMode = function (mode) {
+    this.mode = mode || 'auto';
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('sk_theme_mode', this.mode);
+      }
+    } catch (e) {}
+    if (this.activeId) {
+      this.apply(this.activeId, this.mode);
+    }
+    if (typeof this._onChange === 'function') {
+      this._onChange({ themeId: this.activeId, mode: this.mode });
+    }
+  };
+
+  // ── Export Theme JSON ──
+  ThemeEngine.prototype.exportTheme = function (id) {
+    id = id || this.activeId;
+    var theme = this.themes[id];
+    if (!theme) return null;
+    var exportObj = {
+      __format: 'smartkiosk',
+      id: theme.id,
+      name: theme.name,
+      title: theme.title || theme.name,
+      author: theme.author,
+      version: theme.version,
+      base: theme.base,
+      extends: theme.extends,
+      tokens: theme.tokens,
+      sections: theme.sections
+    };
+    if (typeof document !== 'undefined') {
+      var blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = (theme.id || 'theme') + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }
+    return exportObj;
+  };
+
+  // ── Public tokensToCSS wrapper ──
+  ThemeEngine.prototype.tokensToCSS = function (tokens, mode, themeBase) {
+    return this._tokensToCSS(tokens || {}, mode || this.mode, themeBase || 'light');
+  };
+
+  // ── Initialize ThemeEngine (Register built-ins & apply saved theme) ──
+  ThemeEngine.prototype.init = function (opts) {
+    opts = opts || {};
+    var self = this;
+
+    // 1. Register built-in themes if available
+    var builtins = (typeof global !== 'undefined' && global.SmartKioskThemes) ||
+                   (typeof window !== 'undefined' && window.SmartKioskThemes) || [];
+    if (Array.isArray(builtins)) {
+      builtins.forEach(function (t) {
+        self.register(t, { silent: true });
+      });
+    }
+
+    // 2. Setup System Dark Mode Listener
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      try {
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        this.systemDark = !!mq.matches;
+        if (mq.addEventListener) {
+          mq.addEventListener('change', function (e) {
+            self.systemDark = e.matches;
+            if (self.mode === 'auto' && self.activeId) self.apply(self.activeId, 'auto');
+          });
+        }
+      } catch (e) {}
+    }
+
+    // 3. Load saved preferences or URL preview parameters
+    var previewTheme = null;
+    try {
+      if (typeof window !== 'undefined' && window.location && window.location.search) {
+        var searchParams = new URLSearchParams(window.location.search);
+        previewTheme = searchParams.get('preview_theme') || searchParams.get('theme');
+      }
+    } catch (e) {}
+
+    var savedDefault = null;
+    var savedTheme = null;
+    var savedMode = 'auto';
+    try {
+      if (typeof localStorage !== 'undefined') {
+        savedDefault = localStorage.getItem('sk_default_theme_v1');
+        savedTheme = localStorage.getItem(STORAGE_KEY);
+        savedMode = localStorage.getItem('sk_theme_mode') || 'auto';
+      }
+    } catch (e) {}
+
+    this.defaultThemeId = savedDefault || opts.defaultThemeId || DEFAULT_THEME_ID;
+    this.mode = opts.mode || savedMode || 'auto';
+
+    var targetId = opts.themeId || previewTheme || savedTheme || this.defaultThemeId || DEFAULT_THEME_ID;
+    if (!this.themes[targetId]) {
+      var keys = Object.keys(this.themes);
+      if (keys.length > 0) targetId = keys[0];
+    }
+
+    if (targetId && this.themes[targetId]) {
+      this.apply(targetId, this.mode, !!previewTheme);
+    }
+    return this;
   };
 
   // ══════════════════════════════════════════════════════════════════
@@ -416,15 +577,41 @@
 
   // Forward static methods to instance for universal consumer compatibility
   ThemeEngine.init = function (opts) { return instance.init(opts); };
-  ThemeEngine.apply = function (id, mode) { return instance.apply(id, mode); };
+  ThemeEngine.apply = function (id, mode, isPreview) { return instance.apply(id, mode, isPreview); };
   ThemeEngine.register = function (theme, opts) { return instance.register(theme, opts); };
+  ThemeEngine.unregister = function (id) { return instance.unregister(id); };
   ThemeEngine.get = function (id) { return instance.get(id); };
   ThemeEngine.list = function () { return instance.list(); };
   ThemeEngine.getActiveThemeId = function () { return instance.getActiveThemeId(); };
+  ThemeEngine.setMode = function (mode) { return instance.setMode(mode); };
+  ThemeEngine.exportTheme = function (id) { return instance.exportTheme(id); };
   ThemeEngine.renderSection = function (type, id, s, ctx) { return instance.renderSection(type, id, s, ctx); };
   ThemeEngine.renderSections = function (cfg, ctx) { return instance.renderSections(cfg, ctx); };
-  ThemeEngine.tokensToCSS = function (tokens, mode) { return instance.tokensToCSS(tokens, mode); };
+  ThemeEngine.tokensToCSS = function (tokens, mode, themeBase) { return instance.tokensToCSS(tokens, mode, themeBase); };
   ThemeEngine.injectVariables = function (tmpl, ctx) { return instance.injectVariables(tmpl, ctx); };
+
+  // Static property proxies for direct access (e.g. ThemeEngine.mode)
+  try {
+    Object.defineProperty(ThemeEngine, 'mode', {
+      get: function () { return instance.mode; },
+      set: function (m) { instance.setMode(m); },
+      configurable: true
+    });
+    Object.defineProperty(ThemeEngine, 'activeId', {
+      get: function () { return instance.activeId; },
+      set: function (id) { instance.activeId = id; },
+      configurable: true
+    });
+    Object.defineProperty(ThemeEngine, 'themes', {
+      get: function () { return instance.themes; },
+      configurable: true
+    });
+    Object.defineProperty(ThemeEngine, 'defaultThemeId', {
+      get: function () { return instance.defaultThemeId; },
+      set: function (id) { instance.defaultThemeId = id; },
+      configurable: true
+    });
+  } catch (e) {}
 
   global.ThemeEngine = ThemeEngine;
   global.themeEngine = instance;

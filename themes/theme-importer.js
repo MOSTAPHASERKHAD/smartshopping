@@ -285,5 +285,7 @@
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = Importer;
+    module.exports.ThemeImporter = Importer;
+    module.exports.default = Importer;
   }
 })(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : this));

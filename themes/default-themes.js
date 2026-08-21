@@ -156,4 +156,10 @@
   ];
 
   global.SmartKioskThemes = themes;
-})(window);
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      SmartKioskThemes: themes
+    };
+  }
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : this));

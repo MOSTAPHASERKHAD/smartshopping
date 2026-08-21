@@ -85,7 +85,7 @@ export async function adminSaveTheme(env, params, tenantId = DEFAULT_MASTER_TENA
   const base = params.base === 'dark' ? 'dark' : 'light';
   const extendsTheme = params.extends ? sanitize(params.extends, 100) : null;
   const isActive = params.is_active ? 1 : 0;
-  const themeId = sanitize(params.id || name, 120);
+  const themeId = sanitize(params.id || (name.startsWith('theme_') ? name : 'theme_' + name), 120);
 
   const tokensJson = typeof params.tokens === 'object' ? JSON.stringify(params.tokens) : (typeof params.tokens_json === 'string' ? params.tokens_json : (typeof params.config_json === 'string' ? params.config_json : '{}'));
   const sectionsJson = typeof params.sections === 'object' ? JSON.stringify(params.sections) : (typeof params.sections_json === 'string' ? params.sections_json : '{}');
@@ -169,7 +169,108 @@ export async function adminDeleteTheme(env, params, tenantId = DEFAULT_MASTER_TE
     await env.DB.prepare(`DELETE FROM themes WHERE name = ? AND tenant_id = ?`).bind(name, tenantId).run();
   } catch (e) {}
 
+  if (env.CACHE) {
+    await env.CACHE.delete(`tenant:${tenantId}:theme:${name}`).catch(() => {});
+  }
+
   return { ok: true, message: 'تم حذف الثيم' };
+}
+
+/**
+ * [ADMIN] تعيين ثيم كافتراضي للمتجر
+ */
+export async function adminSetDefaultTheme(env, params, tenantId = DEFAULT_MASTER_TENANT_ID) {
+  const themeId = sanitize(params.id || params.name || params.theme_id, 120);
+  if (!themeId) return { ok: false, error: 'معرّف الثيم مطلوب' };
+
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+
+  // 1. تحقق من وجود الثيم في themes_v2 أو themes أو أنه built-in مسموح
+  let themeExists = false;
+  let themeName = themeId;
+
+  // تحقق من themes_v2
+  try {
+    const row = await env.DB.prepare(
+      isMaster
+        ? `SELECT id, name FROM themes_v2 WHERE (id = ? OR name = ?) AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`
+        : `SELECT id, name FROM themes_v2 WHERE (id = ? OR name = ?) AND tenant_id = ? LIMIT 1`
+    ).bind(themeId, themeId, tenantId).first();
+
+    if (row) {
+      themeExists = true;
+      themeName = row.id || row.name || themeId;
+    }
+  } catch (e) {}
+
+  // تحقق من themes الكلاسيكي
+  if (!themeExists) {
+    try {
+      const row = await env.DB.prepare(
+        isMaster
+          ? `SELECT name FROM themes WHERE (name = ? OR id = ?) AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`
+          : `SELECT name FROM themes WHERE (name = ? OR id = ?) AND tenant_id = ? LIMIT 1`
+      ).bind(themeId, themeId, tenantId).first();
+
+      if (row) {
+        themeExists = true;
+        themeName = row.name;
+      }
+    } catch (e) {}
+  }
+
+  // السماح أيضاً بالثيمات المدمجة المعروفة (Built-in themes)
+  const BUILTIN_IDS = new Set([
+    'smartkiosk-default', 'rose', 'royal', 'algerian', 'ramadan',
+    'emerald', 'sunset', 'midnight', 'luxury', 'mono', 'cyber', 'lavender', 'shrine'
+  ]);
+  if (!themeExists && BUILTIN_IDS.has(themeId)) {
+    themeExists = true;
+    themeName = themeId;
+  }
+
+  if (!themeExists) {
+    return { ok: false, error: 'الثيم المطلوب غير موجود' };
+  }
+
+  // 2. تحديث is_active في themes_v2
+  try {
+    await env.DB.prepare(
+      `UPDATE themes_v2 SET is_active = 0 WHERE tenant_id = ?`
+    ).bind(tenantId).run();
+
+    await env.DB.prepare(
+      `UPDATE themes_v2 SET is_active = 1 WHERE (id = ? OR name = ?) AND tenant_id = ?`
+    ).bind(themeId, themeId, tenantId).run();
+  } catch (e) {}
+
+  // 3. تحديث settings.theme_default
+  try {
+    await env.DB.prepare(`
+      INSERT INTO settings (key, value, tenant_id, updated_at)
+      VALUES ('theme_default', ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(key, tenant_id) DO UPDATE SET
+        value = excluded.value,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(themeName, tenantId).run();
+  } catch (e) {
+    try {
+      await env.DB.prepare(`
+        INSERT INTO settings (key, value, tenant_id)
+        VALUES ('theme_default', ?, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          value = excluded.value
+      `).bind(themeName, tenantId).run();
+    } catch (e2) {}
+  }
+
+  // 4. مسح الكاش
+  if (env.CACHE) {
+    await env.CACHE.delete(`tenant:${tenantId}:settings_v1`).catch(() => {});
+    await env.CACHE.delete(`tenant:${tenantId}:theme:${themeId}`).catch(() => {});
+  }
+
+  return { ok: true, message: 'تم تعيين الثيم الافتراضي بنجاح', default_theme: themeName };
 }
 
 /**
