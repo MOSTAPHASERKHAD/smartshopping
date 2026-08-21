@@ -119,6 +119,23 @@
       desc_en:     p.desc_en != null ? p.desc_en : desc,
       description: p.description || desc,
       description_long: p.description_long || desc,
+      variant_options: (function() {
+        if (Array.isArray(p.variant_options)) return p.variant_options;
+        if (typeof p.variant_options === 'string' && p.variant_options.trim()) {
+          try { return JSON.parse(p.variant_options); } catch(_) {}
+        }
+        return [];
+      })(),
+      pricing_tiers: (function() {
+        if (Array.isArray(p.pricing_tiers)) return p.pricing_tiers;
+        if (typeof p.pricing_tiers === 'string' && p.pricing_tiers.trim()) {
+          try { return JSON.parse(p.pricing_tiers); } catch(_) {}
+        }
+        if (p.landing_config && p.landing_config.pricing_tiers) {
+          return p.landing_config.pricing_tiers;
+        }
+        return [];
+      })(),
       stock:       p.stock != null ? parseInt(p.stock, 10) : -1,
       sku:         p.sku || ''
     });
@@ -447,6 +464,146 @@
     };
   }
 
+  /**
+   * Render HTML for Product Variant Swatches
+   */
+  function renderVariantSwatches(options, activeSelection) {
+    if (!options || !Array.isArray(options) || options.length === 0) return '';
+    activeSelection = activeSelection || {};
+
+    var html = '<div class="pl-variants-container">';
+    options.forEach(function(opt, optIdx) {
+      var optId = opt.id || ('opt_' + optIdx);
+      var optName = opt.name || 'الخيار';
+      var optType = opt.type || (opt.values && opt.values.some(function(v){ return v && typeof v === 'object' && v.color; }) ? 'color' : 'pill');
+      var values = Array.isArray(opt.values) ? opt.values : [];
+      var firstVal = values[0] ? (typeof values[0] === 'object' ? values[0].name : values[0]) : '';
+      var selectedVal = activeSelection[optId] || firstVal;
+
+      html += '<div class="pl-variant-group" data-option-id="' + escHtml(optId) + '">';
+      html += '<div class="pl-variant-header">';
+      html += '<span>' + escHtml(optName) + ':</span>';
+      html += '<span class="pl-variant-selected-val" id="plSelectedVal_' + escHtml(optId) + '">' + escHtml(selectedVal) + '</span>';
+      html += '</div>';
+
+      html += '<div class="pl-swatches-list">';
+      values.forEach(function(valObj) {
+        var vName = typeof valObj === 'object' ? (valObj.name || '') : String(valObj);
+        var vColor = typeof valObj === 'object' ? (valObj.color || valObj.color_hex || '') : '';
+        var vImage = typeof valObj === 'object' ? (valObj.image || valObj.image_url || '') : '';
+        var vPrice = typeof valObj === 'object' ? valObj.price : null;
+        var isSelected = (vName === selectedVal);
+
+        if (optType === 'color' && vColor) {
+          html += '<button type="button" class="pl-swatch-color' + (isSelected ? ' active' : '') + '" ';
+          html += 'style="background-color:' + escHtml(vColor) + (vImage ? ';background-image:url(\'' + escHtml(vImage) + '\')' : '') + '" ';
+          html += 'data-option-id="' + escHtml(optId) + '" data-value-name="' + escHtml(vName) + '" ';
+          if (vImage) html += 'data-image="' + escHtml(vImage) + '" ';
+          if (vPrice != null) html += 'data-price="' + Number(vPrice) + '" ';
+          html += 'onclick="onVariantSwatchClick(\'' + escHtml(optId) + '\', \'' + escHtml(vName) + '\', this)" ';
+          html += 'title="' + escHtml(vName) + '" aria-label="' + escHtml(vName) + '"></button>';
+        } else {
+          html += '<button type="button" class="pl-swatch-pill' + (isSelected ? ' active' : '') + '" ';
+          html += 'data-option-id="' + escHtml(optId) + '" data-value-name="' + escHtml(vName) + '" ';
+          if (vImage) html += 'data-image="' + escHtml(vImage) + '" ';
+          if (vPrice != null) html += 'data-price="' + Number(vPrice) + '" ';
+          html += 'onclick="onVariantSwatchClick(\'' + escHtml(optId) + '\', \'' + escHtml(vName) + '\', this)">';
+          if (vImage) {
+            html += '<img src="' + escHtml(vImage) + '" alt="' + escHtml(vName) + '" class="pl-swatch-pill-img">';
+          }
+          html += '<span>' + escHtml(vName) + '</span>';
+          html += '</button>';
+        }
+      });
+      html += '</div></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  /**
+   * Render HTML for Quantity Breaks & Bundle Offers
+   */
+  function renderQuantityBreaks(tiers, basePrice, activeQty) {
+    basePrice = Number(basePrice || 0);
+    activeQty = Number(activeQty || 1);
+
+    if (!tiers || !Array.isArray(tiers) || tiers.length === 0) {
+      tiers = [
+        { qty: 1, label: '1 قطعة (شراء عادي)', price: basePrice, subtext: 'السعر القياسي' },
+        { qty: 2, label: '2 قطع (الأكثر طلباً ⭐)', price: Math.round(basePrice * 2 * 0.9), badge: 'وفر 10%', subtext: 'العرض الموصى به للمنازل' },
+        { qty: 3, label: '3 قطع (توفير كلي 🎁)', price: Math.round(basePrice * 3 * 0.8), free_shipping: true, badge: 'شحن مجاني + خصم 20%', subtext: 'أفضل قيمة وأعلى توفير' }
+      ];
+    }
+
+    var html = '<div class="pl-bundles-container">';
+    html += '<div class="pl-bundle-header"><span>🎁 اختر الكمية والعرض المناسب:</span></div>';
+    html += '<div class="pl-tier-cards-grid">';
+
+    tiers.forEach(function(tier, idx) {
+      var tQty = Number(tier.qty || (idx + 1));
+      var isSelected = (tQty === activeQty);
+      var tPrice = tier.price != null ? Number(tier.price) : (basePrice * tQty);
+      var tLabel = tier.label || (tQty + ' قطع');
+      var tSubtext = tier.subtext || '';
+      var tBadge = tier.badge || '';
+      var tFreeShip = Boolean(tier.free_shipping);
+
+      html += '<div class="pl-tier-card' + (isSelected ? ' active' : '') + '" onclick="onSelectQuantityTier(' + tQty + ', ' + tPrice + ', ' + tFreeShip + ')" data-qty="' + tQty + '">';
+      if (tBadge) {
+        html += '<div class="pl-tier-badge-pill">' + escHtml(tBadge) + '</div>';
+      }
+      html += '<div class="pl-tier-radio-group">';
+      html += '<input type="radio" name="plBundleTier" class="pl-tier-radio" value="' + tQty + '" ' + (isSelected ? 'checked' : '') + '>';
+      html += '<div>';
+      html += '<div class="pl-tier-label">' + escHtml(tLabel) + '</div>';
+      if (tSubtext) html += '<div class="pl-tier-subtext">' + escHtml(tSubtext) + '</div>';
+      if (tFreeShip) html += '<div class="pl-tier-free-shipping"><span>🚚</span> <span>توصيل مجاني للباب</span></div>';
+      html += '</div></div>';
+
+      html += '<div class="pl-tier-pricing">';
+      html += '<div class="pl-tier-price">' + formatPrice(tPrice) + '</div>';
+      html += '</div>';
+
+      html += '</div>';
+    });
+
+    html += '</div></div>';
+    return html;
+  }
+
+  /**
+   * Authoritatively calculate tier pricing and savings
+   */
+  function calculateTierSubtotal(basePrice, qty, tiers) {
+    basePrice = Number(basePrice || 0);
+    qty = Math.max(1, parseInt(qty || 1, 10));
+
+    if (tiers && Array.isArray(tiers) && tiers.length > 0) {
+      var matchedTier = tiers.find(function(t) { return Number(t.qty) === qty; });
+      if (matchedTier) {
+        var tierPrice = Number(matchedTier.price || (basePrice * qty));
+        var standardPrice = basePrice * qty;
+        var saveAmount = Math.max(0, standardPrice - tierPrice);
+        return {
+          subtotal: tierPrice,
+          standardTotal: standardPrice,
+          saveAmount: saveAmount,
+          freeShipping: Boolean(matchedTier.free_shipping),
+          tier: matchedTier
+        };
+      }
+    }
+
+    return {
+      subtotal: basePrice * qty,
+      standardTotal: basePrice * qty,
+      saveAmount: 0,
+      freeShipping: false,
+      tier: null
+    };
+  }
+
   // Universal Export (Browser Global / Node Module)
   var exports = {
     WILAYAS: WILAYAS,
@@ -458,7 +615,10 @@
     escHtml: escHtml,
     formatPrice: formatPrice,
     calculateClientShippingCost: calculateClientShippingCost,
-    trackAnalyticsEvent: trackAnalyticsEvent
+    trackAnalyticsEvent: trackAnalyticsEvent,
+    renderVariantSwatches: renderVariantSwatches,
+    renderQuantityBreaks: renderQuantityBreaks,
+    calculateTierSubtotal: calculateTierSubtotal
   };
 
   for (var key in exports) {

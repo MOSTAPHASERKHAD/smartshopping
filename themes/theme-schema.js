@@ -218,6 +218,19 @@
           { q: 'هل أستطيع معاينة المنتج قبل الدفع؟', a: 'نعم بالتأكيد، يمكنك معاينة الطرد والتأكد من سلامته ومطابقته للطلب قبل تسليم المبلغ للموزع.' }
         ]
       }
+    },
+    'custom-code': {
+      type: 'custom-code',
+      name: 'قسم كود مخصص (HTML / Liquid)',
+      icon: '💻',
+      defaultOrder: 9,
+      defaultVisible: false,
+      defaultSettings: {
+        raw_html: '<div style="text-align:center;padding:24px;background:var(--ds-surface-muted,#f1f5f9);border-radius:12px;"><h3>🎯 قسم إعلاني مخصص</h3><p>يمكنك كتابة أو لصق أي كود HTML أو بانر ترويجي هنا</p></div>',
+        custom_css: '',
+        container_width: 'contained',
+        device_visibility: 'all'
+      }
     }
   };
 

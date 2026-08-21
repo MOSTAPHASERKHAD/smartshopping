@@ -204,6 +204,10 @@
       case 'faq-accordion':
         return this._renderFaq(settings, ctx, sectionId);
 
+      case 'custom-code':
+      case 'custom-liquid':
+        return this._renderCustomCode(settings, ctx, sectionId);
+
       default:
         return '<div class="pl-section pl-section-custom" id="' + escHtml(sectionId) + '"></div>';
     }
@@ -394,6 +398,17 @@
     html += '</div>';
     html += '</div>';
     return html;
+  };
+
+  ThemeEngine.prototype._renderCustomCode = function (settings, ctx, id) {
+    var rawHtml = this.injectVariables(settings.raw_html || settings.html || '', ctx);
+    var customCss = settings.custom_css ? '<style>' + settings.custom_css + '</style>' : '';
+    var containerClass = settings.container_width === 'full' ? 'sk-custom-code-full' : 'pl-container';
+    var devClass = settings.device_visibility === 'mobile_only' ? 'sk-mobile-only' : (settings.device_visibility === 'desktop_only' ? 'sk-desktop-only' : '');
+    return '<div class="pl-section sk-custom-code ' + devClass + '" id="' + escHtml(id) + '">' +
+      customCss +
+      '<div class="' + containerClass + '">' + rawHtml + '</div>' +
+    '</div>';
   };
 
   // ── Universal Instance & Export ──

@@ -120,12 +120,29 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
       if (qty > stock) return { ok: false, error: `الكمية المطلوبة من ${dbProduct.name} تتجاوز المخزون المتاح (${stock})` };
     }
 
-    const price = Number(dbProduct.price) || 0;
-    realSubtotal += (price * qty);
+    let price = Number(dbProduct.price) || 0;
+
+    // Check variant details
+    let variantTitle = '';
+    if (item.variant_selection && typeof item.variant_selection === 'object') {
+      variantTitle = Object.values(item.variant_selection).filter(Boolean).join(' / ');
+    } else if (item.variant_title) {
+      variantTitle = String(item.variant_title);
+    }
+
+    // Check quantity tier calculation
+    let itemSubtotal = price * qty;
+    if (item.tier_subtotal && !isNaN(Number(item.tier_subtotal))) {
+      itemSubtotal = Number(item.tier_subtotal);
+    }
+
+    realSubtotal += itemSubtotal;
 
     secureItems.push({
       id: dbProduct.id,
-      name: dbProduct.name,
+      name: dbProduct.name + (variantTitle ? ` (${variantTitle})` : ''),
+      variant: item.variant_selection || null,
+      variant_title: variantTitle || null,
       qty: qty,
       price: price
     });

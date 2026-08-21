@@ -1305,3 +1305,226 @@ body.ltr .pl-lb-nav.next {
     white-space: normal;
   }
 }
+
+/* ============================================================
+   Shopify-Level Pro Features: Variant Swatches & Quantity Breaks
+   ============================================================ */
+
+/* ── 1. Variant Swatches ── */
+.pl-variants-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+  margin: var(--ds-space-4) 0;
+  padding: var(--ds-space-3) 0;
+  border-top: 1px dashed var(--ds-border);
+  border-bottom: 1px dashed var(--ds-border);
+}
+
+.pl-variant-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-2);
+}
+
+.pl-variant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ds-text-primary);
+}
+
+.pl-variant-selected-val {
+  color: var(--ds-accent);
+  font-weight: 600;
+}
+
+.pl-swatches-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  align-items: center;
+}
+
+/* Color Circle Swatch */
+.pl-swatch-color {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px var(--ds-border);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+}
+
+.pl-swatch-color:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 2px var(--ds-accent);
+}
+
+.pl-swatch-color.active {
+  box-shadow: 0 0 0 2.5px var(--ds-accent);
+  transform: scale(1.1);
+}
+
+.pl-swatch-color.active::after {
+  content: '✓';
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+/* Pill / Text / Image Swatch */
+.pl-swatch-pill {
+  padding: 7px 16px;
+  border-radius: var(--ds-radius-md);
+  border: 1.5px solid var(--ds-border);
+  background: var(--ds-surface);
+  color: var(--ds-text-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.pl-swatch-pill:hover {
+  border-color: var(--ds-accent);
+  background: var(--ds-surface-muted);
+}
+
+.pl-swatch-pill.active {
+  border-color: var(--ds-accent);
+  background: var(--ds-accent-light);
+  color: var(--ds-accent);
+  box-shadow: 0 0 0 1px var(--ds-accent);
+}
+
+.pl-swatch-pill-img {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+/* ── 2. Quantity Breaks / Bundle Cards ── */
+.pl-bundles-container {
+  margin: var(--ds-space-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+
+.pl-bundle-header {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ds-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pl-tier-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.pl-tier-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 2px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pl-tier-card:hover {
+  border-color: var(--ds-accent);
+}
+
+.pl-tier-card.active {
+  border-color: var(--ds-accent);
+  background: var(--ds-surface);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.12);
+}
+
+.pl-tier-radio-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pl-tier-radio {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ds-accent);
+  cursor: pointer;
+}
+
+.pl-tier-label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ds-text-primary);
+}
+
+.pl-tier-subtext {
+  font-size: 0.78rem;
+  color: var(--ds-text-secondary);
+  margin-top: 2px;
+}
+
+.pl-tier-pricing {
+  text-align: left;
+}
+
+.pl-tier-price {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ds-text-primary);
+}
+
+.pl-tier-card.active .pl-tier-price {
+  color: var(--ds-accent);
+}
+
+.pl-tier-badge-pill {
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  letter-spacing: 0.3px;
+}
+
+.pl-tier-free-shipping {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--ds-success);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
