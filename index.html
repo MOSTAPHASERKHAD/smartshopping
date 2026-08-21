@@ -2987,9 +2987,9 @@ var lpImgs=[];var lpIdx=0;var lpHeroCount=0;var lpReviewData=[];
 function checkProductLanding(){
   captureUTM();
   var params=new URLSearchParams(window.location.search);
-  var pid=params.get('product');
+  var pid=params.get('product') || params.get('id');
   if(!pid)return;
-  window.location.replace('product.html?product='+encodeURIComponent(pid));
+  window.location.replace('product.html' + window.location.search);
 }
 
 function showProductLanding(p){
