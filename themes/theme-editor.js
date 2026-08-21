@@ -276,14 +276,22 @@
       if (global.toast) global.toast('⏳ جاري فك ضغط واستيراد حزمة الثيم...', false);
       function doUnzip() {
         if (!window.JSZip) {
-          if (global.toast) global.toast('❌ تعذر تحميل مكتبة فك الضغط JSZip', true);
+          if (global.toast) global.toast('❌ تعذر تحميل مكتبة فك الضغط JSZip. يرجى إعادة المحاولة', true);
           return;
         }
         window.JSZip.loadAsync(file).then(function(zip) {
-          var targetFile = zip.file('config/settings_data.json') || (zip.file(/^.*config\/settings_data\.json$/i) ? zip.file(/^.*config\/settings_data\.json$/i)[0] : null) || zip.file('settings_data.json');
+          var targetFile = zip.file('config/settings_data.json') || zip.file('settings_data.json');
           if (!targetFile) {
-            var jsonFiles = zip.file(/config\/.*\.json$/i);
-            if (jsonFiles && jsonFiles.length > 0) targetFile = jsonFiles[0];
+            var matches = zip.file(/settings_data\.json$/i);
+            if (matches && matches.length > 0) targetFile = matches[0];
+          }
+          if (!targetFile) {
+            var cfgMatches = zip.file(/config\/.*\.json$/i);
+            if (cfgMatches && cfgMatches.length > 0) targetFile = cfgMatches[0];
+          }
+          if (!targetFile) {
+            var allJson = zip.file(/\.json$/i);
+            if (allJson && allJson.length > 0) targetFile = allJson[0];
           }
 
           if (targetFile) {
@@ -297,7 +305,7 @@
               }
             });
           } else {
-            if (global.toast) global.toast('❌ لم يتم العثور على config/settings_data.json داخل ملف الـ ZIP', true);
+            if (global.toast) global.toast('❌ لم يتم العثور على ملف إعدادات الثيم (settings_data.json) داخل الأرشيف', true);
           }
         }).catch(function(err) {
           if (global.toast) global.toast('❌ فشل فك ضغط ملف الثيم: ' + err.message, true);

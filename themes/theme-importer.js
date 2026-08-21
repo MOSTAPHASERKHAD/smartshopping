@@ -9,14 +9,14 @@
   var Schema = global.ThemeSchema || (typeof require !== 'undefined' ? require('./theme-schema.js') : null);
 
   var COLOR_ALIASES = {
-    primary: ['primary', 'main', 'brand', 'color_primary', 'color_button', 'color_link', 'accent1', 'theme_primary', 'btn_primary'],
-    secondary: ['secondary', 'sale', 'color_sale', 'color_secondary', 'accent2', 'highlight', 'theme_secondary', 'badge_bg'],
-    background: ['background', 'bg', 'body_bg', 'color_bg', 'color_background', 'page_bg', 'canvas', 'theme_bg'],
-    surface: ['surface', 'card', 'panel', 'color_surface', 'color_card', 'color_panel', 'elevated'],
-    text: ['text', 'foreground', 'color_text', 'color_body_text', 'body_text', 'theme_text', 'fg'],
+    primary: ['primary', 'main', 'brand', 'color_primary', 'color_button', 'color_link', 'accent1', 'theme_primary', 'btn_primary', 'colors_accent_1', 'colors_solid_button_labels'],
+    secondary: ['secondary', 'sale', 'color_sale', 'color_secondary', 'accent2', 'highlight', 'theme_secondary', 'badge_bg', 'colors_outline_button_labels', 'checkout_button_color', 'checkout_accent_color', 'colors_accent_2'],
+    background: ['background', 'bg', 'body_bg', 'color_bg', 'color_background', 'page_bg', 'canvas', 'theme_bg', 'colors_background_1'],
+    surface: ['surface', 'card', 'panel', 'color_surface', 'color_card', 'color_panel', 'elevated', 'colors_background_2'],
+    text: ['text', 'foreground', 'color_text', 'color_body_text', 'body_text', 'theme_text', 'fg', 'colors_text'],
     textMuted: ['textmuted', 'muted', 'text_secondary', 'color_text_muted', 'subtext', 'theme_subtext'],
     textSubtle: ['textsubtle', 'subtle', 'text_tertiary', 'color_text_subtle', 'faint', 'theme_faint'],
-    border: ['border', 'line', 'color_border', 'divider', 'theme_border', 'stroke'],
+    border: ['border', 'line', 'color_border', 'divider', 'theme_border', 'stroke', 'buttons_border', 'inputs_border'],
     success: ['success', 'color_success', 'ok', 'positive', 'green'],
     warning: ['warning', 'color_warning', 'warn', 'yellow', 'amber'],
     danger: ['danger', 'error', 'color_danger', 'color_error', 'red', 'destructive'],
@@ -79,10 +79,13 @@
     },
 
     _fromShopify: function (raw) {
-      var src = raw.current && raw.current.theme ? raw.current.theme
-              : raw.settings_data && raw.settings_data.current && raw.settings_data.current.theme
-              ? raw.settings_data.current.theme
-              : raw.config || raw.settings || raw;
+      var src = (raw.current && raw.current.theme && typeof raw.current.theme === 'object') ? raw.current.theme
+              : (raw.current && typeof raw.current === 'object') ? raw.current
+              : (raw.settings_data && raw.settings_data.current && raw.settings_data.current.theme) ? raw.settings_data.current.theme
+              : (raw.settings_data && raw.settings_data.current && typeof raw.settings_data.current === 'object') ? raw.settings_data.current
+              : (raw.config && typeof raw.config === 'object') ? raw.config
+              : (raw.settings && typeof raw.settings === 'object') ? raw.settings
+              : raw;
 
       var colors = {};
       Object.keys(src).forEach(function (k) {
