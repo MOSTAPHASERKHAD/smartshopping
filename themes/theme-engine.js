@@ -98,6 +98,20 @@
     if (tokens.spacing) Object.keys(tokens.spacing).forEach(function (k) { lines.push('  --space-' + k + ':' + tokens.spacing[k] + ';'); });
     if (tokens.radius) Object.keys(tokens.radius).forEach(function (k) { lines.push('  --radius-' + k + ':' + tokens.radius[k] + ';'); });
     if (tokens.shadow) Object.keys(tokens.shadow).forEach(function (k) { lines.push('  --shadow-' + k + ':' + tokens.shadow[k] + ';'); });
+
+    // Bridge with standalone landing page design tokens (--ds-*)
+    if (c.background) lines.push('  --ds-bg:' + c.background + ';');
+    if (c.surface) lines.push('  --ds-surface:' + c.surface + ';');
+    if (c.text) lines.push('  --ds-text-primary:' + c.text + ';');
+    if (c.textMuted) lines.push('  --ds-text-secondary:' + c.textMuted + ';');
+    if (c.textSubtle) lines.push('  --ds-text-muted:' + c.textSubtle + ';');
+    if (c.primary) lines.push('  --ds-primary:' + c.primary + ';');
+    if (c.secondary || c.accent) lines.push('  --ds-accent:' + (c.secondary || c.accent) + ';');
+    if (c.border) lines.push('  --ds-border:' + c.border + ';');
+    if (tokens.fonts && (tokens.fonts.body || tokens.fonts.heading)) {
+      lines.push('  --ds-font:' + (tokens.fonts.body || tokens.fonts.heading) + ';');
+    }
+
     return ':root {\n' + lines.join('\n') + '\n}';
   };
 

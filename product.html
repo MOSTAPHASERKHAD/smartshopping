@@ -127,7 +127,10 @@
     </div>
   </footer>
 
-  <!-- Scripts -->
+  <!-- Dynamic Theme Engine & Sections Scripts -->
+  <script src="themes/theme-schema.js?v=2.2"></script>
+  <script src="themes/default-themes.js?v=2.2"></script>
+  <script src="themes/theme-engine.js?v=2.2"></script>
   <script src="assets/js/product-utils.js?v=2.2"></script>
   <script>
     // --- Global Configuration ---
@@ -1169,8 +1172,24 @@
       document.head.appendChild(ldScript);
     }
 
-    // --- Bootstrap Page ---
+    // --- Bootstrap Page & Theme Engine ---
     document.addEventListener('DOMContentLoaded', function() {
+      if (window.ThemeEngine) {
+        try {
+          window.ThemeEngine.init();
+        } catch(e) { console.warn('ThemeEngine init error:', e); }
+
+        window.addEventListener('message', function(e) {
+          if (e.data && (e.data.type === 'sk:theme-update' || e.data.type === 'theme-preview')) {
+            var d = e.data;
+            if (d.tokens) {
+              window.ThemeEngine.register({ id: d.themeId || 'preview', name: d.name || 'Preview', tokens: d.tokens }, { silent: true });
+              window.ThemeEngine.apply(d.themeId || 'preview', d.mode || window.ThemeEngine.mode);
+            }
+          }
+        });
+      }
+
       loadSettings();
       loadProductPage();
     });
