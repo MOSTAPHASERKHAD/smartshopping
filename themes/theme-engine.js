@@ -414,6 +414,18 @@
   // ── Universal Instance & Export ──
   var instance = new ThemeEngine();
 
+  // Forward static methods to instance for universal consumer compatibility
+  ThemeEngine.init = function (opts) { return instance.init(opts); };
+  ThemeEngine.apply = function (id, mode) { return instance.apply(id, mode); };
+  ThemeEngine.register = function (theme, opts) { return instance.register(theme, opts); };
+  ThemeEngine.get = function (id) { return instance.get(id); };
+  ThemeEngine.list = function () { return instance.list(); };
+  ThemeEngine.getActiveThemeId = function () { return instance.getActiveThemeId(); };
+  ThemeEngine.renderSection = function (type, id, s, ctx) { return instance.renderSection(type, id, s, ctx); };
+  ThemeEngine.renderSections = function (cfg, ctx) { return instance.renderSections(cfg, ctx); };
+  ThemeEngine.tokensToCSS = function (tokens, mode) { return instance.tokensToCSS(tokens, mode); };
+  ThemeEngine.injectVariables = function (tmpl, ctx) { return instance.injectVariables(tmpl, ctx); };
+
   global.ThemeEngine = ThemeEngine;
   global.themeEngine = instance;
 
