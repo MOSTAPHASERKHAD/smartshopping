@@ -151,62 +151,70 @@
 <div class="sidebar">
   <div class="sidebar-header">
     <div class="logo" style="justify-content:center"><img src="logo.png" alt="Smart Shopping" style="height:30px;width:auto"></div>
-    <div class="logo-badge">Admin Panel</div>
+    <div class="logo-badge" data-i18n="admin_panel">Admin Panel</div>
+    <button type="button" class="btn-lang-toggle" onclick="toggleAdminLang()" title="تغيير اللغة / Switch Language">
+      <span>🌐</span> <span class="admin-lang-label">English</span>
+    </button>
   </div>
   <nav class="sidebar-nav">
-    <a href="#" onclick="showSection('dashboard')" class="active" id="nav-dashboard"><span class="icon">📊</span><span>الرئيسية</span></a>
-    <a href="#" onclick="showSection('analytics')" id="nav-analytics"><span class="icon">📈</span><span>تتبع الحملات والأرباح</span></a>
-    <a href="#" onclick="showSection('products')" id="nav-products"><span class="icon">📦</span><span>المنتجات</span></a>
-    <a href="#" onclick="showSection('orders')" id="nav-orders"><span class="icon">🛒</span><span>الطلبات</span></a>
-    <a href="#" onclick="showSection('shipping')" id="nav-shipping"><span class="icon">🚚</span><span>الشحن والتوصيل</span></a>
-    <a href="#" onclick="showSection('settings')" id="nav-settings"><span class="icon">⚙️</span><span>الإعدادات</span></a>
-    <a href="#" onclick="showSection('coupons')" id="nav-coupons"><span class="icon">🎟️</span><span>الكوبونات</span></a>
-    <a href="#" onclick="showSection('testimonials')" id="nav-testimonials"><span class="icon">⭐</span><span>الشهادات</span></a>
-    <a href="#" onclick="showSection('reviews')" id="nav-reviews"><span class="icon">💬</span><span>التقييمات</span></a>
-    <a href="#" onclick="showSection('banners')" id="nav-banners"><span class="icon">🖼️</span><span>البانرات</span></a>
-    <a href="#" onclick="showSection('themes')" id="nav-themes"><span class="icon">🎨</span><span>الثيمات</span></a>
-    <a href="#" onclick="showSection('newsletter')" id="nav-newsletter"><span class="icon">📧</span><span>النشرة البريدية</span></a>
-    <a href="#" onclick="showSection('pages')" id="nav-pages"><span class="icon">📄</span><span>الصفحات</span></a>
+    <a href="#" onclick="showSection('dashboard')" class="active" id="nav-dashboard"><span class="icon">📊</span><span data-i18n="dashboard">الرئيسية</span></a>
+    <a href="#" onclick="showSection('analytics')" id="nav-analytics"><span class="icon">📈</span><span data-i18n="analytics">تتبع الحملات والأرباح</span></a>
+    <a href="#" onclick="showSection('products')" id="nav-products"><span class="icon">📦</span><span data-i18n="products">المنتجات</span></a>
+    <a href="#" onclick="showSection('orders')" id="nav-orders"><span class="icon">🛒</span><span data-i18n="orders">الطلبات</span></a>
+    <a href="#" onclick="showSection('shipping')" id="nav-shipping"><span class="icon">🚚</span><span data-i18n="shipping">الشحن والتوصيل</span></a>
+    <a href="#" onclick="showSection('settings')" id="nav-settings"><span class="icon">⚙️</span><span data-i18n="settings">الإعدادات</span></a>
+    <a href="#" onclick="showSection('coupons')" id="nav-coupons"><span class="icon">🎟️</span><span data-i18n="coupons">الكوبونات</span></a>
+    <a href="#" onclick="showSection('testimonials')" id="nav-testimonials"><span class="icon">⭐</span><span data-i18n="testimonials">الشهادات</span></a>
+    <a href="#" onclick="showSection('reviews')" id="nav-reviews"><span class="icon">💬</span><span data-i18n="reviews">التقييمات</span></a>
+    <a href="#" onclick="showSection('banners')" id="nav-banners"><span class="icon">🖼️</span><span data-i18n="banners">البانرات</span></a>
+    <a href="#" onclick="showSection('themes')" id="nav-themes"><span class="icon">🎨</span><span data-i18n="themes">الثيمات</span></a>
+    <a href="#" onclick="showSection('newsletter')" id="nav-newsletter"><span class="icon">📧</span><span data-i18n="newsletter">النشرة البريدية</span></a>
+    <a href="#" onclick="showSection('pages')" id="nav-pages"><span class="icon">📄</span><span data-i18n="pages">الصفحات</span></a>
   </nav>
-  <div class="sidebar-footer"><span id="adminUserLabel">Admin</span> · <a href="#" onclick="doLogout()" style="color:var(--accent);text-decoration:none">خروج</a></div>
+  <div class="sidebar-footer"><span id="adminUserLabel">Admin</span> · <a href="#" onclick="doLogout()" style="color:var(--accent);text-decoration:none" data-i18n="logout">خروج</a></div>
 </div>
 
 <div class="main">
   <!-- Dashboard -->
   <div id="sec-dashboard">
-    <div class="top-bar"><h1>لوحة التحكم</h1></div>
+    <div class="top-bar">
+      <h1 data-i18n="admin_panel">لوحة التحكم</h1>
+      <button type="button" class="btn-lang-toggle" onclick="toggleAdminLang()" title="تغيير اللغة / Switch Language">
+        <span>🌐</span> <span class="admin-lang-label">English</span>
+      </button>
+    </div>
     <div class="stats">
-      <div class="stat-card"><div class="label">المنتجات</div><div class="value accent" id="stat-products">0</div></div>
-      <div class="stat-card"><div class="label">الطلبات</div><div class="value" id="stat-orders">0</div></div>
-      <div class="stat-card"><div class="label">قيد الانتظار</div><div class="value" id="stat-pending" style="color:#ffc107">0</div></div>
-      <div class="stat-card"><div class="label">الإيراد</div><div class="value success" id="stat-revenue">0 DZD</div></div>
-      <div class="stat-card"><div class="label">طلبات اليوم</div><div class="value" id="stat-today" style="color:var(--info)">0</div></div>
-      <div class="stat-card"><div class="label">إيراد اليوم</div><div class="value success" id="stat-today-revenue">0 DZD</div></div>
+      <div class="stat-card"><div class="label" data-i18n="stat_products">المنتجات</div><div class="value accent" id="stat-products">0</div></div>
+      <div class="stat-card"><div class="label" data-i18n="stat_orders">الطلبات</div><div class="value" id="stat-orders">0</div></div>
+      <div class="stat-card"><div class="label" data-i18n="stat_pending">قيد الانتظار</div><div class="value" id="stat-pending" style="color:#ffc107">0</div></div>
+      <div class="stat-card"><div class="label" data-i18n="stat_revenue">الإيراد الإجمالي</div><div class="value success" id="stat-revenue">0 DZD</div></div>
+      <div class="stat-card"><div class="label" data-i18n="stat_today_orders">طلبات اليوم</div><div class="value" id="stat-today" style="color:var(--info)">0</div></div>
+      <div class="stat-card"><div class="label" data-i18n="stat_today_revenue">إيراد اليوم</div><div class="value success" id="stat-today-revenue">0 DZD</div></div>
     </div>
     <div class="chart-row">
       <div class="chart-card">
-        <h4>📈 طلبات آخر 7 أيام</h4>
+        <h4 data-i18n="orders_last_7d">📈 طلبات آخر 7 أيام</h4>
         <div class="bar-chart" id="chart-orders-week"></div>
       </div>
       <div class="chart-card">
-        <h4>🏆 أكثر المنتجات طلباً</h4>
+        <h4 data-i18n="top_products">🏆 أكثر المنتجات طلباً</h4>
         <ul class="top-list" id="top-products"></ul>
       </div>
     </div>
     <div class="chart-row">
       <div class="chart-card">
-        <h4>📍 أكثر الولايات طلباتاً</h4>
+        <h4 data-i18n="top_wilayas">📍 أكثر الولايات طلباتاً</h4>
         <ul class="top-list" id="top-wilayas"></ul>
       </div>
       <div class="chart-card">
-        <h4>📊 حالة الطلبات</h4>
+        <h4 data-i18n="order_status_chart">📊 حالة الطلبات</h4>
         <div class="bar-chart" id="chart-status" style="align-items:flex-end"></div>
       </div>
     </div>
     <div class="panel">
-      <div class="panel-header"><h3>آخر الطلبات</h3></div>
+      <div class="panel-header"><h3 data-i18n="recent_orders">آخر الطلبات</h3></div>
       <div class="panel-body"><div class="table-wrap"><table><thead><tr>
-        <th>رقم الطلب</th><th>العميل</th><th>الهاتف</th><th>الولاية</th><th>المبلغ</th><th>الحالة</th>
+        <th data-i18n="th_order_id">رقم الطلب</th><th data-i18n="th_customer">العميل</th><th data-i18n="th_phone">الهاتف</th><th data-i18n="th_wilaya">الولاية</th><th data-i18n="th_amount">المبلغ</th><th data-i18n="th_status">الحالة</th>
       </tr></thead><tbody id="dash-orders"></tbody></table></div></div>
     </div>
   </div>
@@ -344,12 +352,19 @@
   <!-- Products -->
   <div id="sec-products" class="hidden">
     <div class="top-bar">
-      <h1>المنتجات</h1>
-      <button class="btn btn-accent" onclick="openProductModal()">+ إضافة منتج</button>
+      <h1 data-i18n="products">المنتجات</h1>
+      <button class="btn btn-accent" onclick="openProductModal()" data-i18n="btn_add_product">+ إضافة منتج</button>
     </div>
     <div class="panel">
       <div class="panel-body"><div class="table-wrap"><table><thead><tr>
-        <th>الصورة</th><th>الاسم</th><th>السعر</th><th>التصنيف</th><th>المخزون</th><th>الحالة</th><th>رابط الهبوط</th><th>إجراءات</th>
+        <th data-i18n="th_image" style="width:60px">الصورة</th>
+        <th data-i18n="th_name">الاسم</th>
+        <th data-i18n="th_price">السعر</th>
+        <th data-i18n="th_category">التصنيف</th>
+        <th data-i18n="th_stock">المخزون</th>
+        <th data-i18n="th_status">الحالة</th>
+        <th data-i18n="th_landing_url">رابط الهبوط</th>
+        <th data-i18n="th_actions" style="width:130px">إجراءات</th>
       </tr></thead><tbody id="products-list"></tbody></table></div></div>
     </div>
   </div>
@@ -357,28 +372,36 @@
   <!-- Orders -->
   <div id="sec-orders" class="hidden">
     <div class="top-bar">
-      <h1>الطلبات <span class="count-badge" id="orders-count-badge"></span></h1>
+      <h1><span data-i18n="orders">الطلبات</span> <span class="count-badge" id="orders-count-badge"></span></h1>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-success btn-sm" onclick="exportOrdersCSV()">📥 تصدير CSV</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteSelectedOrders()">🗑 حذف المحدد</button>
+        <button class="btn btn-success btn-sm" onclick="exportOrdersCSV()" data-i18n="btn_export_csv">📥 تصدير CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSelectedOrders()" data-i18n="btn_delete_selected">🗑 حذف المحدد</button>
       </div>
     </div>
     <div class="panel">
       <div class="panel-body">
         <div class="order-filters">
-          <input type="text" id="orderSearch" placeholder="بحث برقم الطلب أو اسم العميل أو الهاتف..." oninput="renderOrders()">
+          <input type="text" id="orderSearch" data-i18n-placeholder="search_orders_ph" placeholder="بحث برقم الطلب أو اسم العميل أو الهاتف..." oninput="renderOrders()">
           <select id="orderStatusFilter" onchange="renderOrders()">
-            <option value="">جميع الحالات</option>
-            <option value="pending">قيد الانتظار</option>
-            <option value="confirmed">تم التأكيد</option>
-            <option value="shipped">تم الشحن</option>
-            <option value="delivered">تم التوصيل</option>
-            <option value="cancelled">ملغي</option>
+            <option value="" data-i18n="all_statuses">جميع الحالات</option>
+            <option value="pending" data-i18n="st_pending">قيد الانتظار</option>
+            <option value="confirmed" data-i18n="st_confirmed">تم التأكيد</option>
+            <option value="shipped" data-i18n="st_shipped">تم الشحن</option>
+            <option value="delivered" data-i18n="st_delivered">تم التوصيل</option>
+            <option value="cancelled" data-i18n="st_cancelled">ملغي</option>
           </select>
         </div>
         <div class="table-wrap"><table><thead><tr>
-          <th><input type="checkbox" id="selectAllOrders" onchange="toggleSelectAll(this)"></th>
-          <th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>الولاية</th><th>التوصيل</th><th>المبلغ</th><th>الحالة</th><th>إجراءات</th>
+          <th style="width:36px;text-align:center"><input type="checkbox" id="selectAllOrders" onchange="toggleSelectAll(this)"></th>
+          <th data-i18n="th_order_id">رقم الطلب</th>
+          <th data-i18n="th_date">التاريخ</th>
+          <th data-i18n="th_customer">العميل</th>
+          <th data-i18n="th_phone">الهاتف</th>
+          <th data-i18n="th_wilaya">الولاية</th>
+          <th data-i18n="th_delivery">التوصيل</th>
+          <th data-i18n="th_amount">المبلغ</th>
+          <th data-i18n="th_status">الحالة</th>
+          <th data-i18n="th_actions" style="width:160px">إجراءات</th>
         </tr></thead><tbody id="orders-list"></tbody></table></div>
       </div>
     </div>
@@ -982,7 +1005,230 @@ function apiGet(action, params, callback, retries) {
       if (attempt < maxRetries) { attempt++; setTimeout(tryCall, 1000 * attempt); } else { callback({ error: 'Network error' }); }
     });
   }
-  tryCall();
+// ===== ADMIN I18N SYSTEM (Bilingual AR / EN) =====
+var currentAdminLang = (function() {
+  try { return localStorage.getItem('admin_lang') || 'ar'; } catch(e) { return 'ar'; }
+})();
+
+var ADMIN_I18N = {
+  ar: {
+    dashboard: 'الرئيسية',
+    analytics: 'تتبع الحملات والأرباح',
+    products: 'المنتجات',
+    orders: 'الطلبات',
+    shipping: 'الشحن والتوصيل',
+    settings: 'الإعدادات',
+    coupons: 'الكوبونات',
+    testimonials: 'الشهادات',
+    reviews: 'التقييمات',
+    banners: 'البانرات',
+    themes: 'الثيمات',
+    newsletter: 'النشرة البريدية',
+    pages: 'الصفحات',
+    logout: 'خروج',
+    admin_panel: 'لوحة التحكم',
+    
+    // Stats & Dashboard
+    stat_products: 'المنتجات',
+    stat_orders: 'الطلبات',
+    stat_pending: 'قيد الانتظار',
+    stat_revenue: 'الإيراد الإجمالي',
+    stat_today_orders: 'طلبات اليوم',
+    stat_today_revenue: 'إيراد اليوم',
+    recent_orders: 'آخر الطلبات',
+    top_products: 'أكثر المنتجات طلباً',
+    top_wilayas: 'أكثر الولايات طلباتاً',
+    order_status_chart: 'حالة الطلبات',
+    orders_last_7d: 'طلبات آخر 7 أيام',
+
+    // Table Headers
+    th_order_id: 'رقم الطلب',
+    th_customer: 'العميل',
+    th_phone: 'الهاتف',
+    th_wilaya: 'الولاية',
+    th_delivery: 'التوصيل',
+    th_amount: 'المبلغ',
+    th_status: 'الحالة',
+    th_date: 'التاريخ',
+    th_actions: 'إجراءات',
+    th_image: 'الصورة',
+    th_name: 'اسم المنتج',
+    th_price: 'السعر',
+    th_category: 'التصنيف',
+    th_stock: 'المخزون',
+    th_landing_url: 'رابط الهبوط',
+    
+    // Statuses
+    st_pending: 'قيد الانتظار',
+    st_confirmed: 'تم التأكيد',
+    st_shipped: 'تم الشحن',
+    st_delivered: 'تم التوصيل',
+    st_cancelled: 'ملغي',
+    st_active: 'نشط',
+    st_inactive: 'غير نشط',
+    st_out_of_stock: 'نفذ',
+    st_remaining: 'متبقي',
+
+    // Buttons & Actions
+    btn_add_product: '+ إضافة منتج',
+    btn_export_csv: '📥 تصدير CSV',
+    btn_delete_selected: '🗑 حذف المحدد',
+    btn_edit: 'تعديل',
+    btn_delete: 'حذف',
+    btn_details: 'تفاصيل',
+    btn_whatsapp: 'واتساب',
+    btn_copy: 'نسخ',
+    btn_open: 'فتح',
+    btn_save: 'حفظ',
+    btn_cancel: 'إلغاء',
+    btn_refresh: 'تحديث البيانات',
+    
+    // Filters & Placeholders
+    search_orders_ph: 'بحث برقم الطلب أو اسم العميل أو الهاتف...',
+    all_statuses: 'جميع الحالات',
+    empty_orders: 'لا توجد طلبات مطابقة',
+    empty_products: 'لا توجد منتجات',
+    
+    // Shipping & Delivery
+    delivery_home: 'منزل',
+    delivery_office: 'مكتب',
+    
+    lang_btn: 'English'
+  },
+  en: {
+    dashboard: 'Dashboard',
+    analytics: 'Campaign ROI',
+    products: 'Products',
+    orders: 'Orders',
+    shipping: 'Shipping & Delivery',
+    settings: 'Settings',
+    coupons: 'Coupons',
+    testimonials: 'Testimonials',
+    reviews: 'Reviews',
+    banners: 'Banners',
+    themes: 'Themes',
+    newsletter: 'Newsletter',
+    pages: 'Pages',
+    logout: 'Logout',
+    admin_panel: 'Admin Panel',
+    
+    // Stats & Dashboard
+    stat_products: 'Products',
+    stat_orders: 'Orders',
+    stat_pending: 'Pending',
+    stat_revenue: 'Total Revenue',
+    stat_today_orders: "Today's Orders",
+    stat_today_revenue: "Today's Revenue",
+    recent_orders: 'Recent Orders',
+    top_products: 'Top Selling Products',
+    top_wilayas: 'Top Wilayas',
+    order_status_chart: 'Order Statuses',
+    orders_last_7d: 'Orders (Last 7 Days)',
+
+    // Table Headers
+    th_order_id: 'Order ID',
+    th_customer: 'Customer',
+    th_phone: 'Phone',
+    th_wilaya: 'Wilaya',
+    th_delivery: 'Delivery',
+    th_amount: 'Amount',
+    th_status: 'Status',
+    th_date: 'Date',
+    th_actions: 'Actions',
+    th_image: 'Image',
+    th_name: 'Product Name',
+    th_price: 'Price',
+    th_category: 'Category',
+    th_stock: 'Stock',
+    th_landing_url: 'Landing Page',
+    
+    // Statuses
+    st_pending: 'Pending',
+    st_confirmed: 'Confirmed',
+    st_shipped: 'Shipped',
+    st_delivered: 'Delivered',
+    st_cancelled: 'Cancelled',
+    st_active: 'Active',
+    st_inactive: 'Inactive',
+    st_out_of_stock: 'Out of Stock',
+    st_remaining: 'Left: ',
+
+    // Buttons & Actions
+    btn_add_product: '+ Add Product',
+    btn_export_csv: '📥 Export CSV',
+    btn_delete_selected: '🗑 Delete Selected',
+    btn_edit: 'Edit',
+    btn_delete: 'Delete',
+    btn_details: 'Details',
+    btn_whatsapp: 'WhatsApp',
+    btn_copy: 'Copy',
+    btn_open: 'Open',
+    btn_save: 'Save',
+    btn_cancel: 'Cancel',
+    btn_refresh: 'Refresh Data',
+    
+    // Filters & Placeholders
+    search_orders_ph: 'Search by order ID, customer name, or phone...',
+    all_statuses: 'All Statuses',
+    empty_orders: 'No matching orders found',
+    empty_products: 'No products found',
+    
+    // Shipping & Delivery
+    delivery_home: 'Home',
+    delivery_office: 'Office',
+    
+    lang_btn: 'العربية'
+  }
+};
+
+function adminT(key) {
+  var langObj = ADMIN_I18N[currentAdminLang] || ADMIN_I18N.ar;
+  return (langObj && langObj[key] != null) ? langObj[key] : (ADMIN_I18N.ar[key] != null ? ADMIN_I18N.ar[key] : key);
+}
+
+function setAdminLang(lang) {
+  currentAdminLang = (lang === 'en') ? 'en' : 'ar';
+  try { localStorage.setItem('admin_lang', currentAdminLang); } catch(e) {}
+  
+  document.documentElement.lang = currentAdminLang;
+  document.documentElement.dir = (currentAdminLang === 'ar') ? 'rtl' : 'ltr';
+  if (currentAdminLang === 'ar') {
+    document.body.classList.add('rtl');
+    document.body.classList.remove('ltr');
+  } else {
+    document.body.classList.add('ltr');
+    document.body.classList.remove('rtl');
+  }
+
+  // Update language button text
+  var btns = document.querySelectorAll('.admin-lang-label');
+  btns.forEach(function(el) {
+    el.textContent = (currentAdminLang === 'ar') ? 'English' : 'العربية';
+  });
+
+  // Update all data-i18n elements in DOM
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    if (key) el.textContent = adminT(key);
+  });
+
+  // Update placeholders
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n-placeholder');
+    if (key) el.setAttribute('placeholder', adminT(key));
+  });
+
+  // Re-render active tables if populated
+  if (typeof allOrders !== 'undefined' && allOrders && allOrders.length) renderOrders();
+  if (typeof allProducts !== 'undefined' && allProducts && allProducts.length) {
+    var pList = document.getElementById('products-list');
+    if (pList && pList.children.length) loadProducts();
+  }
+  if (typeof renderDashOrders === 'function') renderDashOrders();
+}
+
+function toggleAdminLang() {
+  setAdminLang(currentAdminLang === 'ar' ? 'en' : 'ar');
 }
 
 // ===== NAV =====
@@ -1273,21 +1519,24 @@ function loadProducts() {
     allProducts = data.products;
     refreshCategoryList();
     if (!data.products.length) {
-      document.getElementById('products-list').innerHTML = '<tr><td colspan="8" class="empty">لا توجد منتجات</td></tr>';
+      document.getElementById('products-list').innerHTML = '<tr><td colspan="8" class="empty">' + adminT('empty_products') + '</td></tr>';
       return;
     }
     var html = data.products.map(function(p) {
-      var img = p.image_url ? '<img class="img-thumb" src="' + esc(p.image_url) + '" onerror="this.style.display=\'none\'">' : '<div class="img-thumb" style="display:flex;align-items:center;justify-content:center;color:#999;font-size:.7rem">لا صورة</div>';
+      var img = p.image_url ? '<img class="img-thumb" src="' + esc(p.image_url) + '" onerror="this.style.display=\'none\'">' : '<div class="img-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:.7rem">' + (currentAdminLang==='ar'?'لا صورة':'No image') + '</div>';
       var pid = esc(p.id || '');
+      var activeBadge = p.active ? '<span class="badge badge-confirmed">' + adminT('st_active') + '</span>' : '<span class="badge badge-cancelled">' + adminT('st_inactive') + '</span>';
+      var stockBadge = p.stock <= 0 ? '<span class="badge badge-cancelled">' + adminT('st_out_of_stock') + '</span>' : (p.stock <= 5 ? '<span class="badge badge-pending">' + adminT('st_remaining') + ' ' + p.stock + '</span>' : p.stock);
+      var lpUrl = window.location.origin + '/product.html?product=' + pid;
       return '<tr>' +
-        '<td>' + img + '</td>' +
-        '<td><strong>' + esc(p.name || '') + '</strong>' + (p.sku ? '<br><small style="color:#999">' + esc(p.sku) + '</small>' : '') + '</td>' +
-        '<td>' + Number(p.price).toLocaleString() + ' DZD</td>' +
+        '<td style="width:60px">' + img + '</td>' +
+        '<td><strong style="color:var(--text)">' + esc(p.name || '') + '</strong>' + (p.sku ? '<br><small style="color:var(--text3);font-family:monospace">' + esc(p.sku) + '</small>' : '') + '</td>' +
+        '<td style="font-weight:700;white-space:nowrap">' + Number(p.price).toLocaleString() + ' DZD</td>' +
         '<td>' + esc(p.category || '-') + '</td>' +
-        '<td>' + (p.stock <= 0 ? '<span class="badge badge-cancelled">نفذ</span>' : p.stock <= 5 ? '<span class="badge badge-pending">متبقي ' + p.stock + '</span>' : p.stock) + '</td>' +
-        '<td>' + (p.active ? '<span class="badge badge-confirmed">نشط</span>' : '<span class="badge badge-cancelled">فير نشط</span>') + '</td>' +
-        '<td><div style="display:flex;flex-direction:column;gap:4px"><input type="text" readonly value="' + esc(window.location.origin + '/?product=' + pid) + '" style="font-size:.65rem;padding:4px 6px;border:1px solid #eaeaea;border-radius:4px;width:180px;background:#f9f9f9;direction:ltr;text-align:left" id="lp-link-' + pid + '"><div style="display:flex;gap:4px"><button class="btn btn-sm" style="background:#25d366;color:#fff;padding:3px 8px;font-size:.65rem" onclick="copyLandingLink(\'' + pid + '\')">نسخ</button><a href="' + esc(window.location.origin + '/?product=' + pid) + '" target="_blank" class="btn btn-sm" style="background:#3b82f6;color:#fff;padding:3px 8px;font-size:.65rem;text-decoration:none">فتح</a></div></div></td>' +
-        '<td><button class="btn btn-info btn-sm" onclick="editProduct(' + pid + ')">تعديل</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct(' + pid + ',\'' + esc(p.name || '') + '\')">حذف</button></td>' +
+        '<td>' + stockBadge + '</td>' +
+        '<td>' + activeBadge + '</td>' +
+        '<td><div style="display:flex;align-items:center;gap:4px"><input type="text" readonly value="' + esc(lpUrl) + '" style="font-size:.72rem;padding:4px 6px;border:1px solid var(--border);border-radius:4px;width:150px;background:var(--bg);direction:ltr;text-align:left" id="lp-link-' + pid + '"><button class="btn btn-sm btn-outline" style="padding:3px 7px;font-size:0.72rem" onclick="copyLandingLink(\'' + pid + '\')">' + adminT('btn_copy') + '</button><a href="' + esc(lpUrl) + '" target="_blank" class="btn btn-sm btn-info" style="padding:3px 7px;font-size:0.72rem;text-decoration:none">' + adminT('btn_open') + '</a></div></td>' +
+        '<td style="white-space:nowrap"><div style="display:inline-flex;gap:4px"><button class="btn btn-info btn-sm" onclick="editProduct(' + pid + ')">' + adminT('btn_edit') + '</button> <button class="btn btn-danger btn-sm" onclick="deleteProduct(' + pid + ',\'' + esc(p.name || '') + '\')">' + adminT('btn_delete') + '</button></div></td>' +
       '</tr>';
     }).join('');
     document.getElementById('products-list').innerHTML = html;
@@ -1798,7 +2047,7 @@ function renderOrders() {
   });
   document.getElementById('orders-count-badge').textContent = '(' + filtered.length + ')';
   if (!filtered.length) {
-    document.getElementById('orders-list').innerHTML = '<tr><td colspan="10" class="empty">لا توجد طلبات مطابقة</td></tr>';
+    document.getElementById('orders-list').innerHTML = '<tr><td colspan="10" class="empty">' + adminT('empty_orders') + '</td></tr>';
     return;
   }
   var html = filtered.map(function(o) {
@@ -1807,26 +2056,26 @@ function renderOrders() {
     var itemsText = items.map(function(it) { return esc(it.name || it.title || '') + ' x' + it.qty; }).join(', ');
     var oid = esc(o.order_id || '');
     return '<tr>' +
-      '<td><input type="checkbox" class="order-check" value="' + oid + '"></td>' +
-      '<td><strong>' + esc(o.order_id) + '</strong></td>' +
-      '<td>' + esc((o.created_at || '').substring(0, 10)) + '</td>' +
-      '<td>' + esc(o.name) + '</td>' +
-      '<td><a href="https://wa.me/' + esc(o.phone || '') + '" target="_blank" style="color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:3px">📱 ' + esc(o.phone || '') + '</a></td>' +
-      '<td>' + esc(o.wilaya_ar) + '</td>' +
-      '<td>' + (o.delivery_type === 'Office' ? 'مكتب' : 'منزل') + '</td>' +
-      '<td>' + Number(o.subtotal).toLocaleString() + ' DZD</td>' +
-      '<td><select onchange="updateOrderStatus(\'' + oid + '\',this.value)" style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:.75rem">' +
-        '<option value="pending"' + (o.status === 'pending' ? ' selected' : '') + '>قيد الانتظار</option>' +
-        '<option value="confirmed"' + (o.status === 'confirmed' ? ' selected' : '') + '>تم التأكيد</option>' +
-        '<option value="shipped"' + (o.status === 'shipped' ? ' selected' : '') + '>تم الشحن</option>' +
-        '<option value="delivered"' + (o.status === 'delivered' ? ' selected' : '') + '>تم التوصيل</option>' +
-        '<option value="cancelled"' + (o.status === 'cancelled' ? ' selected' : '') + '>ملقي</option>' +
+      '<td style="width:36px;text-align:center"><input type="checkbox" class="order-check" value="' + oid + '"></td>' +
+      '<td><strong style="color:var(--accent);font-family:monospace;font-size:0.82rem">' + esc(o.order_id) + '</strong></td>' +
+      '<td style="white-space:nowrap;color:var(--text3);font-size:0.78rem">' + esc((o.created_at || '').substring(0, 10)) + '</td>' +
+      '<td><div style="font-weight:600">' + esc(o.name) + '</div>' + (itemsText ? '<div style="font-size:0.72rem;color:var(--text3)">' + itemsText + '</div>' : '') + '</td>' +
+      '<td><a href="https://wa.me/' + esc(o.phone || '') + '" target="_blank" style="color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-family:monospace;white-space:nowrap">📱 ' + esc(o.phone || '') + '</a></td>' +
+      '<td>' + esc(o.wilaya_ar || o.wilaya || '-') + '</td>' +
+      '<td>' + (o.delivery_type === 'Office' ? adminT('delivery_office') : adminT('delivery_home')) + '</td>' +
+      '<td style="font-weight:700;white-space:nowrap">' + Number(o.subtotal || 0).toLocaleString() + ' DZD</td>' +
+      '<td><select onchange="updateOrderStatus(\'' + oid + '\',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:var(--bg);color:var(--text);font-weight:600">' +
+        '<option value="pending"' + (o.status === 'pending' ? ' selected' : '') + '>' + adminT('st_pending') + '</option>' +
+        '<option value="confirmed"' + (o.status === 'confirmed' ? ' selected' : '') + '>' + adminT('st_confirmed') + '</option>' +
+        '<option value="shipped"' + (o.status === 'shipped' ? ' selected' : '') + '>' + adminT('st_shipped') + '</option>' +
+        '<option value="delivered"' + (o.status === 'delivered' ? ' selected' : '') + '>' + adminT('st_delivered') + '</option>' +
+        '<option value="cancelled"' + (o.status === 'cancelled' ? ' selected' : '') + '>' + adminT('st_cancelled') + '</option>' +
       '</select></td>' +
-      '<td style="white-space:nowrap">' +
-        '<button class="btn btn-info btn-xs" onclick="viewOrder(\'' + oid + '\')">تفاصيل</button> ' +
-        '<a href="https://wa.me/' + esc(o.phone || '') + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-xs">واتساب</a> ' +
-        '<button class="btn btn-danger btn-xs" onclick="deleteOrder(\'' + oid + '\',\'' + oid + '\')">حذف</button>' +
-      '</td>' +
+      '<td><div style="display:inline-flex;gap:4px;white-space:nowrap">' +
+        '<button class="btn btn-info btn-xs" onclick="viewOrder(\'' + oid + '\')">' + adminT('btn_details') + '</button> ' +
+        '<a href="https://wa.me/' + esc(o.phone || '') + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-xs">' + adminT('btn_whatsapp') + '</a> ' +
+        '<button class="btn btn-danger btn-xs" onclick="deleteOrder(\'' + oid + '\',\'' + oid + '\')">' + adminT('btn_delete') + '</button>' +
+      '</div></td>' +
     '</tr>';
   }).join('');
   document.getElementById('orders-list').innerHTML = html;
@@ -3033,6 +3282,7 @@ function showAdminPanel() {
     }
   } catch(e) {}
   if (window.ThemeCustomizer) { ThemeCustomizer.autoOpen(); }
+  setAdminLang(currentAdminLang);
   loadDashboard();
   startAutoRefresh();
 }
