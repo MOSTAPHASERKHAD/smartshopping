@@ -337,7 +337,35 @@
       updateProductSEO(p);
       trackProductViewContent(p);
 
-      var title = p.title_ar || p.name || 'منتج متميز';
+      // --- Landing Config & Section Customization ---
+      var lpCfg = p.landing_config || {};
+      if (typeof lpCfg === 'string' && lpCfg.trim()) {
+        try { lpCfg = JSON.parse(lpCfg); } catch(e) { lpCfg = {}; }
+      }
+      var isCustom = (lpCfg.mode === 'custom');
+      var sec = lpCfg.sections || {};
+      var showHero = !isCustom || (sec.hero !== false);
+      var showGallery = !isCustom || (sec.gallery !== false);
+      var showFeatures = !isCustom || (sec.features !== false);
+      var showDetails = !isCustom || (sec.details !== false);
+      var showReviews = !isCustom || (sec.reviews !== false);
+      var showFaq = !isCustom || (sec.faq !== false);
+      var showTrust = !isCustom || (sec.trust !== false);
+      var showForm = true; // Always displayed
+
+      var customHero = lpCfg.hero || {};
+      var accentColor = (customHero.accent_color && /^#[0-9a-fA-F]{6}$/.test(customHero.accent_color)) ? customHero.accent_color : null;
+      if (accentColor) {
+        document.documentElement.style.setProperty('--ds-accent', accentColor);
+        document.documentElement.style.setProperty('--ds-accent-hover', accentColor);
+        document.documentElement.style.setProperty('--pl-accent', accentColor);
+      }
+
+      var title = (customHero.headline && customHero.headline.trim()) ? customHero.headline.trim() : (p.title_ar || p.name || 'منتج متميز');
+      var subtitle = (customHero.subtitle && customHero.subtitle.trim()) ? customHero.subtitle.trim() : '';
+      var ctaLabel = (customHero.cta_label && customHero.cta_label.trim()) ? customHero.cta_label.trim() : '🛒 اطلب الآن';
+      var urgencyText = (customHero.urgency_text && customHero.urgency_text.trim()) ? customHero.urgency_text.trim() : '';
+
       var priceStr = formatPrice(p.price);
       var oldPriceStr = p.old_price ? formatPrice(p.old_price) : '';
       var hasDiscount = p.old_price && p.old_price > p.price;
@@ -348,18 +376,18 @@
       var waPhone = storeSettings.phone || storeSettings.whatsapp || '213557543177';
       var waText = encodeURIComponent('مرحباً، أود الاستفسار عن منتج: ' + title + '\nالرابط: ' + window.location.href);
 
-      // Build Gallery HTML
+      // Build Gallery HTML (Always shows main image; thumbnails show when showGallery is true)
       var galleryHtml = '<div class="pl-gallery-col">';
       galleryHtml += '<div class="pl-main-image-box" id="plMainImageBox" onclick="openLightbox(currentGalleryIndex)">';
       galleryHtml += '<img src="' + escHtml(images[0]) + '" alt="' + escHtml(title) + '" id="plMainImg" loading="eager">';
       galleryHtml += '<button type="button" class="pl-zoom-trigger-btn" onclick="openLightbox(currentGalleryIndex); event.stopPropagation();" aria-label="تكبير الصورة"><span>🔍</span> <span>انقر للتكبير</span></button>';
-      if (images.length > 1) {
+      if (showGallery && images.length > 1) {
         galleryHtml += '<button type="button" class="pl-gallery-nav-btn prev" onclick="navGallery(-1); event.stopPropagation();" aria-label="السابق">›</button>';
         galleryHtml += '<button type="button" class="pl-gallery-nav-btn next" onclick="navGallery(1); event.stopPropagation();" aria-label="التالي">‹</button>';
       }
       galleryHtml += '</div>';
 
-      if (images.length > 1) {
+      if (showGallery && images.length > 1) {
         galleryHtml += '<div class="pl-thumbs-list" id="plThumbsList">';
         images.forEach(function(imgUrl, idx) {
           galleryHtml += '<div class="pl-thumb-item' + (idx === 0 ? ' active' : '') + '" onclick="selectGalleryIndex(' + idx + ')">';
@@ -377,14 +405,22 @@
         infoHtml += '<span class="pl-discount-badge">تخفيض ' + discountPct + '%</span>';
       }
       infoHtml += '<span class="pl-stock-badge">✓ متوفر في المخزن</span>';
+      if (urgencyText) {
+        infoHtml += '<span class="pl-urgency-badge" style="background:#fee2e2;color:#dc2626;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:700">🔥 ' + escHtml(urgencyText) + '</span>';
+      }
       infoHtml += '</div>';
 
       infoHtml += '<h1 class="pl-product-title">' + escHtml(title) + '</h1>';
+      if (subtitle) {
+        infoHtml += '<p class="pl-product-subtitle" style="font-size:1.02rem;color:var(--ds-text2,#64748b);margin:-4px 0 12px;line-height:1.5">' + escHtml(subtitle) + '</p>';
+      }
 
-      infoHtml += '<div class="pl-rating-row">';
-      infoHtml += '<span class="pl-stars" style="color:var(--ds-success)">🛡️</span>';
-      infoHtml += '<span>منتج أصلي مع ضمان المعاينة قبل الدفع</span>';
-      infoHtml += '</div>';
+      if (showReviews) {
+        infoHtml += '<div class="pl-rating-row">';
+        infoHtml += '<span class="pl-stars" style="color:var(--ds-success)">🛡️</span>';
+        infoHtml += '<span>منتج أصلي مع ضمان المعاينة قبل الدفع</span>';
+        infoHtml += '</div>';
+      }
 
       infoHtml += '<div class="pl-price-card">';
       infoHtml += '<div class="pl-current-price">' + priceStr + '</div>';
@@ -394,17 +430,19 @@
       }
       infoHtml += '</div>';
 
-      // Benefits list
-      infoHtml += '<div class="pl-short-benefits">';
-      infoHtml += '<div class="pl-benefit-line"><span class="icon">🚚</span><span>توصيل سريع ومضمون إلى <strong>58 ولاية</strong></span></div>';
-      infoHtml += '<div class="pl-benefit-line"><span class="icon">💵</span><span>الدفع نقداً <strong>عند الاستلام</strong> بعد المعاينة</span></div>';
-      infoHtml += '<div class="pl-benefit-line"><span class="icon">🛡️</span><span>منتج أصلي مع ضمان المطابقة 100%</span></div>';
-      infoHtml += '<div class="pl-benefit-line"><span class="icon">🔄</span><span>إمكانية الاستبدال والاسترجاع بكل سهولة</span></div>';
-      infoHtml += '</div>';
+      // Benefits list (Short Features)
+      if (showFeatures && (!Array.isArray(lpCfg.features) || !lpCfg.features.length)) {
+        infoHtml += '<div class="pl-short-benefits">';
+        infoHtml += '<div class="pl-benefit-line"><span class="icon">🚚</span><span>توصيل سريع ومضمون إلى <strong>58 ولاية</strong></span></div>';
+        infoHtml += '<div class="pl-benefit-line"><span class="icon">💵</span><span>الدفع نقداً <strong>عند الاستلام</strong> بعد المعاينة</span></div>';
+        infoHtml += '<div class="pl-benefit-line"><span class="icon">🛡️</span><span>منتج أصلي مع ضمان المطابقة 100%</span></div>';
+        infoHtml += '<div class="pl-benefit-line"><span class="icon">🔄</span><span>إمكانية الاستبدال والاسترجاع بكل سهولة</span></div>';
+        infoHtml += '</div>';
+      }
 
       // CTA Buttons
       infoHtml += '<div class="pl-cta-row">';
-      infoHtml += '<button type="button" class="pl-btn-order" onclick="scrollToOrderForm()">🛒 اطلب الآن</button>';
+      infoHtml += '<button type="button" class="pl-btn-order" ' + (accentColor ? 'style="background:' + accentColor + '"' : '') + ' onclick="scrollToOrderForm()">' + escHtml(ctaLabel) + '</button>';
       infoHtml += '<a href="https://wa.me/' + waPhone + '?text=' + waText + '" target="_blank" rel="noopener" class="pl-btn-wa">💬 واتساب</a>';
       infoHtml += '</div>';
       infoHtml += '</div>';
@@ -413,46 +451,71 @@
       var html = '<div class="pl-hero-grid">' + galleryHtml + infoHtml + '</div>';
 
       // Trust Signals Strip
-      html += '<div class="pl-trust-strip">';
-      html += '<div class="pl-trust-item"><div class="pl-trust-icon">🚚</div><div class="pl-trust-text"><h4>توصيل لـ 58 ولاية</h4><p>شحن سريع إلى باب منزلك</p></div></div>';
-      html += '<div class="pl-trust-item"><div class="pl-trust-icon">💵</div><div class="pl-trust-text"><h4>الدفع عند الاستلام</h4><p>ادفع فقط عندما تستلم المنتج</p></div></div>';
-      html += '<div class="pl-trust-item"><div class="pl-trust-icon">🛡️</div><div class="pl-trust-text"><h4>معاينة قبل الدفع</h4><p>تأكد من طلبك مع الموزع</p></div></div>';
-      html += '<div class="pl-trust-item"><div class="pl-trust-icon">💬</div><div class="pl-trust-text"><h4>دعم متواصل</h4><p>متابعة وتأكيد الطلب هاتفياً</p></div></div>';
-      html += '</div>';
+      if (showTrust) {
+        html += '<div class="pl-trust-strip">';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">🚚</div><div class="pl-trust-text"><h4>توصيل لـ 58 ولاية</h4><p>شحن سريع إلى باب منزلك</p></div></div>';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">💵</div><div class="pl-trust-text"><h4>الدفع عند الاستلام</h4><p>ادفع فقط عندما تستلم المنتج</p></div></div>';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">🛡️</div><div class="pl-trust-text"><h4>معاينة قبل الدفع</h4><p>تأكد من طلبك مع الموزع</p></div></div>';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">💬</div><div class="pl-trust-text"><h4>دعم متواصل</h4><p>متابعة وتأكيد الطلب هاتفياً</p></div></div>';
+        html += '</div>';
+      }
 
       // Full Description Section
       var descriptionText = p.description_long || p.description || p.desc_ar || '';
-      if (descriptionText) {
+      if (showDetails && descriptionText) {
         html += '<div class="pl-card-section">';
         html += '<h2 class="pl-section-title"><span>📝</span><span>تفاصيل ومميزات المنتج</span></h2>';
         html += '<div class="pl-desc-body">' + formatDescriptionText(descriptionText) + '</div>';
         html += '</div>';
       }
 
-      // Full-Width Feature / Infographic Content Media Section (Images 2+)
-      if (images.length > 1) {
-        html += '<div class="pl-card-section pl-content-media-section">';
-        html += '<h2 class="pl-section-title"><span>✨</span><span>معاينة وتفاصيل ومميزات المنتج</span></h2>';
-        html += '<div class="pl-feature-stack">';
-        for (var i = 1; i < images.length; i++) {
-          html += '<div class="pl-feature-image-card" onclick="openLightbox(' + i + ')" style="cursor:zoom-in" title="انقر لتكبير الصورة">';
-          html += '<img src="' + escHtml(images[i]) + '" alt="' + escHtml(title) + ' - ميزة تفصيلية ' + i + '" class="pl-feature-full-img" loading="lazy" decoding="async">';
+      // Custom Features Section / Media Infographics
+      if (showFeatures) {
+        if (Array.isArray(lpCfg.features) && lpCfg.features.length > 0) {
+          html += '<div class="pl-card-section">';
+          html += '<h2 class="pl-section-title"><span>✨</span><span>مميزات وخصائص المنتج</span></h2>';
+          html += '<div class="pl-custom-features-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px">';
+          lpCfg.features.forEach(function(feat) {
+            html += '<div class="pl-custom-feat-card" style="background:var(--ds-surface,#f8fafc);border:1px solid var(--ds-border,#e2e8f0);border-radius:12px;padding:16px;text-align:center">';
+            if (feat.icon) html += '<div style="font-size:2rem;margin-bottom:8px">' + escHtml(feat.icon) + '</div>';
+            if (feat.title) html += '<h4 style="font-size:1.05rem;font-weight:700;margin-bottom:6px;color:var(--ds-text,#1e293b)">' + escHtml(feat.title) + '</h4>';
+            if (feat.desc) html += '<p style="font-size:0.88rem;color:var(--ds-text2,#64748b);line-height:1.5;margin:0">' + escHtml(feat.desc) + '</p>';
+            html += '</div>';
+          });
           html += '</div>';
+          html += '</div>';
+        } else if (images.length > 1) {
+          html += '<div class="pl-card-section pl-content-media-section">';
+          html += '<h2 class="pl-section-title"><span>✨</span><span>معاينة وتفاصيل ومميزات المنتج</span></h2>';
+          html += '<div class="pl-feature-stack">';
+          for (var i = 1; i < images.length; i++) {
+            html += '<div class="pl-feature-image-card" onclick="openLightbox(' + i + ')" style="cursor:zoom-in" title="انقر لتكبير الصورة">';
+            html += '<img src="' + escHtml(images[i]) + '" alt="' + escHtml(title) + ' - ميزة تفصيلية ' + i + '" class="pl-feature-full-img" loading="lazy" decoding="async">';
+            html += '</div>';
+          }
+          html += '</div>';
+          html += '</div>';
+        }
+      }
+
+      // FAQ Section
+      if (showFaq) {
+        html += '<div class="pl-card-section">';
+        html += '<h2 class="pl-section-title"><span>❓</span><span>الأسئلة الشائعة حول الطلب</span></h2>';
+        html += '<div class="pl-faq-list">';
+        if (Array.isArray(lpCfg.faq) && lpCfg.faq.length > 0) {
+          lpCfg.faq.forEach(function(item) {
+            html += createFaqItem(item.q || 'سؤال', item.a || 'إجابة');
+          });
+        } else {
+          html += createFaqItem('كيف تتم عملية الشراء والدفع؟', 'الأمر بسيط جداً: تملأ استمارة الطلب أدناه باسمك ورقم هاتفك، ثم يتصل بك فريقنا لتأكيد العنوان وشحن المنتج، والدفع يكون نقداً عند استلام الطرد.');
+          html += createFaqItem('كم تستغرق مدة التوصيل؟', 'يتم توصيل الطلب خلال 24 إلى 72 ساعة عمل حسب ولايتك وبلديتك.');
+          html += createFaqItem('هل يمكنني اختيار التوصيل إلى المكتب أو المنزل؟', 'نعم، نوفر خياري التوصيل للمنزل مباشرة أو الاستلام من أقرب مكتب شحن في ولايتك.');
+          html += createFaqItem('هل أستطيع معاينة المنتج قبل الدفع؟', 'نعم بالتأكيد، يمكنك معاينة الطرد والتأكد من سلامته ومطابقته للطلب قبل تسليم المبلغ للموزع.');
         }
         html += '</div>';
         html += '</div>';
       }
-
-      // FAQ Section
-      html += '<div class="pl-card-section">';
-      html += '<h2 class="pl-section-title"><span>❓</span><span>الأسئلة الشائعة حول الطلب</span></h2>';
-      html += '<div class="pl-faq-list">';
-      html += createFaqItem('كيف تتم عملية الشراء والدفع؟', 'الأمر بسيط جداً: تملأ استمارة الطلب أدناه باسمك ورقم هاتفك، ثم يتصل بك فريقنا لتأكيد العنوان وشحن المنتج، والدفع يكون نقداً عند استلام الطرد.');
-      html += createFaqItem('كم تستغرق مدة التوصيل؟', 'يتم توصيل الطلب خلال 24 إلى 72 ساعة عمل حسب ولايتك وبلديتك.');
-      html += createFaqItem('هل يمكنني اختيار التوصيل إلى المكتب أو المنزل؟', 'نعم، نوفر خياري التوصيل للمنزل مباشرة أو الاستلام من أقرب مكتب شحن في ولايتك.');
-      html += createFaqItem('هل أستطيع معاينة المنتج قبل الدفع؟', 'نعم بالتأكيد، يمكنك معاينة الطرد والتأكد من سلامته ومطابقته للطلب قبل تسليم المبلغ للموزع.');
-      html += '</div>';
-      html += '</div>';
 
       // Order Form Section
       html += '<div class="pl-order-card" id="plOrderSection">';
