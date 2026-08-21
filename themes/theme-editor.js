@@ -230,25 +230,43 @@
   // ── Save ──
   function saveTheme() {
     var d = editorState.draft;
-    d.name = (document.getElementById('te_name') || {}).value || d.name;
-    d.author = (document.getElementById('te_author') || {}).value || d.author;
-    d.version = (document.getElementById('te_version') || {}).value || d.version;
-    d.id = (document.getElementById('te_id') || {}).value || d.id;
-    d.base = (document.getElementById('te_base') || {}).value || d.base;
+    if (!d) return;
+    var nameInput = document.getElementById('te_name');
+    var authorInput = document.getElementById('te_author');
+    var versionInput = document.getElementById('te_version');
+    var idInput = document.getElementById('te_id');
+    var baseInput = document.getElementById('te_base');
+
+    if (nameInput) d.name = nameInput.value || d.name;
+    if (authorInput) d.author = authorInput.value || d.author;
+    if (versionInput) d.version = versionInput.value || d.version;
+    if (idInput) d.id = idInput.value || d.id;
+    if (baseInput) d.base = baseInput.value || d.base;
+
     if (!d.id) { global.toast('❌ أدخل معرّف الثيم', true); return; }
+    if (!d.name) { global.toast('❌ أدخل اسم الثيم', true); return; }
+
     var payload = {
-      id: d.id, name: d.name, author: d.author, version: d.version,
-      base: d.base,
-      theme_json: JSON.stringify({
-        colors: d.tokens.colors, fonts: d.tokens.fonts,
-        spacing: d.tokens.spacing, radius: d.tokens.radius,
-        shadow: d.tokens.shadow, components: d.tokens.components,
-        images: d.tokens.images || {}
-      })
+      id: d.id,
+      name: d.name,
+      title: d.title || d.name,
+      author: d.author || 'Admin',
+      version: d.version || '1.0.0',
+      base: d.base || 'light',
+      tokens_json: JSON.stringify(d.tokens || {}),
+      sections_json: JSON.stringify(d.sections || (global.ThemeSchema ? global.ThemeSchema.defaultSectionsConfig() : {})),
+      presets_json: JSON.stringify(d.presets || [])
     };
+
+    if (global.toast) global.toast('⏳ جاري حفظ الثيم...', false);
+
     global.apiGet('admin_save_theme', payload, function (res) {
-      if (res && res.error) { global.toast('❌ ' + res.error, true); return; }
-      global.toast('✅ تم حفظ الثيم', true);
+      if (res && res.error) {
+        var errStr = typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : String(res.error);
+        global.toast('❌ ' + errStr, true);
+        return;
+      }
+      global.toast('✅ تم حفظ الثيم بنجاح!', true);
       closeEditorModal();
       loadThemesAdmin();
     });

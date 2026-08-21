@@ -74,7 +74,10 @@ export async function adminSaveTheme(env, params, tenantId = DEFAULT_MASTER_TENA
   const rawName = sanitize(params.name, 100);
   if (!rawName) return { ok: false, error: 'اسم الثيم مطلوب' };
 
-  const name = rawName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+  let name = rawName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  if (!name) {
+    name = 'theme_' + Date.now();
+  }
   const title = sanitize(params.title || params.name, 150);
   const desc = sanitize(params.description || '', 500);
   const version = sanitize(params.version || '1.0.0', 20);
@@ -82,7 +85,7 @@ export async function adminSaveTheme(env, params, tenantId = DEFAULT_MASTER_TENA
   const base = params.base === 'dark' ? 'dark' : 'light';
   const extendsTheme = params.extends ? sanitize(params.extends, 100) : null;
   const isActive = params.is_active ? 1 : 0;
-  const themeId = sanitize(params.id || `theme_${name}`, 120);
+  const themeId = sanitize(params.id || name, 120);
 
   const tokensJson = typeof params.tokens === 'object' ? JSON.stringify(params.tokens) : (typeof params.tokens_json === 'string' ? params.tokens_json : (typeof params.config_json === 'string' ? params.config_json : '{}'));
   const sectionsJson = typeof params.sections === 'object' ? JSON.stringify(params.sections) : (typeof params.sections_json === 'string' ? params.sections_json : '{}');

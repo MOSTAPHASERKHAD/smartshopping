@@ -10,13 +10,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <!-- Theme Engine -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="themes/theme-schema.js?v=20260821_pro2"></script>
-<script src="themes/theme-engine.js?v=20260821_pro2"></script>
-<script src="themes/default-themes.js?v=20260821_pro2"></script>
-<script src="themes/theme-importer.js?v=20260821_pro2"></script>
-<script src="themes/theme-editor.js?v=20260821_pro2"></script>
-<link rel="stylesheet" href="assets/css/admin.css?v=20260821_pro2">
-<script src="themes/theme-customizer.js?v=20260821_pro2"></script>
+<script src="themes/theme-schema.js?v=20260821_pro3"></script>
+<script src="themes/theme-engine.js?v=20260821_pro3"></script>
+<script src="themes/default-themes.js?v=20260821_pro3"></script>
+<script src="themes/theme-importer.js?v=20260821_pro3"></script>
+<script src="themes/theme-editor.js?v=20260821_pro3"></script>
+<link rel="stylesheet" href="assets/css/admin.css?v=20260821_pro3">
+<script src="themes/theme-customizer.js?v=20260821_pro3"></script>
 
 </head>
 <body>
@@ -1266,9 +1266,15 @@ function loadThemesSection() {
 function toast(msg, isNew) {
   var el = document.createElement('div');
   el.className = 'toast' + (isNew ? ' toast-new' : '');
-  el.textContent = msg;
+  var text = '';
+  if (msg && typeof msg === 'object') {
+    text = msg.error || msg.message || JSON.stringify(msg);
+  } else {
+    text = String(msg || '');
+  }
+  el.textContent = text;
   document.body.appendChild(el);
-  setTimeout(function() { el.remove(); }, 3000);
+  setTimeout(function() { el.remove(); }, 3500);
 }
 
 function playNotification() {
