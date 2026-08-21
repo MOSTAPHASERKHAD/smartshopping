@@ -272,9 +272,12 @@
       global.toast('✅ تم استيراد الثيم بنجاح: ' + (theme.title || theme.name) + ' — راجع الإعدادات ثم احفظه', true);
     }
 
-    if (file.name.toLowerCase().endsWith('.zip')) {
+    var isZip = (file.name && /\.zip$/i.test(file.name.trim())) ||
+                (file.type && (file.type.indexOf('zip') > -1 || file.type.indexOf('compressed') > -1));
+
+    function doUnzip() {
       if (global.toast) global.toast('⏳ جاري فك ضغط واستيراد حزمة الثيم...', false);
-      function doUnzip() {
+      function runExtract() {
         if (!window.JSZip) {
           if (global.toast) global.toast('❌ تعذر تحميل مكتبة فك الضغط JSZip. يرجى إعادة المحاولة', true);
           return;
@@ -315,20 +318,35 @@
       if (!window.JSZip) {
         var s = document.createElement('script');
         s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-        s.onload = doUnzip;
+        s.onload = runExtract;
         s.onerror = function() { if (global.toast) global.toast('❌ تعذر تحميل مكتبة JSZip من الشبكة', true); };
         document.head.appendChild(s);
       } else {
-        doUnzip();
+        runExtract();
       }
+    }
+
+    if (isZip) {
+      doUnzip();
     } else {
       var reader = new FileReader();
       reader.onload = function (e) {
+        var text = e.target.result || '';
+        // If file starts with PK magic bytes (ZIP header), auto-route to doUnzip
+        if (text.substr(0, 2) === 'PK') {
+          doUnzip();
+          return;
+        }
         try {
-          var parsed = JSON.parse(e.target.result);
+          var parsed = JSON.parse(text);
           processParsed(parsed, file.name.replace(/\.json$/i, ''));
         } catch (err) {
-          if (global.toast) global.toast('❌ فشل الاستيراد: ' + err.message, true);
+          // If JSON parse failed because of PK header, try unzipping
+          if (text.indexOf('PK') === 0 || err.message.indexOf('token \'P\'') > -1 || err.message.indexOf('token P') > -1) {
+            doUnzip();
+          } else {
+            if (global.toast) global.toast('❌ فشل الاستيراد: ' + err.message, true);
+          }
         }
       };
       reader.readAsText(file);
