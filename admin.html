@@ -10,13 +10,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <!-- Theme Engine -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="themes/theme-schema.js?v=20260821_pro3"></script>
-<script src="themes/theme-engine.js?v=20260821_pro3"></script>
-<script src="themes/default-themes.js?v=20260821_pro3"></script>
-<script src="themes/theme-importer.js?v=20260821_pro3"></script>
-<script src="themes/theme-editor.js?v=20260821_pro3"></script>
-<link rel="stylesheet" href="assets/css/admin.css?v=20260821_pro3">
-<script src="themes/theme-customizer.js?v=20260821_pro3"></script>
+<script src="themes/theme-schema.js?v=20260821_pro4"></script>
+<script src="themes/theme-engine.js?v=20260821_pro4"></script>
+<script src="themes/default-themes.js?v=20260821_pro4"></script>
+<script src="themes/theme-importer.js?v=20260821_pro4"></script>
+<script src="themes/theme-editor.js?v=20260821_pro4"></script>
+<link rel="stylesheet" href="assets/css/admin.css?v=20260821_pro4">
+<script src="themes/theme-customizer.js?v=20260821_pro4"></script>
 
 </head>
 <body>
@@ -993,7 +993,8 @@ function apiGet(action, params, callback, retries) {
       if (called) return;
       called = true;
       if (timer) clearTimeout(timer);
-      if (data && data.error && /غير مصرح|انتهت الجلسة/.test(data.error) && action !== 'verify_admin') {
+      var errMsg = (data && data.error) ? (typeof data.error === 'object' ? (data.error.message || data.error.code || JSON.stringify(data.error)) : String(data.error)) : '';
+      if (errMsg && /غير مصرح|انتهت الجلسة|UNAUTHORIZED|SESSION_EXPIRED/i.test(errMsg) && action !== 'verify_admin') {
         doLogout();
         return;
       }
@@ -1266,13 +1267,18 @@ function loadThemesSection() {
 function toast(msg, isNew) {
   var el = document.createElement('div');
   el.className = 'toast' + (isNew ? ' toast-new' : '');
-  var text = '';
-  if (msg && typeof msg === 'object') {
-    text = msg.error || msg.message || JSON.stringify(msg);
-  } else {
-    text = String(msg || '');
+  function extractText(val) {
+    if (val == null) return '';
+    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
+    if (typeof val === 'object') {
+      if (val.message) return extractText(val.message);
+      if (val.error) return extractText(val.error);
+      if (val.code) return String(val.code);
+      try { return JSON.stringify(val); } catch(e) { return String(val); }
+    }
+    return String(val);
   }
-  el.textContent = text;
+  el.textContent = extractText(msg);
   document.body.appendChild(el);
   setTimeout(function() { el.remove(); }, 3500);
 }
