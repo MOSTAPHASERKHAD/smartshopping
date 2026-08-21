@@ -1,16 +1,30 @@
 /*
- * theme-engine.js — Smart Kiosk Theme Engine
- * Applies themes to :root, manages modes (light/dark/auto), handles storage & server sync.
- * Depends on: theme-schema.js, theme-importer.js (loaded before this)
+ * theme-engine.js — Smart Kiosk Dynamic Theme & Sections Engine
+ * Applies tokens, manages modes, dynamically parses and renders Shopify-like sections with data injection.
+ * Compatible with Node.js and Browser environments.
  */
 (function (global) {
   'use strict';
 
-  var Schema = global.ThemeSchema;
-  var Importer = global.ThemeImporter;
+  var Schema = global.ThemeSchema || (typeof require !== 'undefined' ? require('./theme-schema.js') : null);
 
   var STORAGE_KEY = 'sk_theme_v1';
   var DEFAULT_THEME_ID = 'smartkiosk-default';
+
+  function escHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function formatPrice(num) {
+    var val = Number(num || 0);
+    return val.toLocaleString() + ' دج';
+  }
 
   function ThemeEngine() {
     this.themes = {};           // id -> theme object
@@ -22,11 +36,10 @@
     this._onChange = null;
   }
 
-  // ── Register a theme (merges with base if `extends`) ──
+  // ── Register a theme ──
   ThemeEngine.prototype.register = function (theme, opts) {
     opts = opts || {};
     if (!theme || !theme.id) return null;
-    // resolve inheritance
     var resolved = this._resolveExtends(theme);
     this.themes[theme.id] = resolved;
     if (!opts.silent && this.activeId === theme.id) this.apply(theme.id, this.mode);
@@ -34,21 +47,21 @@
   };
 
   ThemeEngine.prototype._resolveExtends = function (theme) {
-    var tokens = Schema.normalizeTokens(theme.tokens || {});
+    var tokens = Schema ? Schema.normalizeTokens(theme.tokens || theme.config_json || {}) : (theme.tokens || {});
     if (theme.extends && this.themes[theme.extends]) {
       var parent = this.themes[theme.extends];
-      // parent tokens already normalized; deep-merge
       tokens = this._mergeTokens(parent.tokens, tokens);
     }
     var out = {
       id: theme.id,
       name: theme.name || 'Untitled',
+      title: theme.title || theme.name || 'Untitled',
       author: theme.author || '',
       version: theme.version || '1.0',
-      base: theme.base || (theme.tokens && theme.tokens.colors && theme.tokens.colors.background &&
-              this._isDark(theme.tokens.colors.background) ? 'dark' : 'light'),
+      base: theme.base || 'light',
       extends: theme.extends || null,
-      tokens: tokens
+      tokens: tokens,
+      sections: (theme.sections && typeof theme.sections === 'object') ? theme.sections : (tokens.sections || {})
     };
     return out;
   };
@@ -63,445 +76,322 @@
         merged.components[k] = Object.assign({}, merged.components[k], child.components[k]);
       });
     }
+    if (child.sections) {
+      merged.sections = Object.assign({}, merged.sections, child.sections);
+    }
     return merged;
-  };
-
-  ThemeEngine.prototype._isDark = function (hex) {
-    var m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex || '');
-    if (!m) return false;
-    var h = m[1];
-    if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
-    var r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
-    // perceived luminance
-    var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return lum < 0.5;
   };
 
   // ── Convert tokens → CSS custom properties string ──
   ThemeEngine.prototype._tokensToCSS = function (tokens, mode, themeBase) {
     var lines = [];
-    // Clone colors so we never mutate the original theme tokens
     var c = {};
-    Object.keys(tokens.colors).forEach(function (k) { c[k] = tokens.colors[k]; });
-    // In dark mode, override color subset with darkTokens only for light-base themes.
-    // Dark-base themes (e.g. Shrine dark, Midnight) keep their own colors.
-    if (mode === 'dark' && themeBase !== 'dark') {
+    if (tokens.colors) {
+      Object.keys(tokens.colors).forEach(function (k) { c[k] = tokens.colors[k]; });
+    }
+    if (mode === 'dark' && themeBase !== 'dark' && Schema && Schema.darkTokens) {
       var dk = Schema.darkTokens();
       Object.keys(dk).forEach(function (k) { if (c[k]) c[k] = dk[k]; });
     }
     Object.keys(c).forEach(function (k) { lines.push('  --color-' + k + ':' + c[k] + ';'); });
-    Object.keys(tokens.fonts).forEach(function (k) { lines.push('  --font-' + k + ':' + tokens.fonts[k] + ';'); });
-    Object.keys(tokens.spacing).forEach(function (k) { lines.push('  --space-' + k + ':' + tokens.spacing[k] + ';'); });
-    Object.keys(tokens.radius).forEach(function (k) { lines.push('  --radius-' + k + ':' + tokens.radius[k] + ';'); });
-    Object.keys(tokens.shadow).forEach(function (k) { lines.push('  --shadow-' + k + ':' + tokens.shadow[k] + ';'); });
-    // components
-    Object.keys(tokens.components).forEach(function (comp) {
-      var props = tokens.components[comp];
-      Object.keys(props).forEach(function (p) {
-        lines.push('  --' + comp + '-' + p + ':' + props[p] + ';');
-      });
-    });
-    // legacy aliases used by existing CSS (must all be present or old CSS breaks)
-    lines.push('  --bg:' + c.background + ';');
-    lines.push('  --surface:' + c.surface + ';');
-    lines.push('  --card:' + c.surface + ';');
-    lines.push('  --text:' + c.text + ';');
-    lines.push('  --text2:' + c.textMuted + ';');
-    lines.push('  --text3:' + c.textSubtle + ';');
-    lines.push('  --border:' + c.border + ';');
-    lines.push('  --border2:' + c.border + ';');
-    lines.push('  --accent:' + c.primary + ';');
-    lines.push('  --accent2:' + c.accent + ';');
-    lines.push('  --sale:' + c.secondary + ';');
-    lines.push('  --sale-hover:' + this._darken(c.secondary, 0.12) + ';');
-    lines.push('  --success:' + c.success + ';');
-    lines.push('  --danger:' + c.danger + ';');
-    lines.push('  --font:' + (tokens.fonts ? tokens.fonts.body : "'Almarai','Inter',sans-serif") + ';');
-    lines.push('  --font-heading:' + (tokens.fonts ? (tokens.fonts.heading || tokens.fonts.body) : "'Cairo',sans-serif") + ';');
-    lines.push('  --radius:' + Schema.RADIUS_TOKENS[2].def + ';');
-    lines.push('  --shadow:0 2px 8px rgba(0,0,0,.06);');
-    lines.push('  --max-w:1200px;');
-    // image tokens
-    if (tokens.images) {
-      var imgs = tokens.images;
-      var logoUrl = Schema.makeLogoSvg(imgs.logoText || 'Smart Shopping', imgs.logoIcon || '🛒', c.primary, 'transparent');
-      lines.push('  --logo-url:url(' + logoUrl + ');');
-      lines.push('  --logo-icon:' + (imgs.logoIcon || '🛒') + ';');
-      lines.push('  --logo-text:' + (imgs.logoText || 'Smart Shopping') + ';');
-      lines.push('  --favicon:' + (imgs.favicon || '🛒') + ';');
-      if (imgs.bannerGradient) lines.push('  --banner-gradient:' + imgs.bannerGradient + ';');
-      if (imgs.bannerAccent) lines.push('  --banner-accent:' + imgs.bannerAccent + ';');
-    }
-    // icon tokens
-    if (tokens.icons) {
-      var shape = tokens.icons.shape || 'round';
-      if (shape === 'square') {
-        lines.push('  --icon-radius: 8px;');
-        lines.push('  --icon-clip: none;');
-      } else if (shape === 'triangle') {
-        lines.push('  --icon-radius: 0;');
-        lines.push('  --icon-clip: polygon(50% 0%, 0% 100%, 100% 100%);');
-      } else {
-        lines.push('  --icon-radius: 50%;');
-        lines.push('  --icon-clip: none;');
-      }
-      if (tokens.icons.deliveryIcon && tokens.icons.deliveryIcon.trim() !== '') {
-        // Encode SVG or use raw URL for delivery icon
-        var dIcon = tokens.icons.deliveryIcon;
-        if (dIcon.indexOf('<svg') >= 0) dIcon = 'data:image/svg+xml,' + encodeURIComponent(dIcon);
-        lines.push('  --icon-delivery: url(' + dIcon + ');');
-      }
-    }
-    var rootCss = ':root{\n' + lines.join('\n') + '\n}';
-    // Also generate body.dark-mode with same values to override the ORIGINAL hardcoded body.dark-mode block
-    // (original CSS has higher-specificity body.dark-mode vars that would otherwise override our :root)
-    var darkBlock = 'body.dark-mode{\n' + lines.join('\n') + '\n}';
-    return rootCss + '\n' + darkBlock;
+    if (tokens.fonts) Object.keys(tokens.fonts).forEach(function (k) { lines.push('  --font-' + k + ':' + tokens.fonts[k] + ';'); });
+    if (tokens.spacing) Object.keys(tokens.spacing).forEach(function (k) { lines.push('  --space-' + k + ':' + tokens.spacing[k] + ';'); });
+    if (tokens.radius) Object.keys(tokens.radius).forEach(function (k) { lines.push('  --radius-' + k + ':' + tokens.radius[k] + ';'); });
+    if (tokens.shadow) Object.keys(tokens.shadow).forEach(function (k) { lines.push('  --shadow-' + k + ':' + tokens.shadow[k] + ';'); });
+    return ':root {\n' + lines.join('\n') + '\n}';
   };
 
-  ThemeEngine.prototype._loadThemeFonts = function (fonts) {
-    if (!fonts) return;
-    var families = [];
-    ['heading', 'body'].forEach(function (k) {
-      if (fonts[k]) {
-        var match = fonts[k].match(/['"]?([^'",]+)['"]?/);
-        if (match && match[1]) {
-          var name = match[1].trim();
-          if (name !== 'sans-serif' && name !== 'serif' && name !== 'monospace') {
-            families.push(name);
-          }
-        }
-      }
-    });
-    families.forEach(function (fam) {
-      var fontId = 'gfont-' + fam.toLowerCase().replace(/\s+/g, '-');
-      if (!document.getElementById(fontId)) {
-        var link = document.createElement('link');
-        link.id = fontId;
-        link.rel = 'stylesheet';
-        link.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(fam).replace(/%20/g, '+') + ':wght@300;400;600;700;800&display=swap';
-        document.head.appendChild(link);
-      }
-    });
-  };
-
-  ThemeEngine.prototype._darken = function (color, amt) {
-    var m = /^#([0-9a-f]{6})$/i.exec(color || '');
-    if (!m) return color;
-    var h = m[1];
-    var r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
-    r = Math.max(0, Math.round(r * (1 - amt)));
-    g = Math.max(0, Math.round(g * (1 - amt)));
-    b = Math.max(0, Math.round(b * (1 - amt)));
-    return '#' + [r, g, b].map(function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
-  };
-
-  // ── Apply a theme by id (and mode) ──
+  // ── Apply theme to DOM (Browser Only) ──
   ThemeEngine.prototype.apply = function (themeId, mode) {
-    try {
-      var theme = this.themes[themeId];
-      if (!theme) { console.warn('ThemeEngine: theme not found', themeId); return false; }
-      this.activeId = themeId;
-      if (mode) this.mode = mode;
-      var effectiveMode = this._effectiveMode();
-
-      // dynamically load theme Google Fonts
-      this._loadThemeFonts(theme.tokens && theme.tokens.fonts);
-
-      // inject CSS — always move to end of <head> so it wins specificity over static CSS
-      var styleEl = document.getElementById('theme-engine-style');
-      if (!styleEl) {
-        styleEl = document.createElement('style');
-        styleEl.id = 'theme-engine-style';
-      }
-      // Remove and re-append so it's always the LAST stylesheet (highest cascade priority)
-      if (styleEl.parentNode) styleEl.parentNode.removeChild(styleEl);
-      document.head.appendChild(styleEl);
-      var css = this._tokensToCSS(theme.tokens, effectiveMode, theme.base);
-      styleEl.textContent = css;
-
-      // body classes
-      document.body.classList.toggle('dark-mode', effectiveMode === 'dark');
-      document.documentElement.setAttribute('data-theme', themeId);
-      document.documentElement.setAttribute('data-mode', effectiveMode);
-
-      // update manifest theme-color
-      this._updateManifest(theme, effectiveMode);
-
-      // update theme images (logo, favicon) — wrapped to prevent breaking
-      try { this._applyImages(theme); } catch (e) { console.warn('ThemeEngine: _applyImages error', e); }
-      
-      if (theme.tokens.sections) {
-        this._applySections(theme.tokens.sections);
-      }
-      
-      // dispatch event
-      var evt = new CustomEvent('themechanged', { detail: { theme: theme, mode: mode } });
-      document.dispatchEvent(evt);
-
-      this._persist();
-      if (this._onChange) this._onChange(theme, effectiveMode);
-      return true;
-    } catch (e) {
-      console.error('ThemeEngine.apply error:', e);
-      return false;
-    }
-  };
-
-  ThemeEngine.prototype._applySections = function(sections) {
-    var container = document.getElementById('mainContentWrapper');
-    if (!container) return;
-    
-    var idMap = {
-      'announcement': 'section-announcement',
-      'header': 'section-header',
-      'hero': 'section-hero',
-      'products': 'section-products',
-      'benefits': 'section-trust',
-      'track': 'track-section',
-      'testimonials': 'testimonialsSection',
-      'footer': 'section-footer'
-    };
-    
-    // Give all children high order by default
-    Array.prototype.forEach.call(container.children, function(child) {
-       child.style.order = 99;
-    });
-
-    var processed = {};
-    sections.forEach(function(sec, idx) {
-      var domId = idMap[sec.id] || ('section-' + sec.id);
-      var el = document.getElementById(domId);
-      if (el) {
-        if (sec.visible === false && sec.id !== 'hero') {
-          el.style.display = 'none';
-        } else {
-          el.style.display = '';
-        }
-        el.style.order = idx + 1;
-        processed[sec.id] = true;
-      }
-    });
-
-    // ALWAYS ensure hero section is visible and properly ordered
-    // If hero wasn't in the theme's sections, place it after header (position 3)
-    var heroEl = document.getElementById('section-hero');
-    if (heroEl && !processed.hero) {
-      heroEl.style.display = '';
-      heroEl.style.order = 3;
-    }
-  };
-
-  ThemeEngine.prototype._effectiveMode = function () {
-    if (this.mode === 'auto') return this.systemDark ? 'dark' : 'light';
-    return this.mode;
-  };
-
-  ThemeEngine.prototype._updateManifest = function (theme, mode) {
-    var color = theme.tokens.colors.primary;
-    if (mode === 'dark') color = theme.tokens.colors.surface;
-    try {
-      var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', color);
-      var manifestLink = document.querySelector('link[rel="manifest"]');
-      if (manifestLink) {
-        // best-effort: cannot rewrite manifest file, but ok
-      }
-    } catch (e) {}
-  };
-
-  // ── Apply theme images ──
-  // NOTE: Logo and favicon represent the store's brand identity.
-  // They are intentionally NOT changed by theme switching.
-  // Only the hero banner gradient (decorative) is updated.
-  ThemeEngine.prototype._applyImages = function (theme) {
-    var imgs = theme.tokens && theme.tokens.images;
-    if (!imgs) return;
-    if (imgs.bannerGradient) {
-      var hero = document.getElementById('heroSlider');
-      if (hero) {
-        hero.style.background = imgs.bannerGradient;
-      }
-    }
-  };
-
-  // ── Mode handling ──
-  ThemeEngine.prototype.setMode = function (mode) {
-    this.mode = mode;
-    if (mode === 'auto' && !this._media) this._initMedia();
-    this.apply(this.activeId || this.defaultThemeId, mode);
-  };
-
-  ThemeEngine.prototype._initMedia = function () {
-    if (!global.matchMedia) return;
-    this._media = global.matchMedia('(prefers-color-scheme: dark)');
-    var self = this;
-    this.systemDark = this._media.matches;
-    var handler = function (e) {
-      self.systemDark = e.matches;
-      if (self.mode === 'auto' && self.activeId) self.apply(self.activeId, 'auto');
-    };
-    if (this._media.addEventListener) this._media.addEventListener('change', handler);
-    else if (this._media.addListener) this._media.addListener(handler);
-  };
-
-  // ── Persistence ──
-  ThemeEngine.prototype._persist = function () {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: this.activeId, mode: this.mode }));
-    } catch (e) {}
-  };
-
-  ThemeEngine.prototype.saveCustomTheme = function(themeId) {
+    if (typeof document === 'undefined') return;
     var t = this.themes[themeId];
     if (!t) return;
-    try {
-      var custom = JSON.parse(localStorage.getItem('sk_custom_themes_v1') || '{}');
-      custom[themeId] = t;
-      localStorage.setItem('sk_custom_themes_v1', JSON.stringify(custom));
-    } catch(e) {}
-  };
+    this.activeId = themeId;
+    this.mode = mode || this.mode;
 
-  ThemeEngine.prototype.loadLocal = function () {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      var p = JSON.parse(raw);
-      if (p.id) this.activeId = p.id;
-      if (p.mode) this.mode = p.mode;
-      return p;
-    } catch (e) { return null; }
-  };
-
-  // ── Load default theme from server settings ──
-  ThemeEngine.prototype.init = function (opts) {
-    opts = opts || {};
-    this._initMedia();
-    this._initRegister(opts);
-  };
-
-  // Register built-in themes. If default-themes.js hasn't executed yet
-  // (async script load, or a stale cached HTML), poll briefly until it is.
-  ThemeEngine.prototype._initRegister = function (opts) {
-    var self = this;
-    function doRegister() {
-      if (!global.SmartKioskThemes) return false;
-      global.SmartKioskThemes.forEach(function (t) { self.register(t, { silent: true }); });
-      return true;
+    var css = this._tokensToCSS(t.tokens, this.mode, t.base);
+    var el = document.getElementById('sk-theme-vars');
+    if (!el) {
+      el = document.createElement('style');
+      el.id = 'sk-theme-vars';
+      document.head.appendChild(el);
     }
-    if (doRegister()) {
-      this._initApply(opts);
-      return;
-    }
-    // themes not ready — poll (handles async / late script execution)
-    if (this._initTimer) return; // already polling
-    var tries = 0;
-    this._initTimer = setInterval(function () {
-      tries++;
-      if (doRegister() || tries > 150) {
-        clearInterval(self._initTimer);
-        self._initTimer = null;
-        self._initApply(opts);
+    el.textContent = css;
+  };
+
+  // ══════════════════════════════════════════════════════════════════
+  // ── DYNAMIC SECTIONS PARSER & RENDERER (Shopify Architecture) ──
+  // ══════════════════════════════════════════════════════════════════
+
+  /**
+   * Template Variable Injector (e.g. {{ product.name }} or {{ store.name }})
+   */
+  ThemeEngine.prototype.injectVariables = function (templateStr, ctx) {
+    if (!templateStr || typeof templateStr !== 'string') return '';
+    ctx = ctx || {};
+    var p = ctx.product || {};
+    var s = ctx.store || {};
+
+    return templateStr.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, function (match, key) {
+      var parts = key.split('.');
+      if (parts[0] === 'product') {
+        var pKey = parts[1];
+        if (pKey === 'price') return formatPrice(p.price);
+        if (pKey === 'price_old' || pKey === 'old_price') return p.price_old ? formatPrice(p.price_old) : '';
+        return p[pKey] != null ? String(p[pKey]) : '';
       }
-    }, 80);
-  };
-
-  ThemeEngine.prototype._initApply = function (opts) {
-    opts = opts || {};
-    
-    // Load customized themes from local storage to override defaults
-    var self2 = this;
-    try {
-      var custom = JSON.parse(localStorage.getItem('sk_custom_themes_v1') || '{}');
-      Object.keys(custom).forEach(function(k) {
-        self2.register(custom[k], { silent: true });
-      });
-    } catch(e) {}
-
-    var local = this.loadLocal();
-    if (opts.defaultThemeId) this.defaultThemeId = opts.defaultThemeId;
-    
-    // Override default with admin's local choice if exists
-    try {
-      var adminDef = localStorage.getItem('sk_default_theme_v1');
-      if (adminDef) this.defaultThemeId = adminDef;
-    } catch(e) {}
-
-    if (opts.themes && opts.themes.length) {
-      opts.themes.forEach(function (t) { self2.register(t, { silent: true }); });
-    }
-    // Decide which theme to show
-    var showId = (local && this.themes[local.id]) ? local.id
-               : ((this.defaultThemeId && this.themes[this.defaultThemeId]) ? this.defaultThemeId
-               : ((this.activeId && this.themes[this.activeId]) ? this.activeId
-               : (this.themes[DEFAULT_THEME_ID] ? DEFAULT_THEME_ID
-               : (Object.keys(this.themes)[0] || null))));
-    var showMode = (local && local.mode) ? local.mode : (opts.defaultMode || 'auto');
-    this.apply(showId, showMode);
-
-    // Guarantee sections are always ordered/visible, even if theme doesn't define them.
-    // This fixes cold-start where the default theme has no .tokens.sections array.
-    var self3 = this;
-    setTimeout(function() {
-      var activeTheme = self3.themes[self3.activeId];
-      if (activeTheme && (!activeTheme.tokens.sections || !activeTheme.tokens.sections.length)) {
-        // Build defaults from SECTION_TOKENS
-        var defaultSections = Schema.SECTION_TOKENS.map(function(s) {
-          return { id: s.id, visible: s.defaultVisible };
-        });
-        self3._applySections(defaultSections);
+      if (parts[0] === 'store') {
+        var sKey = parts[1];
+        return s[sKey] != null ? String(s[sKey]) : '';
       }
-    }, 0);
-  };
-
-  // ── Import a theme file (delegates to importer) ──
-  ThemeEngine.prototype.importFile = function (file) {
-    if (!global.ThemeImporter) throw new Error('ThemeImporter not loaded');
-    return global.ThemeImporter.normalize(file);
-  };
-
-  // ── Export a theme as downloadable JSON ──
-  ThemeEngine.prototype.exportTheme = function (themeId, filename) {
-    var theme = this.themes[themeId];
-    if (!theme) return;
-    var out = {
-      __format: 'smartkiosk',
-      id: theme.id,
-      name: theme.name,
-      author: theme.author,
-      version: theme.version,
-      base: theme.base,
-      extends: theme.extends,
-      tokens: theme.tokens
-    };
-    var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = filename || (theme.id + '.json');
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-  };
-
-  // ── List available themes (id+name+base) for switcher ──
-  ThemeEngine.prototype.list = function () {
-    var self = this;
-    return Object.keys(this.themes).map(function (id) {
-      var t = self.themes[id];
-      return {
-        id: id, name: t.name, base: t.base, author: t.author,
-        tokens: t.tokens  // needed by theme switcher for color swatches
-      };
+      return match;
     });
   };
 
-  ThemeEngine.prototype.get = function (id) { return this.themes[id]; };
+  /**
+   * Render a Single Section by Type
+   */
+  ThemeEngine.prototype.renderSection = function (sectionType, sectionId, settings, ctx) {
+    settings = settings || {};
+    ctx = ctx || {};
+    var p = ctx.product || {};
+    var s = ctx.store || {};
 
-  ThemeEngine.prototype.onChange = function (cb) { this._onChange = cb; };
+    switch (sectionType) {
+      case 'hero':
+      case 'hero-banner':
+        return this._renderHero(settings, ctx, sectionId);
 
-  // singleton
-  global.ThemeEngine = new ThemeEngine();
-  global.ThemeEngineClass = ThemeEngine;
-})(window);
+      case 'order-form':
+      case 'fast-order-form':
+        return this._renderOrderForm(settings, ctx, sectionId);
+
+      case 'trust':
+      case 'trust-signals':
+        return this._renderTrustSignals(settings, ctx, sectionId);
+
+      case 'gallery':
+      case 'product-gallery':
+        return this._renderGallery(settings, ctx, sectionId);
+
+      case 'features':
+      case 'features-grid':
+        return this._renderFeatures(settings, ctx, sectionId);
+
+      case 'details':
+      case 'rich-text-details':
+        return this._renderDetails(settings, ctx, sectionId);
+
+      case 'reviews':
+      case 'testimonials-reviews':
+        return this._renderReviews(settings, ctx, sectionId);
+
+      case 'faq':
+      case 'faq-accordion':
+        return this._renderFaq(settings, ctx, sectionId);
+
+      default:
+        return '<div class="pl-section pl-section-custom" id="' + escHtml(sectionId) + '"></div>';
+    }
+  };
+
+  /**
+   * Render All Ordered Sections into unified HTML
+   */
+  ThemeEngine.prototype.renderSections = function (sectionsConfig, ctx) {
+    var self = this;
+    sectionsConfig = sectionsConfig || (Schema ? Schema.defaultSectionsConfig() : {});
+    ctx = ctx || {};
+
+    // Convert to sorted array
+    var secArray = Object.keys(sectionsConfig).map(function (secKey) {
+      var item = sectionsConfig[secKey];
+      return {
+        id: secKey,
+        type: item.type || secKey,
+        enabled: typeof item.enabled === 'boolean' ? item.enabled : true,
+        order: typeof item.order === 'number' ? item.order : 99,
+        settings: item.settings || {}
+      };
+    });
+
+    secArray.sort(function (a, b) { return a.order - b.order; });
+
+    var htmlParts = [];
+    secArray.forEach(function (sec) {
+      if (sec.enabled) {
+        var secHtml = self.renderSection(sec.type, sec.id, sec.settings, ctx);
+        if (secHtml) htmlParts.push(secHtml);
+      }
+    });
+
+    return htmlParts.join('\n');
+  };
+
+  // ── Section Renderers Implementation ──
+
+  ThemeEngine.prototype._renderHero = function (settings, ctx, id) {
+    var p = ctx.product || {};
+    var headline = this.injectVariables(settings.headline || '{{ product.name }}', ctx);
+    var subtitle = this.injectVariables(settings.subtitle || '', ctx);
+    var cta = this.injectVariables(settings.cta_label || '🛒 اطلب الآن', ctx);
+    var urgency = this.injectVariables(settings.urgency_text || '', ctx);
+    var priceStr = formatPrice(p.price);
+    var oldPriceStr = p.price_old ? formatPrice(p.price_old) : '';
+
+    var html = '<div class="pl-hero-grid pl-section" id="' + escHtml(id) + '">';
+    html += '<div class="pl-info-col">';
+    html += '<div class="pl-badge-row">';
+    if (p.price_old && p.price_old > p.price) {
+      var pct = Math.round((1 - p.price / p.price_old) * 100);
+      html += '<span class="pl-discount-badge">تخفيض ' + pct + '%</span>';
+    }
+    html += '<span class="pl-stock-badge">✓ متوفر في المخزن</span>';
+    if (urgency) {
+      html += '<span class="pl-urgency-badge">🔥 ' + escHtml(urgency) + '</span>';
+    }
+    html += '</div>';
+
+    html += '<h1 class="pl-product-title">' + escHtml(headline) + '</h1>';
+    if (subtitle) {
+      html += '<p class="pl-product-subtitle">' + escHtml(subtitle) + '</p>';
+    }
+
+    html += '<div class="pl-price-card">';
+    html += '<div class="pl-price-main"><span class="pl-price-val">' + escHtml(priceStr) + '</span></div>';
+    if (oldPriceStr) {
+      html += '<div class="pl-price-old"><del>' + escHtml(oldPriceStr) + '</del></div>';
+    }
+    html += '</div>';
+
+    html += '<button type="button" class="pl-cta-btn" onclick="scrollToOrderForm()"><span>' + escHtml(cta) + '</span> <span>👇</span></button>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  };
+
+  ThemeEngine.prototype._renderOrderForm = function (settings, ctx, id) {
+    var title = settings.title || 'استمارة الطلب السريع (الدفع عند الاستلام)';
+    var badge = settings.badge_text || '⚡ تأكيد فوري وسريع';
+    var submitText = settings.submit_btn_text || '🛒 تأكيد الطلب الآن (الدفع عند الاستلام)';
+
+    var html = '<div class="pl-order-section pl-section" id="' + escHtml(id) + '">';
+    html += '<div class="pl-order-card">';
+    html += '<div class="pl-order-header">';
+    html += '<div class="pl-order-badge">' + escHtml(badge) + '</div>';
+    html += '<h2 class="pl-order-title">' + escHtml(title) + '</h2>';
+    html += '<p class="pl-order-subtitle">املأ الاستمارة وسنتصل بك لتأكيد الشحن والتسليم</p>';
+    html += '</div>';
+
+    html += '<form class="pl-form" id="plOrderForm" onsubmit="handleOrderSubmit(event)">';
+    html += '<div class="pl-field-group"><label class="pl-label">الاسم الكامل *</label><input type="text" id="plName" class="pl-input" placeholder="مثال: محمد بن علي" required></div>';
+    html += '<div class="pl-field-group"><label class="pl-label">رقم الهاتف *</label><input type="tel" id="plPhone" class="pl-input" placeholder="05 / 06 / 07 XX XX XX XX" required></div>';
+    html += '<div class="pl-field-group"><label class="pl-label">الولاية *</label><select id="plWilaya" class="pl-select" required onchange="onWilayaChange()"><option value="">-- اختر ولايتك (58 ولاية) --</option></select></div>';
+    html += '<div class="pl-field-group"><label class="pl-label">البلدية / العنوان بالتفصيل *</label><input type="text" id="plAddress" class="pl-input" placeholder="البلدية والشارع بالتفصيل" required></div>';
+    html += '<div class="pl-field-group"><label class="pl-label">مكان الاستلام</label><div class="pl-radio-group"><label><input type="radio" name="plDelivery" value="Home" checked onchange="updateTotalCalc()"> التوصيل للمنزل</label><label><input type="radio" name="plDelivery" value="Office" onchange="updateTotalCalc()"> الاستلام من مكتب التوصيل</label></div></div>';
+    
+    html += '<div class="pl-summary-box">';
+    html += '<div class="pl-sum-row"><span>سعر المنتج:</span><span id="plSubtotalVal">--</span></div>';
+    html += '<div class="pl-sum-row"><span>تكلفة التوصيل:</span><span id="plShippingVal">اختر الولاية</span></div>';
+    html += '<div class="pl-sum-row total"><span>المجموع الإجمالي:</span><span id="plTotalVal">--</span></div>';
+    html += '</div>';
+
+    html += '<button type="submit" class="pl-submit-btn" id="plSubmitBtn"><span>' + escHtml(submitText) + '</span></button>';
+    html += '</form>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  };
+
+  ThemeEngine.prototype._renderTrustSignals = function (settings, ctx, id) {
+    var html = '<div class="pl-trust-strip pl-section" id="' + escHtml(id) + '">';
+    html += '<div class="pl-trust-item"><span class="icon">💵</span><div><h4>' + escHtml(settings.badge1_title || 'دفع عند الاستلام') + '</h4><p>' + escHtml(settings.badge1_desc || 'عاين طردك قبل الدفع') + '</p></div></div>';
+    html += '<div class="pl-trust-item"><span class="icon">🚚</span><div><h4>' + escHtml(settings.badge2_title || 'شحن سريع') + '</h4><p>' + escHtml(settings.badge2_desc || 'توصيل لـ 58 ولاية') + '</p></div></div>';
+    html += '<div class="pl-trust-item"><span class="icon">🛡️</span><div><h4>' + escHtml(settings.badge3_title || 'ضمان الجودة') + '</h4><p>' + escHtml(settings.badge3_desc || 'مطابق للمواصفات 100%') + '</p></div></div>';
+    html += '</div>';
+    return html;
+  };
+
+  ThemeEngine.prototype._renderGallery = function (settings, ctx, id) {
+    var p = ctx.product || {};
+    var images = p.images && p.images.length > 0 ? p.images : [p.image_url || 'logo.png'];
+    var html = '<div class="pl-gallery-col pl-section" id="' + escHtml(id) + '">';
+    html += '<div class="pl-main-image-box" onclick="openLightbox(0)">';
+    html += '<img src="' + escHtml(images[0]) + '" alt="' + escHtml(p.name || '') + '" id="plMainImg">';
+    html += '<button type="button" class="pl-zoom-trigger-btn"><span>🔍 انقر للتكبير</span></button>';
+    html += '</div>';
+    if (images.length > 1 && settings.show_thumbnails !== false) {
+      html += '<div class="pl-thumbs-list">';
+      images.forEach(function (img, idx) {
+        html += '<div class="pl-thumb-item' + (idx === 0 ? ' active' : '') + '" onclick="selectGalleryIndex(' + idx + ')">';
+        html += '<img src="' + escHtml(img) + '" alt="' + escHtml(p.name || '') + ' ' + (idx + 1) + '">';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  };
+
+  ThemeEngine.prototype._renderFeatures = function (settings, ctx, id) {
+    var title = settings.title || 'لماذا تختار هذا المنتج؟';
+    var list = settings.features_list || [];
+    var html = '<div class="pl-card-section pl-section" id="' + escHtml(id) + '">';
+    html += '<h2 class="pl-section-title"><span>⭐</span><span>' + escHtml(title) + '</span></h2>';
+    html += '<div class="pl-features-grid">';
+    list.forEach(function (f) {
+      html += '<div class="pl-feature-card"><div class="icon">' + escHtml(f.icon || '✨') + '</div><h3>' + escHtml(f.title || '') + '</h3><p>' + escHtml(f.desc || '') + '</p></div>';
+    });
+    html += '</div>';
+    html += '</div>';
+    return html;
+  };
+
+  ThemeEngine.prototype._renderDetails = function (settings, ctx, id) {
+    var title = settings.title || 'تفاصيل ومواصفات المنتج';
+    var content = this.injectVariables(settings.content || '{{ product.description }}', ctx);
+    var html = '<div class="pl-card-section pl-section" id="' + escHtml(id) + '">';
+    html += '<h2 class="pl-section-title"><span>📄</span><span>' + escHtml(title) + '</span></h2>';
+    html += '<div class="pl-desc-content"><p>' + escHtml(content).replace(/\n/g, '<br>') + '</p></div>';
+    html += '</div>';
+    return html;
+  };
+
+  ThemeEngine.prototype._renderReviews = function (settings, ctx, id) {
+    var title = settings.title || 'آراء عملائنا الكرام';
+    var badge = settings.badge_text || 'تقييم 4.9/5 من أكثر من 500 مشترٍ';
+    var html = '<div class="pl-card-section pl-section" id="' + escHtml(id) + '">';
+    html += '<h2 class="pl-section-title"><span>💬</span><span>' + escHtml(title) + '</span></h2>';
+    html += '<div class="pl-reviews-header"><span class="badge">⭐ ' + escHtml(badge) + '</span></div>';
+    html += '<div class="pl-reviews-list" id="plReviewsList"><div class="pl-review-item"><div class="stars">⭐⭐⭐⭐⭐</div><p class="text">منتج ممتاز ومطابق للوصف تماماً والتوصيل سريع جداً بارك الله فيكم.</p><div class="author">أحمد — الجزائر العاصمة (مشتري مؤكد ✓)</div></div></div>';
+    html += '</div>';
+    return html;
+  };
+
+  ThemeEngine.prototype._renderFaq = function (settings, ctx, id) {
+    var title = settings.title || 'الأسئلة الشائعة حول الطلب والتوصيل';
+    var list = settings.faq_list || [];
+    var html = '<div class="pl-card-section pl-section" id="' + escHtml(id) + '">';
+    html += '<h2 class="pl-section-title"><span>❓</span><span>' + escHtml(title) + '</span></h2>';
+    html += '<div class="pl-faq-list">';
+    list.forEach(function (item) {
+      html += '<div class="pl-faq-item" onclick="this.classList.toggle(\'open\')"><div class="pl-faq-q"><span>' + escHtml(item.q || '') + '</span><span class="arrow">▼</span></div><div class="pl-faq-a">' + escHtml(item.a || '') + '</div></div>';
+    });
+    html += '</div>';
+    html += '</div>';
+    return html;
+  };
+
+  // ── Universal Instance & Export ──
+  var instance = new ThemeEngine();
+
+  global.ThemeEngine = ThemeEngine;
+  global.themeEngine = instance;
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      ThemeEngine: ThemeEngine,
+      themeEngine: instance
+    };
+  }
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : this));

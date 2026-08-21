@@ -52,10 +52,11 @@ import {
   newsletterSubscribe, adminListSubscribers
 } from './handlers/subscribers.js';
 
-// ── استيراد معالجات الثيمات ──
+// ── استيراد معالجات الثيمات والأقسام الديناميكية ──
 import {
-  adminListThemes, adminSaveTheme, adminDeleteTheme
-} from './handlers/admin.js';
+  adminListThemes, adminSaveTheme, adminDeleteTheme,
+  adminSaveThemeSections, getThemeSections
+} from './handlers/themes.js';
 
 // ── استيراد معالجات الرفع (Uploads) ──
 import {
@@ -347,6 +348,9 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   // ── أحداث التحليلات العامة ──
   if (action === 'track_analytics_event') return trackPublicAnalyticsEvent(env, params, request, tenantId);
 
+  // ── أقسام الثيمات الديناميكية (عام) ──
+  if (action === 'get_theme_sections') return getThemeSections(env, params, tenantId);
+
   // ── الطلبات ──
   if (action === 'order')           return createOrder(env, params, request, ctx, token, tenantId);
   if (action === 'track')           return trackOrder(env, params.order_id, tenantId);
@@ -422,10 +426,11 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   // ── النشرة البريدية ──
   if (action === 'admin_list_subscribers') return adminListSubscribers(env, params);
 
-  // ── الثيمات ──
-  if (action === 'admin_list_themes')   return adminListThemes(env, tenantId);
-  if (action === 'admin_save_theme')    return adminSaveTheme(env, params, tenantId);
-  if (action === 'admin_delete_theme')  return adminDeleteTheme(env, params, tenantId);
+  // ── الثيمات والأقسام الديناميكية ──
+  if (action === 'admin_list_themes')          return adminListThemes(env, tenantId);
+  if (action === 'admin_save_theme')           return adminSaveTheme(env, params, tenantId);
+  if (action === 'admin_delete_theme')         return adminDeleteTheme(env, params, tenantId);
+  if (action === 'admin_save_theme_sections')  return adminSaveThemeSections(env, params, tenantId);
 
   // ── رفع الملفات ──
   if (action === 'admin_upload_image')  return adminUploadImage(env, params, request, tenantId);
