@@ -63,7 +63,7 @@
         var tokens = (theme && theme.tokens) ? theme.tokens : (Schema ? Schema.defaultTokens() : {});
 
         // Fetch saved section overrides for this specific target
-        global.apiGet('theme_sections', { target_type: targetType, target_id: targetId }, function(secRes) {
+        global.apiGet('get_theme_sections', { target_type: targetType, target_id: targetId }, function(secRes) {
           if (secRes && secRes.ok && secRes.config && secRes.config.sections && Object.keys(secRes.config.sections).length > 0) {
             sections = secRes.config.sections;
           }

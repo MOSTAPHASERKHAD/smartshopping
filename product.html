@@ -387,7 +387,7 @@
           currentProduct = normalizeProduct(rawProduct);
 
           // Fetch dynamic theme sections for product (priority over legacy landing_config)
-          var sectionsUrl = API_URL + '?action=theme_sections&target_type=product&target_id=' + encodeURIComponent(pid) + (currentStoreSlug ? '&store=' + encodeURIComponent(currentStoreSlug) : '');
+          var sectionsUrl = API_URL + '?action=get_theme_sections&target_type=product&target_id=' + encodeURIComponent(pid) + (currentStoreSlug ? '&store=' + encodeURIComponent(currentStoreSlug) : '');
           fetch(sectionsUrl)
             .then(function(r) { return r.json(); })
             .then(function(secRes) {
