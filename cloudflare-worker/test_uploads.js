@@ -39,4 +39,7 @@ async function testUploads() {
   }
 }
 
-testUploads().catch(console.error);
+testUploads().catch(err => {
+  console.error('❌ Test failed with error:', err);
+  process.exit(1);
+});

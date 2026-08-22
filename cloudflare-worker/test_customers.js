@@ -127,4 +127,7 @@ async function testCustomerFlow() {
   console.log('\n✅ All customer tests passed!');
 }
 
-testCustomerFlow().catch(console.error);
+testCustomerFlow().catch(err => {
+  console.error('❌ Test failed with error:', err);
+  process.exit(1);
+});

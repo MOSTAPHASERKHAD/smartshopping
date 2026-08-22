@@ -78,4 +78,7 @@ async function testThemes() {
   }
 }
 
-testThemes().catch(console.error);
+testThemes().catch(err => {
+  console.error('❌ Test failed with error:', err);
+  process.exit(1);
+});

@@ -77,7 +77,7 @@ export async function authRegister(env, params, request) {
   const userId   = 'user_' + generateToken(8);
   const passwordHash = await hashMerchantPassword(password);
 
-  // 3. إنشاء المتجر والمستخدم بدور OWNER
+  // 3. إنشاء المتجر والمستخدم بدور OWNER وتهيئة الإعدادات الأساسية
   await env.DB.batch([
     env.DB.prepare(`
       INSERT INTO tenants (id, name, slug, status, plan, created_at, updated_at)
@@ -88,6 +88,21 @@ export async function authRegister(env, params, request) {
       INSERT INTO users (id, tenant_id, email, name, password_hash, role, status, email_verified_at, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, 'OWNER', 'active', NULL, strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))
     `).bind(userId, tenantId, email, name, passwordHash),
+
+    env.DB.prepare(`
+      INSERT INTO settings (tenant_id, key, value)
+      VALUES (?, 'store_name', ?)
+    `).bind(tenantId, storeName),
+
+    env.DB.prepare(`
+      INSERT INTO settings (tenant_id, key, value)
+      VALUES (?, 'store_currency', 'DZD')
+    `).bind(tenantId),
+
+    env.DB.prepare(`
+      INSERT INTO settings (tenant_id, key, value)
+      VALUES (?, 'theme_default', 'smartkiosk-default')
+    `).bind(tenantId),
   ]);
 
   // 4. توليد رمز تأكيد البريد الإلكتروني

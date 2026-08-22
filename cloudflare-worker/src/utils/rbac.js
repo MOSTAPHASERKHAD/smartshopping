@@ -190,10 +190,12 @@ export const ACTION_PERMISSIONS = {
   admin_list_subscribers: PERMISSIONS.SUBSCRIBERS_READ,
 
   // Themes
-  admin_list_themes:        PERMISSIONS.THEMES_READ,
-  admin_save_theme:         PERMISSIONS.THEMES_UPDATE,
-  admin_delete_theme:       PERMISSIONS.THEMES_DELETE,
-  admin_set_default_theme:  PERMISSIONS.THEMES_UPDATE,
+  admin_list_themes:         PERMISSIONS.THEMES_READ,
+  admin_get_theme:           PERMISSIONS.THEMES_READ,
+  admin_save_theme:          PERMISSIONS.THEMES_UPDATE,
+  admin_save_theme_sections: PERMISSIONS.THEMES_UPDATE,
+  admin_delete_theme:        PERMISSIONS.THEMES_DELETE,
+  admin_set_default_theme:   PERMISSIONS.THEMES_UPDATE,
 
   // Media
   admin_list_media:    PERMISSIONS.MEDIA_READ,
@@ -224,12 +226,15 @@ export const ACTION_PERMISSIONS = {
 
 /**
  * التحقق مما إذا كان الدور يمتلك الصلاحية المطلوبة
- * @param {string} role
+ * @param {string|object} roleOrSession
  * @param {string} permission
  * @returns {boolean}
  */
-export function hasPermission(role, permission) {
-  if (!role || !permission) return false;
+export function hasPermission(roleOrSession, permission) {
+  if (!roleOrSession || !permission) return false;
+  const role = typeof roleOrSession === 'object' && roleOrSession !== null
+    ? (roleOrSession.role || '')
+    : roleOrSession;
   const userRole = String(role).toUpperCase();
   if (userRole === ROLES.OWNER || userRole === 'SUPER_ADMIN') return true;
   const perms = ROLE_PERMISSIONS[userRole];
@@ -238,13 +243,17 @@ export function hasPermission(role, permission) {
 
 /**
  * التحقق مما إذا كان الدور يمتلك صلاحية تنفيذ Action معين
- * @param {string} role
+ * @param {string|object} roleOrSession
  * @param {string} action
  * @param {string} tenantId
  * @returns {boolean}
  */
-export function canExecuteAction(role, action, tenantId = null) {
+export function canExecuteAction(roleOrSession, action, tenantId = null) {
   if (!action) return false;
+
+  const role = typeof roleOrSession === 'object' && roleOrSession !== null
+    ? (roleOrSession.role || '')
+    : roleOrSession;
 
   // إجراءات Super Admin مخصصة لمالك المتجر الرئيسي فقط أو دور SUPER_ADMIN
   if (action.startsWith('admin_super_')) {

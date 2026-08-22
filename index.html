@@ -20,11 +20,9 @@
 <meta name="twitter:description" content="منتجات متنوعة بأفضل الأسعار — الدفع عند الاستلام">
 <link rel="canonical" href="https://smartshopping.click/">
 <link rel="manifest" href="manifest.json">
-<link rel="preconnect" href="https://script.google.com" crossorigin>
-<link rel="dns-prefetch" href="https://script.google.com">
+<link rel="preconnect" href="https://smart-shopping-api.mostaphaserkhad.workers.dev" crossorigin>
+<link rel="dns-prefetch" href="https://smart-shopping-api.mostaphaserkhad.workers.dev">
 <link rel="dns-prefetch" href="https://i.ibb.co">
-<link rel="preload" as="fetch" href="https://script.google.com/macros/s/AKfycbwSbvmaGo5s7yB4Vw29589Z_UgBY1TYd3QrwmW90ivy5jVx0gbr_jh5MxSwQzepIQ2JEQ/exec?action=catalog" crossorigin>
-<script>fetch('https://script.google.com/macros/s/AKfycbwSbvmaGo5s7yB4Vw29589Z_UgBY1TYd3QrwmW90ivy5jVx0gbr_jh5MxSwQzepIQ2JEQ/exec?action=catalog&_w='+Date.now()).catch(function(){})</script>
 <meta name="theme-color" content="#1a1a2e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -32,7 +30,7 @@
 // === Versioned SW Cache Buster ===
 // If SW version changes, clear ALL caches and reload to serve fresh content
 (function(){
-  var REQUIRED_VER = 'v34';
+  var REQUIRED_VER = 'v46';
   var stored = localStorage.getItem('sk_sw_ver');
   if(stored === REQUIRED_VER) return; // already up to date
   if(!('serviceWorker' in navigator)) { localStorage.setItem('sk_sw_ver', REQUIRED_VER); return; }
@@ -1243,7 +1241,19 @@ function esc(s) {
 }
 function showToast(msg, type) {
   var existing=document.querySelector('.toast');if(existing)existing.remove();
-  var el=document.createElement('div');el.className='toast toast-'+(type||'info');el.textContent=msg;
+  var el=document.createElement('div');el.className='toast toast-'+(type||'info');
+  function extractToastText(val) {
+    if (val == null) return '';
+    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
+    if (typeof val === 'object') {
+      if (val.message) return extractToastText(val.message);
+      if (val.error) return extractToastText(val.error);
+      if (val.code) return String(val.code);
+      try { return JSON.stringify(val); } catch(e) { return String(val); }
+    }
+    return String(val);
+  }
+  el.textContent = extractToastText(msg);
   document.body.appendChild(el);setTimeout(function(){el.remove()},3000);
 }
 function setLoading(id, loading) {
@@ -1665,7 +1675,9 @@ function renderOrderSummary(){
   }
   var wilayaSelected = (document.getElementById('orderWilaya') || {}).value;
   var shippingCost = getShippingCost();
-  if (shippingCost > 0) {
+  if (storeSettings.free_shipping_enabled === 'true' && wilayaSelected) {
+    h+='<div class="summary-line"><span>'+t('shipping_cost')+'</span><span style="color:var(--success);font-weight:700">🚚 التوصيل مجاني</span></div>';
+  } else if (shippingCost > 0) {
     h+='<div class="summary-line"><span>'+t('shipping_cost')+'</span><span>+'+Number(shippingCost).toLocaleString()+' '+t('currency')+'</span></div>';
   } else if (wilayaSelected) {
     h+='<div class="summary-line"><span>'+t('shipping_cost')+'</span><span style="color:var(--success)">شحن مجاني</span></div>';
@@ -2042,6 +2054,7 @@ function getCartSubtotal() {
 var REMOTE_WILAYAS = ['01','08','11','30','33','37','47','50','51','52','53','54','55','56','57','58'];
 function getShippingCost() {
   try {
+    if (storeSettings.free_shipping_enabled === 'true') return 0;
     var delivery = (document.getElementById('orderDelivery') || {}).value || 'home';
     var wilaya = (document.getElementById('orderWilaya') || {}).value || '';
     if (!wilaya) return 0;
@@ -3166,10 +3179,14 @@ function updateLpShippingSummary(productId){
   var res=(typeof calculateClientShippingCost==='function')
     ? calculateClientShippingCost(storeSettings.shipping_config,w,d,items,storeSettings)
     : {cost:0};
-  var total=Number(product.price)+Number(res.cost||0);
+  var isFreeShipSetting = (storeSettings.free_shipping_enabled === 'true');
+  var shipCost = isFreeShipSetting ? 0 : Number(res.cost||0);
+  var total=Number(product.price)+shipCost;
   if(shipLabel){
-    if(res.cost>0){
-      shipLabel.innerHTML='<span style="color:#10b981;font-weight:700">+'+Number(res.cost).toLocaleString()+' DZD</span>'+(res.carrier?' <small style="color:var(--text3)">('+escHtml(res.carrier)+')</small>':'');
+    if(isFreeShipSetting){
+      shipLabel.innerHTML='<span style="color:#10b981;font-weight:700">🚚 التوصيل مجاني</span>';
+    } else if(shipCost>0){
+      shipLabel.innerHTML='<span style="color:#10b981;font-weight:700">+'+Number(shipCost).toLocaleString()+' DZD</span>'+(res.carrier?' <small style="color:var(--text3)">('+escHtml(res.carrier)+')</small>':'');
     } else {
       shipLabel.textContent=(currentLang==='ar'?'شحن مجاني':'Free Shipping');
     }

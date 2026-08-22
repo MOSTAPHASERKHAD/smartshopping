@@ -54,7 +54,7 @@ import {
 
 // ── استيراد معالجات الثيمات والأقسام الديناميكية ──
 import {
-  adminListThemes, adminSaveTheme, adminDeleteTheme, adminSetDefaultTheme,
+  adminListThemes, adminGetTheme, adminSaveTheme, adminDeleteTheme, adminSetDefaultTheme,
   adminSaveThemeSections, getThemeSections
 } from './handlers/themes.js';
 
@@ -330,11 +330,11 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
 
   // ── الشهادات والتقييمات ──
   if (action === 'testimonials')    return getTestimonials(env, tenantId);
-  if (action === 'get_reviews')     return getReviews(env, params, tenantId);
+  if (action === 'get_reviews' || action === 'reviews') return getReviews(env, params, tenantId);
   if (action === 'add_review')      return addPublicReview(env, params, tenantId);
 
   // ── الصفحات المخصصة ──
-  if (action === 'get_pages')       return getPages(env, tenantId);
+  if (action === 'get_pages' || action === 'pages') return getPages(env, tenantId);
 
   // ── النشرة البريدية ──
   if (action === 'newsletter_subscribe') return newsletterSubscribe(env, params);
@@ -428,6 +428,7 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
 
   // ── الثيمات والأقسام الديناميكية ──
   if (action === 'admin_list_themes')          return adminListThemes(env, tenantId);
+  if (action === 'admin_get_theme')           return adminGetTheme(env, params, tenantId);
   if (action === 'admin_save_theme')           return adminSaveTheme(env, params, tenantId);
   if (action === 'admin_delete_theme')         return adminDeleteTheme(env, params, tenantId);
   if (action === 'admin_set_default_theme')    return adminSetDefaultTheme(env, params, tenantId);

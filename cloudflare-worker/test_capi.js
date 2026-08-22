@@ -53,4 +53,7 @@ async function testCAPI() {
   }
 }
 
-testCAPI().catch(console.error);
+testCAPI().catch(err => {
+  console.error('❌ Test failed with error:', err);
+  process.exit(1);
+});

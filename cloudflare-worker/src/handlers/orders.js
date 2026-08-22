@@ -93,19 +93,23 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
   const productIds = itemsArr.map(item => Number(item.id)).filter(id => !isNaN(id));
   if (!productIds.length) return { ok: false, error: 'بيانات السلة غير صالحة' };
 
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
   const placeholders = productIds.map(() => '?').join(',');
-  const { results: realProducts } = await env.DB.prepare(
-    `SELECT id, name, price, active, stock, weight FROM products WHERE id IN (${placeholders}) AND (tenant_id = ? OR tenant_id IS NULL)`
-  ).bind(...productIds, tenantId).all();
+  const productStmt = isMaster
+    ? env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json FROM products WHERE id IN (${placeholders}) AND (tenant_id = ? OR tenant_id IS NULL)`).bind(...productIds, tenantId)
+    : env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json FROM products WHERE id IN (${placeholders}) AND tenant_id = ?`).bind(...productIds, tenantId);
+
+  const { results: realProducts } = await productStmt.all();
 
   const productsMap = new Map(realProducts.map(p => [p.id, p]));
 
   let realSubtotal = 0;
+  let hasTierFreeShipping = false;
   const secureItems = [];
 
   for (const item of itemsArr) {
     const pId = Number(item.id);
-    const qty = Number(item.qty) || 1;
+    const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
     
     if (qty <= 0) return { ok: false, error: 'الكمية غير صالحة' };
     
@@ -120,7 +124,35 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
       if (qty > stock) return { ok: false, error: `الكمية المطلوبة من ${dbProduct.name} تتجاوز المخزون المتاح (${stock})` };
     }
 
-    let price = Number(dbProduct.price) || 0;
+    const basePrice = Number(dbProduct.price) || 0;
+
+    // ── 🔒 حساب السعر والخصم الكمي على الخادم حصرياً (Server-Authoritative Pricing Tiers) ──
+    let tiers = [];
+    if (dbProduct.landing_config_json) {
+      try {
+        const lp = typeof dbProduct.landing_config_json === 'string'
+          ? JSON.parse(dbProduct.landing_config_json)
+          : (dbProduct.landing_config_json || {});
+        if (Array.isArray(lp.pricing_tiers) && lp.pricing_tiers.length > 0) {
+          tiers = lp.pricing_tiers;
+        } else if (lp.sections && lp.sections.pricing_tiers && Array.isArray(lp.sections.pricing_tiers.tiers)) {
+          tiers = lp.sections.pricing_tiers.tiers;
+        }
+      } catch (_) {}
+    }
+
+    let itemSubtotal = basePrice * qty;
+    if (tiers.length > 0) {
+      const matchedTier = tiers.find(t => Number(t.qty) === qty);
+      if (matchedTier && matchedTier.price != null && !isNaN(Number(matchedTier.price))) {
+        itemSubtotal = Number(matchedTier.price);
+        if (matchedTier.free_shipping) {
+          hasTierFreeShipping = true;
+        }
+      }
+    }
+
+    realSubtotal += itemSubtotal;
 
     // Check variant details
     let variantTitle = '';
@@ -130,21 +162,13 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
       variantTitle = String(item.variant_title);
     }
 
-    // Check quantity tier calculation
-    let itemSubtotal = price * qty;
-    if (item.tier_subtotal && !isNaN(Number(item.tier_subtotal))) {
-      itemSubtotal = Number(item.tier_subtotal);
-    }
-
-    realSubtotal += itemSubtotal;
-
     secureItems.push({
       id: dbProduct.id,
       name: dbProduct.name + (variantTitle ? ` (${variantTitle})` : ''),
       variant: item.variant_selection || null,
       variant_title: variantTitle || null,
       qty: qty,
-      price: price
+      price: basePrice
     });
   }
 
@@ -153,11 +177,11 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
   // ── معالجة الكوبون (على السعر الحقيقي داخل متجر التاجر) ──
   let finalDiscount = 0;
   if (couponCode) {
-    const couponRow = await env.DB.prepare(`
-      SELECT id, discount_type, discount_value, min_order, max_uses, used_count, expires_at
-      FROM coupons
-      WHERE code = ? AND active = 1 AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1
-    `).bind(couponCode, tenantId).first();
+    const couponStmt = isMaster
+      ? env.DB.prepare(`SELECT id, discount_type, discount_value, min_order, max_uses, used_count, expires_at FROM coupons WHERE code = ? AND active = 1 AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(couponCode, tenantId)
+      : env.DB.prepare(`SELECT id, discount_type, discount_value, min_order, max_uses, used_count, expires_at FROM coupons WHERE code = ? AND active = 1 AND tenant_id = ? LIMIT 1`).bind(couponCode, tenantId);
+
+    const couponRow = await couponStmt.first();
 
     if (
       couponRow &&
@@ -170,20 +194,26 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
         : couponRow.discount_value;
 
       // زَد العداد بعد قبول الطلب
-      await env.DB.prepare(
-        `UPDATE coupons SET used_count = used_count + 1 WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
-      ).bind(couponRow.id, tenantId).run();
+      const updateCouponStmt = isMaster
+        ? env.DB.prepare(`UPDATE coupons SET used_count = used_count + 1 WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`).bind(couponRow.id, tenantId)
+        : env.DB.prepare(`UPDATE coupons SET used_count = used_count + 1 WHERE id = ? AND tenant_id = ?`).bind(couponRow.id, tenantId);
+
+      await updateCouponStmt.run();
     }
   }
 
   // ── حساب سعر التوصيل (Server-Side Authoritative & Multi-Carrier Engine) ──
-  const shippingSettings = { shipping_config: '', shipping_home: '', shipping_office: '', shipping_remote: '' };
+  const shippingSettings = { shipping_config: '', shipping_home: '', shipping_office: '', shipping_remote: '', free_shipping_enabled: '' };
   try {
-    const { results: shipRows } = await env.DB.prepare(
-      `SELECT key, value FROM settings WHERE key IN ('shipping_config','shipping_home','shipping_office','shipping_remote') AND (tenant_id = ? OR tenant_id IS NULL)`
-    ).bind(tenantId).all();
+    const shipStmt = isMaster
+      ? env.DB.prepare(`SELECT key, value FROM settings WHERE key IN ('shipping_config','shipping_home','shipping_office','shipping_remote','free_shipping_enabled') AND (tenant_id = ? OR tenant_id IS NULL)`).bind(tenantId)
+      : env.DB.prepare(`SELECT key, value FROM settings WHERE key IN ('shipping_config','shipping_home','shipping_office','shipping_remote','free_shipping_enabled') AND tenant_id = ?`).bind(tenantId);
+
+    const { results: shipRows } = await shipStmt.all();
     for (const row of shipRows) shippingSettings[row.key] = row.value;
   } catch (e) { /* defaults remain '' */ }
+
+  const isFreeShipping = shippingSettings.free_shipping_enabled === 'true' || hasTierFreeShipping;
 
   const shippingCalc = calculateShippingCost({
     shippingConfig: shippingSettings.shipping_config,
@@ -198,8 +228,9 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
     return { ok: false, error: shippingCalc.error || 'طريقة التوصيل المحددة غير متوفرة' };
   }
 
-  const shippingCost = shippingCalc.shippingCost;
-  const shippingNote = shippingCalc.shippingNote;
+  // ── التوصيل المجاني: تجاوز السعر فقط مع الحفاظ على شركة التوصيل وبيانات الولاية ──
+  const shippingCost = isFreeShipping ? 0 : shippingCalc.shippingCost;
+  const shippingNote = isFreeShipping ? (hasTierFreeShipping ? 'شحن مجاني (عرض ترويجي)' : 'توصيل مجاني') : shippingCalc.shippingNote;
   const deliveryCompany = shippingCalc.deliveryCompany || 'yalidine';
 
   // ── إنشاء معرّف الطلب ──
@@ -314,16 +345,30 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 export async function trackOrder(env, orderId, tenantId = DEFAULT_MASTER_TENANT_ID) {
   if (!orderId) return { found: false, error: 'معرّف الطلب مطلوب' };
 
-  const order = await env.DB.prepare(`
-    SELECT
-      order_id, created_at, status, shipping_note,
-      wilaya_ar, wilaya_en, delivery_type,
-      items_json, subtotal, discount, shipping_cost,
-      delivery_company, tracking_code
-    FROM orders
-    WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL)
-    LIMIT 1
-  `).bind(sanitize(orderId, 60), tenantId).first();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`
+        SELECT
+          order_id, created_at, status, shipping_note,
+          wilaya_ar, wilaya_en, delivery_type,
+          items_json, subtotal, discount, shipping_cost,
+          delivery_company, tracking_code
+        FROM orders
+        WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL)
+        LIMIT 1
+      `).bind(sanitize(orderId, 60), tenantId)
+    : env.DB.prepare(`
+        SELECT
+          order_id, created_at, status, shipping_note,
+          wilaya_ar, wilaya_en, delivery_type,
+          items_json, subtotal, discount, shipping_cost,
+          delivery_company, tracking_code
+        FROM orders
+        WHERE order_id = ? AND tenant_id = ?
+        LIMIT 1
+      `).bind(sanitize(orderId, 60), tenantId);
+
+  const order = await stmt.first();
 
   if (!order) return { found: false, error: 'الطلب غير موجود' };
 
@@ -346,20 +391,33 @@ export async function customerOrders(env, token, tenantId = DEFAULT_MASTER_TENAN
     return { ok: false, error: { code: 'UNAUTHORIZED', message: 'يرجى تسجيل الدخول لعرض طلباتك' }, orders: [] };
   }
 
-  const customer = await env.DB.prepare(
-    `SELECT phone FROM customers WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`
-  ).bind(customerId, tenantId).first();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const custStmt = isMaster
+    ? env.DB.prepare(`SELECT phone FROM customers WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(customerId, tenantId)
+    : env.DB.prepare(`SELECT phone FROM customers WHERE id = ? AND tenant_id = ? LIMIT 1`).bind(customerId, tenantId);
 
+  const customer = await custStmt.first();
   const ownPhone = customer?.phone || null;
 
-  const { results } = await env.DB.prepare(`
-    SELECT order_id, created_at, status, subtotal, items_json
-    FROM orders
-    WHERE (customer_id = ? OR (customer_id IS NULL AND phone = ?))
-      AND (tenant_id = ? OR tenant_id IS NULL)
-    ORDER BY created_at DESC
-    LIMIT 20
-  `).bind(customerId, ownPhone, tenantId).all();
+  const ordersStmt = isMaster
+    ? env.DB.prepare(`
+        SELECT order_id, created_at, status, subtotal, items_json
+        FROM orders
+        WHERE (customer_id = ? OR (customer_id IS NULL AND phone = ?))
+          AND (tenant_id = ? OR tenant_id IS NULL)
+        ORDER BY created_at DESC
+        LIMIT 20
+      `).bind(customerId, ownPhone, tenantId)
+    : env.DB.prepare(`
+        SELECT order_id, created_at, status, subtotal, items_json
+        FROM orders
+        WHERE (customer_id = ? OR (customer_id IS NULL AND phone = ?))
+          AND tenant_id = ?
+        ORDER BY created_at DESC
+        LIMIT 20
+      `).bind(customerId, ownPhone, tenantId);
+
+  const { results } = await ordersStmt.all();
 
   const orders = results.map(o => ({
     ...o,
@@ -382,6 +440,9 @@ export async function adminListOrders(env, params = {}, tenantId = DEFAULT_MASTE
   const limit  = Math.min(100, Math.max(1, parseInt(params.limit ?? 50)));
   const offset = (page - 1) * limit;
 
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const tenantFilter = isMaster ? `(tenant_id = ? OR tenant_id IS NULL)` : `tenant_id = ?`;
+
   let query = `
     SELECT
       id, order_id, created_at, name, phone,
@@ -392,7 +453,7 @@ export async function adminListOrders(env, params = {}, tenantId = DEFAULT_MASTE
       utm_term, utm_content, fbclid, session_id,
       delivery_company, tracking_code
     FROM orders
-    WHERE (tenant_id = ? OR tenant_id IS NULL)
+    WHERE ${tenantFilter}
   `;
   const bindings = [tenantId];
 
@@ -408,8 +469,8 @@ export async function adminListOrders(env, params = {}, tenantId = DEFAULT_MASTE
 
   // جلب العدد الكلي للصفحات داخل نطاق هذا التاجر
   const countQuery = status
-    ? `SELECT COUNT(*) as total FROM orders WHERE (tenant_id = ? OR tenant_id IS NULL) AND status = ?`
-    : `SELECT COUNT(*) as total FROM orders WHERE (tenant_id = ? OR tenant_id IS NULL)`;
+    ? `SELECT COUNT(*) as total FROM orders WHERE ${tenantFilter} AND status = ?`
+    : `SELECT COUNT(*) as total FROM orders WHERE ${tenantFilter}`;
   const countRow = status
     ? await env.DB.prepare(countQuery).bind(tenantId, status).first()
     : await env.DB.prepare(countQuery).bind(tenantId).first();
@@ -437,9 +498,12 @@ export async function adminUpdateOrder(env, params, tenantId = DEFAULT_MASTER_TE
   const orderId = sanitize(params.order_id, 60);
   if (!orderId) return { ok: false, error: 'معرّف الطلب مطلوب' };
 
-  const existing = await env.DB.prepare(
-    `SELECT id, status FROM orders WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`
-  ).bind(orderId, tenantId).first();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const checkStmt = isMaster
+    ? env.DB.prepare(`SELECT id, status FROM orders WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(orderId, tenantId)
+    : env.DB.prepare(`SELECT id, status FROM orders WHERE order_id = ? AND tenant_id = ? LIMIT 1`).bind(orderId, tenantId);
+
+  const existing = await checkStmt.first();
 
   if (!existing) return { ok: false, error: 'الطلب غير موجود أو لا تملك صلاحية تعديله' };
 
@@ -484,9 +548,10 @@ export async function adminUpdateOrder(env, params, tenantId = DEFAULT_MASTER_TE
 
   if (updates.length) {
     bindings.push(orderId, tenantId);
-    await env.DB.prepare(
-      `UPDATE orders SET ${updates.join(', ')} WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
-    ).bind(...bindings).run();
+    const updateOrderStmt = isMaster
+      ? env.DB.prepare(`UPDATE orders SET ${updates.join(', ')} WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL)`)
+      : env.DB.prepare(`UPDATE orders SET ${updates.join(', ')} WHERE order_id = ? AND tenant_id = ?`);
+    await updateOrderStmt.bind(...bindings).run();
   }
 
   // PATHWAY DELIVERED: المسار الوحيد المؤدي إلى إنقاص المخزون.
@@ -504,9 +569,12 @@ export async function adminDeleteOrder(env, params, tenantId = DEFAULT_MASTER_TE
   const orderId = sanitize(params.order_id, 60);
   if (!orderId) return { ok: false, error: 'معرّف الطلب مطلوب' };
 
-  const result = await env.DB.prepare(
-    `DELETE FROM orders WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
-  ).bind(orderId, tenantId).run();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const deleteStmt = isMaster
+    ? env.DB.prepare(`DELETE FROM orders WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL)`).bind(orderId, tenantId)
+    : env.DB.prepare(`DELETE FROM orders WHERE order_id = ? AND tenant_id = ?`).bind(orderId, tenantId);
+
+  const result = await deleteStmt.run();
 
   if (!result.meta.changes) {
     return { ok: false, error: 'الطلب غير موجود أو لا تملك صلاحية حذفه' };
@@ -629,9 +697,9 @@ export async function processDeliveredOrderStock(env, orderId, tenantId = DEFAUL
   }
 
   // ── النجاح: commit مؤكد (claim + كل decrements) ──
-  // مسح cache الكتالوج فقط بعد commit ناجح.
+  // مسح cache الكتالوج للمستأجر المعني فقط بعد commit ناجح
   if (env.CACHE) {
-    try { await env.CACHE.delete('catalog_v1'); } catch { /* cache best-effort */ }
+    try { await env.CACHE.delete(`tenant:${tenantId}:catalog_v1`); } catch { /* cache best-effort */ }
   }
 
   return { ok: true, stock_processed_at: claimToken };

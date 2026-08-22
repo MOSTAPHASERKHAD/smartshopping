@@ -23,6 +23,8 @@ cloudflare-worker/scripts/import_production.sql
 # GAS/D1 data snapshots (may mirror production data)
 backups/
 cloudflare-worker/backups/
+cloudflare-worker/*.sql
+!cloudflare-worker/migrations/*.sql
 /.git.phase18_2_2_prefilter/
 *.sql.tmp
 

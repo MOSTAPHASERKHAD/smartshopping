@@ -82,8 +82,8 @@ export async function adminUpdateSettings(env, params, tenantId = DEFAULT_MASTER
     if (cleanKey === 'admin_password' && cleanValue) {
       cleanValue = await sha256(cleanValue);
       updates.push([
-        `INSERT INTO settings(tenant_id, key, value) VALUES(?, 'admin_password_hash', ?)
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value, tenant_id = excluded.tenant_id`,
+        `INSERT INTO settings(tenant_id, key, value, updated_at) VALUES(?, 'admin_password_hash', ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+         ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
         [tenantId, cleanValue],
       ]);
       continue;
@@ -91,7 +91,7 @@ export async function adminUpdateSettings(env, params, tenantId = DEFAULT_MASTER
 
     updates.push([
       `INSERT INTO settings(tenant_id, key, value, updated_at) VALUES(?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at, tenant_id = excluded.tenant_id`,
+       ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
       [tenantId, cleanKey, cleanValue],
     ]);
   }
@@ -113,9 +113,11 @@ export async function adminUpdateSettings(env, params, tenantId = DEFAULT_MASTER
  * [ADMIN] قائمة الكوبونات داخل متجر التاجر الموثق
  */
 export async function adminListCoupons(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
-  const { results } = await env.DB.prepare(`
-    SELECT * FROM coupons WHERE (tenant_id = ? OR tenant_id IS NULL) ORDER BY id DESC
-  `).bind(tenantId).all();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`SELECT * FROM coupons WHERE (tenant_id = ? OR tenant_id IS NULL) ORDER BY id DESC`).bind(tenantId)
+    : env.DB.prepare(`SELECT * FROM coupons WHERE tenant_id = ? ORDER BY id DESC`).bind(tenantId);
+  const { results } = await stmt.all();
 
   return { coupons: results };
 }
@@ -165,27 +167,52 @@ export async function adminEditCoupon(env, params, tenantId = DEFAULT_MASTER_TEN
   const id = parseInt(params.id);
   if (!id) return { ok: false, error: 'معرّف الكوبون مطلوب' };
 
-  const result = await env.DB.prepare(`
-    UPDATE coupons SET
-      code           = ?,
-      discount_type  = ?,
-      discount_value = ?,
-      min_order      = ?,
-      max_uses       = ?,
-      expires_at     = ?,
-      active         = ?
-    WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)
-  `).bind(
-    sanitize(params.code, 50).toUpperCase(),
-    params.discount_type === 'fixed' ? 'fixed' : 'percent',
-    sanitizeNumber(params.discount_value),
-    sanitizeNumber(params.min_order),
-    parseInt(params.max_uses ?? 0),
-    params.expires_at ? sanitize(params.expires_at, 30) : null,
-    params.active === '0' ? 0 : 1,
-    id,
-    tenantId,
-  ).run();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`
+        UPDATE coupons SET
+          code           = ?,
+          discount_type  = ?,
+          discount_value = ?,
+          min_order      = ?,
+          max_uses       = ?,
+          expires_at     = ?,
+          active         = ?
+        WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)
+      `).bind(
+        sanitize(params.code, 50).toUpperCase(),
+        params.discount_type === 'fixed' ? 'fixed' : 'percent',
+        sanitizeNumber(params.discount_value),
+        sanitizeNumber(params.min_order),
+        parseInt(params.max_uses ?? 0),
+        params.expires_at ? sanitize(params.expires_at, 30) : null,
+        params.active === '0' ? 0 : 1,
+        id,
+        tenantId,
+      )
+    : env.DB.prepare(`
+        UPDATE coupons SET
+          code           = ?,
+          discount_type  = ?,
+          discount_value = ?,
+          min_order      = ?,
+          max_uses       = ?,
+          expires_at     = ?,
+          active         = ?
+        WHERE id = ? AND tenant_id = ?
+      `).bind(
+        sanitize(params.code, 50).toUpperCase(),
+        params.discount_type === 'fixed' ? 'fixed' : 'percent',
+        sanitizeNumber(params.discount_value),
+        sanitizeNumber(params.min_order),
+        parseInt(params.max_uses ?? 0),
+        params.expires_at ? sanitize(params.expires_at, 30) : null,
+        params.active === '0' ? 0 : 1,
+        id,
+        tenantId,
+      );
+
+  const result = await stmt.run();
 
   if (!result.meta.changes) {
     return { ok: false, error: 'الكوبون غير موجود أو لا تملك صلاحية تعديله' };
@@ -201,9 +228,12 @@ export async function adminDeleteCoupon(env, params, tenantId = DEFAULT_MASTER_T
   const id = parseInt(params.id);
   if (!id) return { ok: false, error: 'معرّف الكوبون مطلوب' };
 
-  const result = await env.DB.prepare(
-    `DELETE FROM coupons WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
-  ).bind(id, tenantId).run();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`DELETE FROM coupons WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`).bind(id, tenantId)
+    : env.DB.prepare(`DELETE FROM coupons WHERE id = ? AND tenant_id = ?`).bind(id, tenantId);
+
+  const result = await stmt.run();
 
   if (!result.meta.changes) {
     return { ok: false, error: 'الكوبون غير موجود أو لا تملك صلاحية حذفه' };
@@ -217,9 +247,11 @@ export async function adminDeleteCoupon(env, params, tenantId = DEFAULT_MASTER_T
 // ─────────────────────────────────────────────
 
 export async function adminListTestimonials(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
-  const { results } = await env.DB.prepare(
-    `SELECT * FROM testimonials WHERE (tenant_id = ? OR tenant_id IS NULL) ORDER BY sort_order ASC, id DESC`
-  ).bind(tenantId).all();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`SELECT * FROM testimonials WHERE (tenant_id = ? OR tenant_id IS NULL) ORDER BY sort_order ASC, id DESC`).bind(tenantId)
+    : env.DB.prepare(`SELECT * FROM testimonials WHERE tenant_id = ? ORDER BY sort_order ASC, id DESC`).bind(tenantId);
+  const { results } = await stmt.all();
   return { testimonials: results };
 }
 
@@ -251,27 +283,52 @@ export async function adminEditTestimonial(env, params, tenantId = DEFAULT_MASTE
   const id = parseInt(params.id);
   if (!id) return { ok: false, error: 'المعرّف مطلوب' };
 
-  const result = await env.DB.prepare(`
-    UPDATE testimonials SET
-      author_name     = ?,
-      author_location = ?,
-      content         = ?,
-      rating          = ?,
-      avatar_url      = ?,
-      active          = ?,
-      sort_order      = ?
-    WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)
-  `).bind(
-    sanitize(params.author_name,     200),
-    sanitize(params.author_location, 100),
-    sanitize(params.content,         2000),
-    Math.min(5, Math.max(1, parseInt(params.rating ?? 5))),
-    sanitize(params.avatar_url, 500),
-    params.active === '0' ? 0 : 1,
-    parseInt(params.sort_order ?? 0),
-    id,
-    tenantId,
-  ).run();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`
+        UPDATE testimonials SET
+          author_name     = ?,
+          author_location = ?,
+          content         = ?,
+          rating          = ?,
+          avatar_url      = ?,
+          active          = ?,
+          sort_order      = ?
+        WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)
+      `).bind(
+        sanitize(params.author_name,     200),
+        sanitize(params.author_location, 100),
+        sanitize(params.content,         2000),
+        Math.min(5, Math.max(1, parseInt(params.rating ?? 5))),
+        sanitize(params.avatar_url, 500),
+        params.active === '0' ? 0 : 1,
+        parseInt(params.sort_order ?? 0),
+        id,
+        tenantId,
+      )
+    : env.DB.prepare(`
+        UPDATE testimonials SET
+          author_name     = ?,
+          author_location = ?,
+          content         = ?,
+          rating          = ?,
+          avatar_url      = ?,
+          active          = ?,
+          sort_order      = ?
+        WHERE id = ? AND tenant_id = ?
+      `).bind(
+        sanitize(params.author_name,     200),
+        sanitize(params.author_location, 100),
+        sanitize(params.content,         2000),
+        Math.min(5, Math.max(1, parseInt(params.rating ?? 5))),
+        sanitize(params.avatar_url, 500),
+        params.active === '0' ? 0 : 1,
+        parseInt(params.sort_order ?? 0),
+        id,
+        tenantId,
+      );
+
+  const result = await stmt.run();
 
   if (!result.meta.changes) {
     return { ok: false, error: 'الشهادة غير موجودة أو لا تملك صلاحية تعديلها' };
@@ -284,9 +341,12 @@ export async function adminDeleteTestimonial(env, params, tenantId = DEFAULT_MAS
   const id = parseInt(params.id);
   if (!id) return { ok: false, error: 'المعرّف مطلوب' };
 
-  const result = await env.DB.prepare(
-    `DELETE FROM testimonials WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
-  ).bind(id, tenantId).run();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`DELETE FROM testimonials WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`).bind(id, tenantId)
+    : env.DB.prepare(`DELETE FROM testimonials WHERE id = ? AND tenant_id = ?`).bind(id, tenantId);
+
+  const result = await stmt.run();
 
   if (!result.meta.changes) {
     return { ok: false, error: 'الشهادة غير موجودة أو لا تملك صلاحية حذفها' };
@@ -300,13 +360,24 @@ export async function adminDeleteTestimonial(env, params, tenantId = DEFAULT_MAS
 // ─────────────────────────────────────────────
 
 export async function adminListReviews(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
-  const { results } = await env.DB.prepare(`
-    SELECT r.*, p.name as product_name
-    FROM reviews r
-    LEFT JOIN products p ON r.product_id = p.id
-    WHERE (r.tenant_id = ? OR r.tenant_id IS NULL)
-    ORDER BY r.id DESC
-  `).bind(tenantId).all();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`
+        SELECT r.*, p.name as product_name
+        FROM reviews r
+        LEFT JOIN products p ON r.product_id = p.id
+        WHERE (r.tenant_id = ? OR r.tenant_id IS NULL)
+        ORDER BY r.id DESC
+      `).bind(tenantId)
+    : env.DB.prepare(`
+        SELECT r.*, p.name as product_name
+        FROM reviews r
+        LEFT JOIN products p ON r.product_id = p.id
+        WHERE r.tenant_id = ?
+        ORDER BY r.id DESC
+      `).bind(tenantId);
+
+  const { results } = await stmt.all();
   return { reviews: results };
 }
 
@@ -314,9 +385,12 @@ export async function adminDeleteReview(env, params, tenantId = DEFAULT_MASTER_T
   const id = parseInt(params.id);
   if (!id) return { ok: false, error: 'المعرّف مطلوب' };
 
-  const result = await env.DB.prepare(
-    `DELETE FROM reviews WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
-  ).bind(id, tenantId).run();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`DELETE FROM reviews WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`).bind(id, tenantId)
+    : env.DB.prepare(`DELETE FROM reviews WHERE id = ? AND tenant_id = ?`).bind(id, tenantId);
+
+  const result = await stmt.run();
 
   if (!result.meta.changes) {
     return { ok: false, error: 'التقييم غير موجود أو لا تملك صلاحية حذفه' };
@@ -330,9 +404,12 @@ export async function adminApproveReview(env, params, tenantId = DEFAULT_MASTER_
   const status = params.status === 'rejected' ? 'rejected' : 'approved';
   if (!id) return { ok: false, error: 'المعرّف مطلوب' };
 
-  const result = await env.DB.prepare(
-    `UPDATE reviews SET status = ? WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
-  ).bind(status, id, tenantId).run();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`UPDATE reviews SET status = ? WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`).bind(status, id, tenantId)
+    : env.DB.prepare(`UPDATE reviews SET status = ? WHERE id = ? AND tenant_id = ?`).bind(status, id, tenantId);
+
+  const result = await stmt.run();
 
   if (!result.meta.changes) {
     return { ok: false, error: 'التقييم غير موجود أو لا تملك صلاحية تعديله' };
@@ -346,9 +423,11 @@ export async function adminApproveReview(env, params, tenantId = DEFAULT_MASTER_
 // ─────────────────────────────────────────────
 
 export async function adminListPages(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
-  const { results } = await env.DB.prepare(
-    `SELECT id, slug, title, active, updated_at FROM pages WHERE (tenant_id = ? OR tenant_id IS NULL) ORDER BY id`
-  ).bind(tenantId).all();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`SELECT id, slug, title, active, updated_at FROM pages WHERE (tenant_id = ? OR tenant_id IS NULL) ORDER BY id`).bind(tenantId)
+    : env.DB.prepare(`SELECT id, slug, title, active, updated_at FROM pages WHERE tenant_id = ? ORDER BY id`).bind(tenantId);
+  const { results } = await stmt.all();
   return { pages: results };
 }
 

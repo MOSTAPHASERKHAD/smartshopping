@@ -214,7 +214,8 @@
       sections: state.sections
     }, function(res) {
       if (res && res.error) {
-        if (global.toast) global.toast('❌ ' + res.error, true);
+        var errStr = typeof res.error === 'object' ? (res.error.message || res.error.code || JSON.stringify(res.error)) : String(res.error);
+        if (global.toast) global.toast('❌ ' + errStr, true);
         return;
       }
       if (global.toast) global.toast('✅ تم حفظ وتطبيق تخصيصات الثيم بنجاح!', true);

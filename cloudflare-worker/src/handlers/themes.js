@@ -247,30 +247,95 @@ export async function adminSetDefaultTheme(env, params, tenantId = DEFAULT_MASTE
   // 3. تحديث settings.theme_default
   try {
     await env.DB.prepare(`
-      INSERT INTO settings (key, value, tenant_id, updated_at)
-      VALUES ('theme_default', ?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(key, tenant_id) DO UPDATE SET
+      INSERT INTO settings (tenant_id, key, value, updated_at)
+      VALUES (?, 'theme_default', ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(tenant_id, key) DO UPDATE SET
         value = excluded.value,
         updated_at = CURRENT_TIMESTAMP
-    `).bind(themeName, tenantId).run();
+    `).bind(tenantId, themeName).run();
   } catch (e) {
     try {
       await env.DB.prepare(`
-        INSERT INTO settings (key, value, tenant_id)
-        VALUES ('theme_default', ?, ?)
-        ON CONFLICT(key) DO UPDATE SET
+        INSERT INTO settings (tenant_id, key, value)
+        VALUES (?, 'theme_default', ?)
+        ON CONFLICT(tenant_id, key) DO UPDATE SET
           value = excluded.value
-      `).bind(themeName, tenantId).run();
-    } catch (e2) {}
+      `).bind(tenantId, themeName).run();
+    } catch (err) {}
   }
 
   // 4. مسح الكاش
   if (env.CACHE) {
     await env.CACHE.delete(`tenant:${tenantId}:settings_v1`).catch(() => {});
-    await env.CACHE.delete(`tenant:${tenantId}:theme:${themeId}`).catch(() => {});
+    await env.CACHE.delete(`tenant:${tenantId}:theme_default`).catch(() => {});
   }
 
-  return { ok: true, message: 'تم تعيين الثيم الافتراضي بنجاح', default_theme: themeName };
+  return { ok: true, theme: themeName, message: 'تم تعيين الثيم الافتراضي بنجاح' };
+}
+
+/**
+ * [ADMIN] جلب تفاصيل ثيم معين مع عزل التاجر
+ */
+export async function adminGetTheme(env, params, tenantId = DEFAULT_MASTER_TENANT_ID) {
+  const themeId = sanitize(params.id || params.name || params.theme_id, 120);
+  if (!themeId) return { ok: false, error: 'معرّف الثيم مطلوب' };
+
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+
+  // 1. استعلم من themes_v2
+  try {
+    const row = await env.DB.prepare(
+      isMaster
+        ? `SELECT id, tenant_id, name, title, description, version, author, base, extends, tokens_json, sections_json, presets_json, is_active, updated_at FROM themes_v2 WHERE (id = ? OR name = ?) AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`
+        : `SELECT id, tenant_id, name, title, description, version, author, base, extends, tokens_json, sections_json, presets_json, is_active, updated_at FROM themes_v2 WHERE (id = ? OR name = ?) AND tenant_id = ? LIMIT 1`
+    ).bind(themeId, themeId, tenantId).first();
+
+    if (row) {
+      const theme = {
+        id: row.id,
+        tenant_id: row.tenant_id,
+        name: row.name,
+        title: row.title || row.name,
+        description: row.description || '',
+        version: row.version || '1.0.0',
+        author: row.author || '',
+        base: row.base || 'light',
+        extends: row.extends || null,
+        tokens: safeJsonParse(row.tokens_json, {}),
+        sections: safeJsonParse(row.sections_json, {}),
+        presets: safeJsonParse(row.presets_json, []),
+        is_active: Boolean(row.is_active),
+        updated_at: row.updated_at
+      };
+      return { ok: true, theme };
+    }
+  } catch (e) {}
+
+  // 2. استعلم من themes الكلاسيكي
+  try {
+    const fallbackRow = await env.DB.prepare(
+      isMaster
+        ? `SELECT id, name, config_json, updated_at FROM themes WHERE (name = ? OR id = ?) AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`
+        : `SELECT id, name, config_json, updated_at FROM themes WHERE (name = ? OR id = ?) AND tenant_id = ? LIMIT 1`
+    ).bind(themeId, themeId, tenantId).first();
+
+    if (fallbackRow) {
+      const tokens = safeJsonParse(fallbackRow.config_json, {});
+      const theme = {
+        id: String(fallbackRow.id || fallbackRow.name),
+        name: fallbackRow.name,
+        title: fallbackRow.name,
+        tokens: tokens,
+        config_json: tokens,
+        sections: {},
+        updated_at: fallbackRow.updated_at
+      };
+      return { ok: true, theme };
+    }
+  } catch (e) {}
+
+  // 3. إذا كان ثيماً مدمجاً (Built-in theme)
+  return { ok: true, theme: null, is_builtin: true, theme_id: themeId };
 }
 
 /**
@@ -278,25 +343,15 @@ export async function adminSetDefaultTheme(env, params, tenantId = DEFAULT_MASTE
  */
 export async function adminSaveThemeSections(env, params, tenantId = DEFAULT_MASTER_TENANT_ID) {
   const targetType = ['global', 'product', 'page', 'collection'].includes(params.target_type) ? params.target_type : 'global';
-  const targetId = sanitize(String(params.target_id || 'default'), 100);
-  const themeId = params.theme_id ? sanitize(params.theme_id, 100) : null;
-  
-  let sectionsJson = '{}';
-  if (params.sections) {
-    sectionsJson = typeof params.sections === 'object' ? JSON.stringify(params.sections) : String(params.sections);
-  } else if (params.sections_json) {
-    sectionsJson = String(params.sections_json);
-  }
+  const targetId = sanitize(String(params.target_id || params.product_id || 'default'), 100);
+  const themeId = params.theme_id ? sanitize(params.theme_id, 120) : null;
+  const sectionsJson = typeof params.sections === 'object' ? JSON.stringify(params.sections) : (typeof params.sections_json === 'string' ? params.sections_json : '{}');
 
-  try {
-    JSON.parse(sectionsJson);
-  } catch (e) {
-    return { ok: false, error: 'تنسيق sections_json غير صالح' };
-  }
+  try { JSON.parse(sectionsJson); } catch (e) { return { ok: false, error: 'تنسيق sections غير صحيح' }; }
 
   await env.DB.prepare(`
     INSERT INTO theme_section_configs (tenant_id, target_type, target_id, theme_id, sections_json, updated_at)
-    VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(tenant_id, target_type, target_id) DO UPDATE SET
       theme_id = excluded.theme_id,
       sections_json = excluded.sections_json,

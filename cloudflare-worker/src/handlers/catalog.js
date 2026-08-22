@@ -317,12 +317,22 @@ export async function validateCoupon(env, params, tenantId = DEFAULT_MASTER_TENA
 
   if (!code) return { valid: false, error: 'كود الكوبون مطلوب' };
 
-  const coupon = await env.DB.prepare(`
-    SELECT id, code, discount_type, discount_value, min_order, max_uses, used_count, expires_at
-    FROM coupons
-    WHERE code = ? AND active = 1 AND (tenant_id = ? OR tenant_id IS NULL)
-    LIMIT 1
-  `).bind(code, tenantId).first();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`
+        SELECT id, code, discount_type, discount_value, min_order, max_uses, used_count, expires_at
+        FROM coupons
+        WHERE code = ? AND active = 1 AND (tenant_id = ? OR tenant_id IS NULL)
+        LIMIT 1
+      `).bind(code, tenantId)
+    : env.DB.prepare(`
+        SELECT id, code, discount_type, discount_value, min_order, max_uses, used_count, expires_at
+        FROM coupons
+        WHERE code = ? AND active = 1 AND tenant_id = ?
+        LIMIT 1
+      `).bind(code, tenantId);
+
+  const coupon = await stmt.first();
 
   if (!coupon) return { valid: false, error: 'الكوبون غير موجود أو منتهي الصلاحية' };
 
@@ -365,13 +375,22 @@ export async function validateCoupon(env, params, tenantId = DEFAULT_MASTER_TENA
  * [ADMIN] قائمة جميع المنتجات لمتجر التاجر الموثق
  */
 export async function adminListProducts(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
-  const { results } = await env.DB.prepare(`
-    SELECT * FROM products
-    WHERE tenant_id = ? OR tenant_id IS NULL
-    ORDER BY sort_order ASC, id DESC
-  `).bind(tenantId).all();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`
+        SELECT * FROM products
+        WHERE (tenant_id = ? OR tenant_id IS NULL)
+        ORDER BY sort_order ASC, id DESC
+      `).bind(tenantId)
+    : env.DB.prepare(`
+        SELECT * FROM products
+        WHERE tenant_id = ?
+        ORDER BY sort_order ASC, id DESC
+      `).bind(tenantId);
 
-  const products = results.map(p => ({
+  const { results } = await stmt.all();
+
+  const products = (results || []).map(p => ({
     ...p,
     gallery_json:    safeParseJson(p.gallery_json,    []),
     variant_options: safeParseJson(p.variant_options, []),
@@ -438,10 +457,14 @@ export async function adminEditProduct(env, params, tenantId = DEFAULT_MASTER_TE
   const id = parseInt(params.id);
   if (!id) return { ok: false, error: 'معرّف المنتج (id) مطلوب' };
 
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+
   // التحقق الحصري من وجود المنتج داخل نطاق هذا التاجر
-  const existing = await env.DB.prepare(
-    `SELECT id FROM products WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`
-  ).bind(id, tenantId).first();
+  const checkStmt = isMaster
+    ? env.DB.prepare(`SELECT id FROM products WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(id, tenantId)
+    : env.DB.prepare(`SELECT id FROM products WHERE id = ? AND tenant_id = ? LIMIT 1`).bind(id, tenantId);
+
+  const existing = await checkStmt.first();
 
   if (!existing) return { ok: false, error: 'المنتج غير موجود أو لا تملك صلاحية تعديله' };
 
@@ -449,27 +472,51 @@ export async function adminEditProduct(env, params, tenantId = DEFAULT_MASTER_TE
     ? Math.max(0, parseFloat(params.weight))
     : null;
 
-  await env.DB.prepare(`
-    UPDATE products SET
-      name             = ?,
-      description      = ?,
-      description_long = ?,
-      price            = ?,
-      price_old        = ?,
-      image_url        = ?,
-      gallery_json     = ?,
-      variant_options  = ?,
-      category         = ?,
-      stock            = ?,
-      active           = ?,
-      sort_order       = ?,
-      tags_json        = ?,
-      sku              = ?,
-      weight           = ?,
-      landing_config_json = ?,
-      updated_at       = strftime('%Y-%m-%dT%H:%M:%SZ','now')
-    WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)
-  `).bind(
+  const updateStmt = isMaster
+    ? env.DB.prepare(`
+        UPDATE products SET
+          name             = ?,
+          description      = ?,
+          description_long = ?,
+          price            = ?,
+          price_old        = ?,
+          image_url        = ?,
+          gallery_json     = ?,
+          variant_options  = ?,
+          category         = ?,
+          stock            = ?,
+          active           = ?,
+          sort_order       = ?,
+          tags_json        = ?,
+          sku              = ?,
+          weight           = ?,
+          landing_config_json = ?,
+          updated_at       = strftime('%Y-%m-%dT%H:%M:%SZ','now')
+        WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)
+      `)
+    : env.DB.prepare(`
+        UPDATE products SET
+          name             = ?,
+          description      = ?,
+          description_long = ?,
+          price            = ?,
+          price_old        = ?,
+          image_url        = ?,
+          gallery_json     = ?,
+          variant_options  = ?,
+          category         = ?,
+          stock            = ?,
+          active           = ?,
+          sort_order       = ?,
+          tags_json        = ?,
+          sku              = ?,
+          weight           = ?,
+          landing_config_json = ?,
+          updated_at       = strftime('%Y-%m-%dT%H:%M:%SZ','now')
+        WHERE id = ? AND tenant_id = ?
+      `);
+
+  await updateStmt.bind(
     sanitize(params.name, 300),
     sanitize(params.description,      1000),
     sanitize(params.description_long, 10000),
@@ -502,9 +549,12 @@ export async function adminDeleteProduct(env, params, tenantId = DEFAULT_MASTER_
   const id = parseInt(params.id);
   if (!id) return { ok: false, error: 'معرّف المنتج (id) مطلوب' };
 
-  const result = await env.DB.prepare(
-    `DELETE FROM products WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`
-  ).bind(id, tenantId).run();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const deleteStmt = isMaster
+    ? env.DB.prepare(`DELETE FROM products WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`).bind(id, tenantId)
+    : env.DB.prepare(`DELETE FROM products WHERE id = ? AND tenant_id = ?`).bind(id, tenantId);
+
+  const result = await deleteStmt.run();
 
   if (env.CACHE) await env.CACHE.delete(`tenant:${tenantId}:catalog_v1`);
 

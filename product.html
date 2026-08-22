@@ -159,10 +159,21 @@
     })();
 
     // --- Toast Helper ---
+    function extractErrorMessage(val) {
+      if (val == null) return '';
+      if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
+      if (typeof val === 'object') {
+        if (val.message) return extractErrorMessage(val.message);
+        if (val.error) return extractErrorMessage(val.error);
+        if (val.code) return String(val.code);
+        try { return JSON.stringify(val); } catch(e) { return String(val); }
+      }
+      return String(val);
+    }
     function showToast(msg, type) {
       var t = document.getElementById('plToast');
       if (!t) return;
-      t.textContent = msg;
+      t.textContent = extractErrorMessage(msg);
       t.className = 'pl-toast show' + (type ? ' ' + type : '');
       setTimeout(function() {
         t.className = 'pl-toast';
@@ -1036,11 +1047,16 @@
         ? calculateClientShippingCost(storeSettings.shipping_config, wilayaCode, deliveryType, items, storeSettings)
         : { cost: 0, note: '' };
 
-      var shippingCost = (tierResult.freeShipping || window.selectedQuantityState.freeShipping) ? 0 : Number(res.cost || 0);
+      // ── التوصيل المجاني (من إعدادات المتجر — حالة صريحة) ──
+      var isFreeShippingSetting = (storeSettings.free_shipping_enabled === 'true');
+
+      var shippingCost = (isFreeShippingSetting || tierResult.freeShipping || window.selectedQuantityState.freeShipping) ? 0 : Number(res.cost || 0);
       var total = effectiveSubtotal + shippingCost;
 
       if (shipLabel) {
-        if (tierResult.freeShipping || window.selectedQuantityState.freeShipping) {
+        if (isFreeShippingSetting) {
+          shipLabel.innerHTML = '<span style="color:#10b981;font-weight:700">🚚 التوصيل مجاني</span>';
+        } else if (tierResult.freeShipping || window.selectedQuantityState.freeShipping) {
           shipLabel.innerHTML = '<span style="color:#10b981;font-weight:700">شحن مجاني 🎁 (عرض ترويجي)</span>';
         } else if (shippingCost > 0) {
           shipLabel.innerHTML = '<span style="color:#10b981;font-weight:700">+' + shippingCost.toLocaleString() + ' دج</span>' + (res.carrier ? ' <small style="color:var(--text3)">(' + escHtml(res.carrier) + ')</small>' : '');

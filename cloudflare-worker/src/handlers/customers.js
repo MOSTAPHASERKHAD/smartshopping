@@ -16,10 +16,14 @@ export async function customerRegister(env, params, tenantId = DEFAULT_MASTER_TE
   if (!phone || phone.length < 9) return { ok: false, error: 'رقم الهاتف غير صالح' };
   if (!password || password.length < 6) return { ok: false, error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' };
   
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+
   // تحقق من عدم وجود الحساب مسبقاً داخل متجر هذا التاجر
-  const existing = await env.DB.prepare(
-    `SELECT id FROM customers WHERE phone = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`
-  ).bind(phone, tenantId).first();
+  const checkStmt = isMaster
+    ? env.DB.prepare(`SELECT id FROM customers WHERE phone = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(phone, tenantId)
+    : env.DB.prepare(`SELECT id FROM customers WHERE phone = ? AND tenant_id = ? LIMIT 1`).bind(phone, tenantId);
+
+  const existing = await checkStmt.first();
   if (existing) return { ok: false, error: 'رقم الهاتف مستخدم مسبقاً في هذا المتجر' };
   
   const passwordHash = await hashCustomerPasswordS1(password);
@@ -51,9 +55,12 @@ export async function customerLogin(env, params, tenantId = DEFAULT_MASTER_TENAN
   
   if (!phone || !password) return { ok: false, error: 'رقم الهاتف وكلمة المرور مطلوبة' };
   
-  const customer = await env.DB.prepare(`
-    SELECT id, phone, password_hash FROM customers WHERE phone = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1
-  `).bind(phone, tenantId).first();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`SELECT id, phone, password_hash FROM customers WHERE phone = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(phone, tenantId)
+    : env.DB.prepare(`SELECT id, phone, password_hash FROM customers WHERE phone = ? AND tenant_id = ? LIMIT 1`).bind(phone, tenantId);
+
+  const customer = await stmt.first();
   
   if (!customer) return { ok: false, error: 'بيانات الدخول غير صحيحة' };
   
@@ -84,10 +91,18 @@ export async function customerProfile(env, token, tenantId = DEFAULT_MASTER_TENA
   const customerId = await validateCustomerToken(env.DB, token);
   if (!customerId) return { ok: false, error: { code: 'UNAUTHORIZED', message: 'يرجى تسجيل الدخول' } };
   
-  const customer = await env.DB.prepare(`
-    SELECT id, phone, name, wilaya_code, wilaya_ar, wilaya_en, municipality, delivery_type, created_at
-    FROM customers WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1
-  `).bind(customerId, tenantId).first();
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`
+        SELECT id, phone, name, wilaya_code, wilaya_ar, wilaya_en, municipality, delivery_type, created_at
+        FROM customers WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1
+      `).bind(customerId, tenantId)
+    : env.DB.prepare(`
+        SELECT id, phone, name, wilaya_code, wilaya_ar, wilaya_en, municipality, delivery_type, created_at
+        FROM customers WHERE id = ? AND tenant_id = ? LIMIT 1
+      `).bind(customerId, tenantId);
+
+  const customer = await stmt.first();
   
   if (!customer) return { ok: false, error: 'الحساب غير موجود' };
   
@@ -111,8 +126,11 @@ export async function adminListCustomers(env, params, tenantId = DEFAULT_MASTER_
   const offset = (page - 1) * limit;
   const search = sanitize(params.search, 50) || '';
   
-  let query = `SELECT id, phone, name, wilaya_ar, created_at FROM customers WHERE (tenant_id = ? OR tenant_id IS NULL)`;
-  let countQuery = `SELECT COUNT(*) as total FROM customers WHERE (tenant_id = ? OR tenant_id IS NULL)`;
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const tenantFilter = isMaster ? `(tenant_id = ? OR tenant_id IS NULL)` : `tenant_id = ?`;
+
+  let query = `SELECT id, phone, name, wilaya_ar, created_at FROM customers WHERE ${tenantFilter}`;
+  let countQuery = `SELECT COUNT(*) as total FROM customers WHERE ${tenantFilter}`;
   const queryParams = [tenantId];
   
   if (search) {
