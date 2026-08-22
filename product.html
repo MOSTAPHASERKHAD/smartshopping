@@ -319,6 +319,7 @@
       if (formSec && formSec.settings) {
         if (formSec.settings.title) p.landing_config.form_title = formSec.settings.title;
         if (formSec.settings.submit_btn_text) p.landing_config.submit_btn_text = formSec.settings.submit_btn_text;
+        p.landing_config.form_settings = formSec.settings;
       }
 
       var trustSec = sections['trust-signals'] || sections['trust'];
@@ -617,27 +618,36 @@
         html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1);
       }
 
+      var formSettings = lpCfg.form_settings || {};
+      var showEmail = (formSettings.show_email_field === true);
+      var showBaladiya = (formSettings.show_baladiya_field === true);
+      var showAddress = (formSettings.show_address_field === true);
+      var showDeliveryPref = (formSettings.show_delivery_preference === true);
+      var showNotes = (formSettings.show_notes_field === true);
+
       html += '<div class="pl-form-grid">';
 
-      // Name
+      // Name (Always Required)
       html += '<div class="pl-field-group">';
       html += '<label for="plName">الاسم الكامل *</label>';
       html += '<input type="text" id="plName" required placeholder="مثال: محمد بن علي" autocomplete="name">';
       html += '</div>';
 
-      // Phone
+      // Phone (Always Required)
       html += '<div class="pl-field-group">';
       html += '<label for="plPhone">رقم الهاتف *</label>';
       html += '<input type="tel" id="plPhone" required placeholder="مثال: 0555123456" autocomplete="tel" dir="ltr" style="text-align:right">';
       html += '</div>';
 
-      // Email (Optional)
-      html += '<div class="pl-field-group">';
-      html += '<label for="plEmail">البريد الإلكتروني (اختياري)</label>';
-      html += '<input type="email" id="plEmail" placeholder="example@email.com" autocomplete="email" dir="ltr" style="text-align:right">';
-      html += '</div>';
+      // Email (Toggleable)
+      if (showEmail) {
+        html += '<div class="pl-field-group">';
+        html += '<label for="plEmail">البريد الإلكتروني (اختياري)</label>';
+        html += '<input type="email" id="plEmail" placeholder="example@email.com" autocomplete="email" dir="ltr" style="text-align:right">';
+        html += '</div>';
+      }
 
-      // Wilaya
+      // Wilaya (Always Required)
       html += '<div class="pl-field-group">';
       html += '<label for="plWilaya">الولاية *</label>';
       html += '<select id="plWilaya" required onchange="handleWilayaChange()">';
@@ -648,20 +658,22 @@
       html += '</select>';
       html += '</div>';
 
-      // Municipality
-      html += '<div class="pl-field-group">';
-      html += '<label for="plCommune">البلدية *</label>';
-      html += '<input type="text" id="plCommune" required placeholder="اكتب اسم بلديتك">';
-      html += '</div>';
+      // Municipality (Toggleable)
+      if (showBaladiya) {
+        html += '<div class="pl-field-group">';
+        html += '<label for="plCommune">البلدية *</label>';
+        html += '<input type="text" id="plCommune" required placeholder="اكتب اسم بلديتك">';
+        html += '</div>';
+      }
 
-      // Delivery Type
+      // Delivery Type (Toggleable)
       var shipCfg = null;
       try { if (storeSettings && storeSettings.shipping_config) shipCfg = typeof storeSettings.shipping_config === 'string' ? JSON.parse(storeSettings.shipping_config) : storeSettings.shipping_config; } catch(_) {}
       var showHome = !shipCfg || shipCfg.enable_home !== false;
       var showOffice = !shipCfg || shipCfg.enable_office !== false;
       var defaultType = showHome ? 'Home' : (showOffice ? 'Office' : '');
 
-      if (showHome || showOffice) {
+      if (showDeliveryPref && (showHome || showOffice)) {
         html += '<div class="pl-field-group full-width">';
         html += '<label>مكان التوصيل المفصل:</label>';
         html += '<div class="pl-delivery-selector">';
@@ -679,17 +691,21 @@
         html += '</div>';
       }
 
-      // Address
-      html += '<div class="pl-field-group full-width">';
-      html += '<label for="plAddress">العنوان التفصيلي (الحي، الشارع، رقم المنزل) *</label>';
-      html += '<input type="text" id="plAddress" required placeholder="مثال: حي النور، عمارة 4، شقة 12">';
-      html += '</div>';
+      // Address (Toggleable)
+      if (showAddress) {
+        html += '<div class="pl-field-group full-width">';
+        html += '<label for="plAddress">العنوان التفصيلي (الحي، الشارع، رقم المنزل) *</label>';
+        html += '<input type="text" id="plAddress" required placeholder="مثال: حي النور، عمارة 4، شقة 12">';
+        html += '</div>';
+      }
 
-      // Notes
-      html += '<div class="pl-field-group full-width">';
-      html += '<label for="plNotes">ملاحظات إضافية (اختياري)</label>';
-      html += '<textarea id="plNotes" rows="2" placeholder="أي تعليمات خاصة بالموعد أو التوصيل..."></textarea>';
-      html += '</div>';
+      // Notes (Toggleable)
+      if (showNotes) {
+        html += '<div class="pl-field-group full-width">';
+        html += '<label for="plNotes">ملاحظات إضافية (اختياري)</label>';
+        html += '<textarea id="plNotes" rows="2" placeholder="أي تعليمات خاصة بالموعد أو التوصيل..."></textarea>';
+        html += '</div>';
+      }
 
       html += '</div>'; // End form grid
 
@@ -1343,25 +1359,42 @@
       e.preventDefault();
       if (!currentProduct) return;
 
-      var name = document.getElementById('plName').value.trim();
-      var phone = document.getElementById('plPhone').value.trim();
-      var email = document.getElementById('plEmail').value.trim();
-      var wilayaCode = document.getElementById('plWilaya').value;
-      var commune = document.getElementById('plCommune').value.trim();
-      var address = document.getElementById('plAddress').value.trim();
-      var notes = document.getElementById('plNotes').value.trim();
-      var deliveryType = document.querySelector('input[name="plDelivery"]:checked').value || 'Home';
+      var nameEl = document.getElementById('plName');
+      var phoneEl = document.getElementById('plPhone');
+      var emailEl = document.getElementById('plEmail');
+      var wilayaEl = document.getElementById('plWilaya');
+      var communeEl = document.getElementById('plCommune');
+      var addressEl = document.getElementById('plAddress');
+      var notesEl = document.getElementById('plNotes');
+      var deliveryRadio = document.querySelector('input[name="plDelivery"]:checked');
 
-      // Validation
+      var name = nameEl ? nameEl.value.trim() : '';
+      var phone = phoneEl ? phoneEl.value.trim() : '';
+      var email = emailEl ? emailEl.value.trim() : '';
+      var wilayaCode = wilayaEl ? wilayaEl.value : '';
+      var commune = communeEl ? communeEl.value.trim() : '';
+      var address = addressEl ? addressEl.value.trim() : '';
+      var notes = notesEl ? notesEl.value.trim() : '';
+      var deliveryType = deliveryRadio ? deliveryRadio.value : 'Home';
+
+      // Validation (Only validate rendered and required fields)
       if (!name) { showToast('يرجى إدخال الاسم الكامل', 'error'); return; }
       if (!phone || phone.length < 9) { showToast('يرجى إدخال رقم هاتف صالح', 'error'); return; }
       if (!wilayaCode) { showToast('يرجى اختيار ولايتك', 'error'); return; }
-      if (!commune) { showToast('يرجى إدخال البلدية', 'error'); return; }
-      if (!address) { showToast('يرجى إدخال العنوان', 'error'); return; }
+      if (communeEl && communeEl.required && !commune) { showToast('يرجى إدخال البلدية', 'error'); return; }
+      if (addressEl && addressEl.required && !address) { showToast('يرجى إدخال العنوان', 'error'); return; }
 
       var wilObj = WILAYAS.find(function(w){ return w.code === wilayaCode; });
       var wilNameAr = wilObj ? wilObj.ar : '';
       var wilNameEn = wilObj ? wilObj.en : '';
+
+      // Graceful fallback for hidden fields to satisfy backend/delivery records
+      if (!commune) {
+        commune = wilNameAr || 'الولاية';
+      }
+      if (!address) {
+        address = wilNameAr ? ('توصيل إلى ' + wilNameAr) : 'توصيل حسب الولاية';
+      }
 
       var submitBtn = document.getElementById('plSubmitBtn');
       submitBtn.disabled = true;

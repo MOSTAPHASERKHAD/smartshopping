@@ -146,7 +146,11 @@
         submit_btn_text: '🛒 تأكيد الطلب الآن (الدفع عند الاستلام)',
         show_quantity_selector: true,
         show_wilaya_selector: true,
-        show_notes_field: true
+        show_email_field: false,
+        show_baladiya_field: false,
+        show_address_field: false,
+        show_delivery_preference: false,
+        show_notes_field: false
       }
     },
     'trust-signals': {

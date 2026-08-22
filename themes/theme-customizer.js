@@ -409,6 +409,13 @@
           end_at: 'تاريخ ووقت انتهاء العرض (ISO 8601)',
           delivery_note: 'ملاحظة التوصيل',
           submit_btn_text: 'نص زر تأكيد الطلب',
+          show_quantity_selector: 'إظهار خيار تحديد الكمية',
+          show_wilaya_selector: 'إظهار خيار الولاية',
+          show_email_field: 'إظهار حقل البريد الإلكتروني',
+          show_baladiya_field: 'إظهار حقل البلدية',
+          show_address_field: 'إظهار حقل العنوان التفصيلي',
+          show_delivery_preference: 'إظهار خيار مكان التوصيل (للمنزل/المكتب)',
+          show_notes_field: 'إظهار حقل الملاحظات',
           badge1_title: 'عنوان الشارة الأولى',
           badge1_desc: 'وصف الشارة الأولى',
           badge2_title: 'عنوان الشارة الثانية',
@@ -430,6 +437,11 @@
             html += '<button type="button" onclick="ThemeCustomizer.set24HourOffer(\'' + esc(sid) + '\')" style="background:#f59e0b;color:#111;border:none;border-radius:6px;padding:7px 10px;font-weight:800;font-size:0.78rem;cursor:pointer;white-space:nowrap;" title="تعيين العداد لينتهي بعد 24 ساعة من الآن">⚡ +24 ساعة</button>';
             html += '</div>';
             html += '<div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;">اضغط الزر لبدء عداد 24 ساعة موحد لجميع الزوار من الآن</div>';
+            html += '</div>';
+          } else if (typeof sVal === 'boolean') {
+            html += '<div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;background:#0f172a;padding:8px 10px;border-radius:6px;border:1px solid #334155;">';
+            html += '<label style="font-size:0.8rem;color:#e2e8f0;cursor:pointer;flex:1;" for="sk-chk-' + esc(sid) + '-' + esc(sKey) + '">' + esc(labelText) + '</label>';
+            html += '<input type="checkbox" id="sk-chk-' + esc(sid) + '-' + esc(sKey) + '" ' + (sVal ? 'checked' : '') + ' onchange="ThemeCustomizer.updateSectionSetting(\'' + esc(sid) + '\', \'' + esc(sKey) + '\', this.checked)" style="cursor:pointer;width:18px;height:18px;accent-color:#6366f1;">';
             html += '</div>';
           } else if (typeof sVal === 'string' || typeof sVal === 'number') {
             html += '<div style="margin-bottom:10px;">';
