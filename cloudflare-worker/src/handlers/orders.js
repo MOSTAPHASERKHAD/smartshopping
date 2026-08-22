@@ -68,7 +68,6 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
   const deliveryType= sanitize(params.delivery_type,20) || 'home';
   const note        = sanitize(params.note,         500);
   const subtotal    = sanitizeNumber(params.subtotal);
-  const totalPrice  = sanitizeNumber(params.total_price || params.selected_bundle_price || params.subtotal);
   const utmSource   = sanitize(params.utm_source,   100);
   const utmMedium   = sanitize(params.utm_medium,   100);
   const utmCampaign = sanitize(params.utm_campaign, 100);
@@ -143,24 +142,13 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
     }
 
     let itemSubtotal = basePrice * qty;
-    let tierMatched = false;
     if (tiers.length > 0) {
       const matchedTier = tiers.find(t => Number(t.qty) === qty);
       if (matchedTier && matchedTier.price != null && !isNaN(Number(matchedTier.price))) {
         itemSubtotal = Number(matchedTier.price);
-        tierMatched = true;
         if (matchedTier.free_shipping) {
           hasTierFreeShipping = true;
         }
-      }
-    }
-
-    // دعم تسعير الحزم الديناميكية وخصومات العداد التنازلي الفعلية
-    if (!tierMatched) {
-      if (item.tier_subtotal && !isNaN(Number(item.tier_subtotal)) && Number(item.tier_subtotal) > 0) {
-        itemSubtotal = Number(item.tier_subtotal);
-      } else if (totalPrice > 0 && itemsArr.length === 1) {
-        itemSubtotal = totalPrice;
       }
     }
 
