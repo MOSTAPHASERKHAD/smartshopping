@@ -188,6 +188,94 @@ console.log('── TEST 11: Settings Persistence (UPSERT via admin_update_setti
 }
 console.log('');
 
+// ── TEST 12: Landing Page UX Free Delivery Matrix (Scenarios 1-5) ──
+console.log('── TEST 12: Landing Page UX Free Delivery Matrix (Scenarios 1-5) ──');
+{
+  function simulateProductLandingUX(storeSettings, product, wilayaCode, qty) {
+    qty = qty || 1;
+    var isStoreFreeShipping = Boolean(storeSettings && (storeSettings.free_shipping_enabled === 'true' || storeSettings.free_shipping_enabled === true || storeSettings.free_shipping_enabled === '1'));
+    var isProdFreeShipping = Boolean(product && (product.free_shipping === true || product.free_shipping === 'true' || product.free_shipping === 1));
+    var isFreeShipping = isStoreFreeShipping || isProdFreeShipping;
+
+    var basePrice = Number(product.price || 0);
+    var oldPrice = Number(product.old_price || 0);
+    var hasDiscount = oldPrice > basePrice;
+    var saveAmount = hasDiscount ? (oldPrice - basePrice) : 0;
+
+    var heroBadgeVisible = isFreeShipping;
+    var heroBadgeText = isStoreFreeShipping ? '🚚 التوصيل مجاني إلى جميع الولايات' : (isProdFreeShipping ? '🚚 التوصيل مجاني لهذا المنتج' : '');
+
+    var shipLabelText = '';
+    var total = basePrice * qty;
+
+    if (!wilayaCode) {
+      if (isStoreFreeShipping) {
+        shipLabelText = '🚚 التوصيل مجاني لجميع الولايات';
+      } else if (isProdFreeShipping) {
+        shipLabelText = '🚚 التوصيل مجاني لهذا المنتج';
+      } else {
+        shipLabelText = 'يحدد بعد اختيار الولاية';
+      }
+    } else {
+      var calculatedFee = (wilayaCode === '16') ? 500 : 700;
+      var shippingCost = isFreeShipping ? 0 : calculatedFee;
+      total += shippingCost;
+      if (isFreeShipping) {
+        shipLabelText = 'مجاني (0 د.ج)';
+      } else if (shippingCost > 0) {
+        shipLabelText = '+' + shippingCost + ' دج';
+      } else {
+        shipLabelText = 'يحدد بعد التأكيد';
+      }
+    }
+
+    return {
+      heroBadgeVisible: heroBadgeVisible,
+      heroBadgeText: heroBadgeText,
+      shipLabelText: shipLabelText,
+      hasDiscount: hasDiscount,
+      currentPrice: basePrice,
+      oldPrice: oldPrice,
+      saveAmount: saveAmount,
+      total: total
+    };
+  }
+
+  const mockProd = { id: 1, name: 'ساعة يد فاخرة', price: 3500, old_price: 5000 };
+
+  // Scenario 1: Free delivery BEFORE selecting Wilaya
+  const sc1 = simulateProductLandingUX({ free_shipping_enabled: 'true' }, mockProd, '');
+  assert('UX-1: Free shipping badge visible BEFORE wilaya selection', sc1.heroBadgeVisible === true);
+  assert('UX-1: Hero badge text is 🚚 التوصيل مجاني إلى جميع الولايات', sc1.heroBadgeText === '🚚 التوصيل مجاني إلى جميع الولايات');
+  assert('UX-1: Ship label displays free delivery before wilaya', sc1.shipLabelText === '🚚 التوصيل مجاني لجميع الولايات');
+
+  // Scenario 2: Free delivery AFTER selecting Wilaya
+  const sc2 = simulateProductLandingUX({ free_shipping_enabled: 'true' }, mockProd, '16');
+  assert('UX-2: Free shipping badge stays visible AFTER wilaya selection', sc2.heroBadgeVisible === true);
+  assert('UX-2: Ship label updates to مجاني (0 د.ج)', sc2.shipLabelText === 'مجاني (0 د.ج)');
+  assert('UX-2: Total = product price with 0 shipping', sc2.total === 3500);
+
+  // Scenario 3: Paid delivery
+  const sc3 = simulateProductLandingUX({ free_shipping_enabled: 'false' }, mockProd, '16');
+  assert('UX-3: Free shipping badge is hidden for paid shipping', sc3.heroBadgeVisible === false);
+  assert('UX-3: Ship label displays calculated fee (+500 دج)', sc3.shipLabelText === '+500 دج');
+  assert('UX-3: Total = 3500 + 500 = 4000', sc3.total === 4000);
+
+  // Scenario 4: Undetermined shipping before Wilaya selection
+  const sc4 = simulateProductLandingUX({ free_shipping_enabled: 'false' }, mockProd, '');
+  assert('UX-4: Free shipping badge is hidden', sc4.heroBadgeVisible === false);
+  assert('UX-4: Ship label displays يحدد بعد اختيار الولاية', sc4.shipLabelText === 'يحدد بعد اختيار الولاية');
+
+  // Scenario 5: Old Price + New Price + Free Shipping Badge together
+  const sc5 = simulateProductLandingUX({ free_shipping_enabled: 'true' }, mockProd, '');
+  assert('UX-5: Current price preserved (3500)', sc5.currentPrice === 3500);
+  assert('UX-5: Old price preserved (5000)', sc5.oldPrice === 5000);
+  assert('UX-5: Save amount preserved (1500)', sc5.saveAmount === 1500);
+  assert('UX-5: Has discount flag true', sc5.hasDiscount === true);
+  assert('UX-5: Free shipping badge coexists with price & discount', sc5.heroBadgeVisible === true);
+}
+console.log('');
+
 // ── Summary ──
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('📊 FREE SHIPPING TEST RESULTS: ' + passed + ' PASSED | ' + failed + ' FAILED');

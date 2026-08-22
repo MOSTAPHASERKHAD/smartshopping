@@ -210,23 +210,59 @@
   };
 
   ThemeCustomizerClass.prototype.save = function() {
+    var saveBtn = (typeof document !== 'undefined') ? document.getElementById('sk-customizer-save-btn') : null;
+    var statusEl = (typeof document !== 'undefined') ? document.getElementById('sk-customizer-status') : null;
+
+    function setStatus(msg, type, isBusy) {
+      if (saveBtn) {
+        saveBtn.disabled = Boolean(isBusy);
+        saveBtn.style.opacity = isBusy ? '0.6' : '1';
+        saveBtn.style.cursor = isBusy ? 'not-allowed' : 'pointer';
+        if (isBusy) {
+          saveBtn.innerHTML = '⏳ جاري الحفظ...';
+        } else {
+          saveBtn.innerHTML = '💾 حفظ التعديلات';
+        }
+      }
+      if (statusEl) {
+        if (msg) {
+          statusEl.style.display = 'inline-flex';
+          statusEl.style.color = type === 'success' ? '#10b981' : (type === 'error' ? '#ef4444' : '#38bdf8');
+          statusEl.textContent = msg;
+          if (type === 'success') {
+            setTimeout(function() { if (statusEl) statusEl.style.display = 'none'; }, 4000);
+          }
+        } else {
+          statusEl.style.display = 'none';
+        }
+      }
+      if (global.toast) {
+        try { global.toast(msg, type !== 'error'); } catch (_) {}
+      }
+    }
+
     if (!global.apiPost) {
-      if (global.toast) global.toast('✅ تم حفظ التعديلات محلياً', true);
+      setStatus('✅ تم حفظ التعديلات محلياً', 'success', false);
       return;
     }
-    if (global.toast) global.toast('⏳ جاري حفظ وتطبيق تخصيصات الثيم...', false);
+
+    setStatus('⏳ جارٍ حفظ وتطبيق تخصيصات الثيم...', 'info', true);
+
+    var sectionsJson = JSON.stringify(state.sections || {});
+
     global.apiPost('admin_save_theme_sections', {
       theme_id: state.themeId,
       target_type: state.targetType,
       target_id: state.targetId,
-      sections: state.sections
+      sections_json: sectionsJson,
+      sections: sectionsJson
     }, function(res) {
       if (res && res.error) {
         var errStr = typeof res.error === 'object' ? (res.error.message || res.error.code || JSON.stringify(res.error)) : String(res.error);
-        if (global.toast) global.toast('❌ ' + errStr, true);
+        setStatus('❌ فشل الحفظ: ' + errStr, 'error', false);
         return;
       }
-      if (global.toast) global.toast('✅ تم حفظ وتطبيق تخصيصات الثيم بنجاح! يمكنك الآن معاينة صفحة الهبوط مباشرة.', true);
+      setStatus('✅ تم حفظ التعديلات بنجاح! يمكنك الآن معاينة صفحة الهبوط.', 'success', false);
     });
   };
 
@@ -259,8 +295,9 @@
     // Action Buttons
     var landingUrl = (state.targetType === 'product' && state.targetId) ? ('product.html?product=' + encodeURIComponent(state.targetId)) : 'index.html';
     html += '<div style="display:flex;align-items:center;gap:10px;">';
+    html += '<span id="sk-customizer-status" style="font-size:0.85rem;font-weight:600;display:none;align-items:center;gap:6px;"></span>';
     html += '<a id="sk-preview-landing-btn" href="' + landingUrl + '" target="_blank" rel="noopener" style="background:#3b82f6;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-weight:600;font-size:0.85rem;display:flex;align-items:center;gap:6px;">👁️ معاينة صفحة الهبوط ↗</a>';
-    html += '<button type="button" onclick="ThemeCustomizer.save()" style="background:#10b981;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">💾 حفظ التعديلات</button>';
+    html += '<button id="sk-customizer-save-btn" type="button" onclick="ThemeCustomizer.save()" style="background:#10b981;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity 0.2s ease;">💾 حفظ التعديلات</button>';
     html += '<button type="button" onclick="ThemeCustomizer.close()" style="background:transparent;color:#94a3b8;border:1px solid #475569;padding:8px 14px;border-radius:8px;cursor:pointer;">✕ إغلاق</button>';
     html += '</div>';
     html += '</div>';
