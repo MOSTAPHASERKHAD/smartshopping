@@ -253,7 +253,7 @@
       }
     }
 
-    // --- Load Settings (Logo, WhatsApp, Store Name, Pixels) ---
+    // --- Load Settings (Logo, WhatsApp, Store Name, Pixels, Theme) ---
     function loadSettings() {
       var url = API_URL + '?action=settings' + (currentStoreSlug ? '&store=' + encodeURIComponent(currentStoreSlug) : '');
       fetch(url)
@@ -262,6 +262,14 @@
           if (d && !d.error) {
             storeSettings = d;
             loadTrackingPixels(d);
+            if (d.theme_default && window.ThemeEngine) {
+              try {
+                if (d.theme_config) {
+                  window.ThemeEngine.register({ id: d.theme_default, name: d.theme_default, tokens: d.theme_config }, { silent: true });
+                }
+                window.ThemeEngine.apply(d.theme_default);
+              } catch(e) { console.warn('ThemeEngine apply error:', e); }
+            }
             if (d.store_logo) {
               var logoEl = document.getElementById('plStoreLogo');
               if (logoEl) logoEl.src = d.store_logo;
@@ -276,6 +284,73 @@
           }
         })
         .catch(function() {});
+    }
+
+    // --- Apply Dynamic Theme Sections to Product with Fallback ---
+    function applyThemeSectionsToProduct(p, sections) {
+      if (!p || !sections || typeof sections !== 'object') return;
+      if (!p.landing_config || typeof p.landing_config !== 'object') {
+        try { p.landing_config = typeof p.landing_config === 'string' ? JSON.parse(p.landing_config) : {}; }
+        catch(_) { p.landing_config = {}; }
+      }
+      p.landing_config.mode = 'custom';
+      if (!p.landing_config.sections) p.landing_config.sections = {};
+      if (!p.landing_config.hero) p.landing_config.hero = {};
+
+      var heroSec = sections['hero-banner'] || sections['hero'];
+      if (heroSec) {
+        p.landing_config.sections.hero = (heroSec.enabled !== false);
+        if (heroSec.settings) {
+          if (heroSec.settings.headline) p.landing_config.hero.headline = heroSec.settings.headline;
+          if (heroSec.settings.subtitle != null) p.landing_config.hero.subtitle = heroSec.settings.subtitle;
+          if (heroSec.settings.cta_label) p.landing_config.hero.cta_label = heroSec.settings.cta_label;
+          if (heroSec.settings.urgency_text != null) p.landing_config.hero.urgency_text = heroSec.settings.urgency_text;
+          if (heroSec.settings.accent_color) p.landing_config.hero.accent_color = heroSec.settings.accent_color;
+        }
+      }
+
+      var gallerySec = sections['product-gallery'] || sections['gallery'];
+      if (gallerySec) {
+        p.landing_config.sections.gallery = (gallerySec.enabled !== false);
+      }
+
+      var formSec = sections['fast-order-form'] || sections['order-form'];
+      if (formSec && formSec.settings) {
+        if (formSec.settings.title) p.landing_config.form_title = formSec.settings.title;
+        if (formSec.settings.submit_btn_text) p.landing_config.submit_btn_text = formSec.settings.submit_btn_text;
+      }
+
+      var trustSec = sections['trust-signals'] || sections['trust'];
+      if (trustSec) {
+        p.landing_config.sections.trust = (trustSec.enabled !== false);
+        if (trustSec.settings) p.landing_config.trust_badges = trustSec.settings;
+      }
+
+      var featuresSec = sections['features-grid'] || sections['features'];
+      if (featuresSec) {
+        p.landing_config.sections.features = (featuresSec.enabled !== false);
+        if (featuresSec.settings && Array.isArray(featuresSec.settings.features_list) && featuresSec.settings.features_list.length > 0) {
+          p.landing_config.features = featuresSec.settings.features_list;
+        }
+      }
+
+      var detailsSec = sections['rich-text-details'] || sections['details'];
+      if (detailsSec) {
+        p.landing_config.sections.details = (detailsSec.enabled !== false);
+      }
+
+      var reviewsSec = sections['testimonials-reviews'] || sections['reviews'];
+      if (reviewsSec) {
+        p.landing_config.sections.reviews = (reviewsSec.enabled !== false);
+      }
+
+      var faqSec = sections['faq-accordion'] || sections['faq'];
+      if (faqSec) {
+        p.landing_config.sections.faq = (faqSec.enabled !== false);
+        if (faqSec.settings && Array.isArray(faqSec.settings.faq_list) && faqSec.settings.faq_list.length > 0) {
+          p.landing_config.faq = faqSec.settings.faq_list;
+        }
+      }
     }
 
     // --- Load Product from Catalog ---
@@ -310,7 +385,23 @@
           }
 
           currentProduct = normalizeProduct(rawProduct);
-          renderProductPage(currentProduct);
+
+          // Fetch dynamic theme sections for product (priority over legacy landing_config)
+          var sectionsUrl = API_URL + '?action=theme_sections&target_type=product&target_id=' + encodeURIComponent(pid) + (currentStoreSlug ? '&store=' + encodeURIComponent(currentStoreSlug) : '');
+          fetch(sectionsUrl)
+            .then(function(r) { return r.json(); })
+            .then(function(secRes) {
+              if (secRes && secRes.ok && secRes.config && secRes.config.sections) {
+                applyThemeSectionsToProduct(currentProduct, secRes.config.sections);
+                if (secRes.config.theme_id && window.ThemeEngine) {
+                  try { window.ThemeEngine.apply(secRes.config.theme_id); } catch(_) {}
+                }
+              }
+              renderProductPage(currentProduct);
+            })
+            .catch(function() {
+              renderProductPage(currentProduct);
+            });
 
           // Listen to form focus as InitiateCheckout trigger
           function onFormFocus() {
@@ -470,9 +561,12 @@
       var html = '<div class="pl-hero-grid">' + galleryHtml + infoHtml + '</div>';
 
       // ── Position 2: Order Form Section (Immediately After Hero / Gallery) ──
+      var formTitle = (lpCfg.form_title && lpCfg.form_title.trim()) ? lpCfg.form_title.trim() : 'استمارة الطلب السريع (الدفع عند الاستلام)';
+      var submitBtnText = (lpCfg.submit_btn_text && lpCfg.submit_btn_text.trim()) ? lpCfg.submit_btn_text.trim() : '🛒 تأكيد الطلب الآن (الدفع عند الاستلام)';
+
       html += '<div class="pl-order-card" id="plOrderSection">';
       html += '<div class="pl-order-header">';
-      html += '<h3>استمارة الطلب السريع (الدفع عند الاستلام)</h3>';
+      html += '<h3>' + escHtml(formTitle) + '</h3>';
       html += '<p>املأ بياناتك وسنتصل بك هاتفياً لتأكيد الطلب وتحديد موعد التسليم</p>';
       html += '</div>';
 
@@ -568,7 +662,7 @@
       html += '</div>';
 
       // Submit Button
-      html += '<button type="submit" class="pl-btn-submit" id="plSubmitBtn">🛒 تأكيد الطلب الآن (الدفع عند الاستلام)</button>';
+      html += '<button type="submit" class="pl-btn-submit" id="plSubmitBtn">' + escHtml(submitBtnText) + '</button>';
       html += '</form>';
 
       // Success Box
@@ -577,11 +671,21 @@
 
       // ── Position 3: Trust Signals Strip ──
       if (showTrust) {
+        var tb = lpCfg.trust_badges || {};
+        var b1_t = tb.badge1_title || 'توصيل لـ 58 ولاية';
+        var b1_d = tb.badge1_desc || 'شحن سريع إلى باب منزلك';
+        var b2_t = tb.badge2_title || 'الدفع عند الاستلام';
+        var b2_d = tb.badge2_desc || 'ادفع فقط عندما تستلم المنتج';
+        var b3_t = tb.badge3_title || 'معاينة قبل الدفع';
+        var b3_d = tb.badge3_desc || 'تأكد من طلبك مع الموزع';
+        var b4_t = tb.badge4_title || 'دعم متواصل';
+        var b4_d = tb.badge4_desc || 'متابعة وتأكيد الطلب هاتفياً';
+
         html += '<div class="pl-trust-strip">';
-        html += '<div class="pl-trust-item"><div class="pl-trust-icon">🚚</div><div class="pl-trust-text"><h4>توصيل لـ 58 ولاية</h4><p>شحن سريع إلى باب منزلك</p></div></div>';
-        html += '<div class="pl-trust-item"><div class="pl-trust-icon">💵</div><div class="pl-trust-text"><h4>الدفع عند الاستلام</h4><p>ادفع فقط عندما تستلم المنتج</p></div></div>';
-        html += '<div class="pl-trust-item"><div class="pl-trust-icon">🛡️</div><div class="pl-trust-text"><h4>معاينة قبل الدفع</h4><p>تأكد من طلبك مع الموزع</p></div></div>';
-        html += '<div class="pl-trust-item"><div class="pl-trust-icon">💬</div><div class="pl-trust-text"><h4>دعم متواصل</h4><p>متابعة وتأكيد الطلب هاتفياً</p></div></div>';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">🚚</div><div class="pl-trust-text"><h4>' + escHtml(b1_t) + '</h4><p>' + escHtml(b1_d) + '</p></div></div>';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">💵</div><div class="pl-trust-text"><h4>' + escHtml(b2_t) + '</h4><p>' + escHtml(b2_d) + '</p></div></div>';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">🛡️</div><div class="pl-trust-text"><h4>' + escHtml(b3_t) + '</h4><p>' + escHtml(b3_d) + '</p></div></div>';
+        html += '<div class="pl-trust-item"><div class="pl-trust-icon">💬</div><div class="pl-trust-text"><h4>' + escHtml(b4_t) + '</h4><p>' + escHtml(b4_d) + '</p></div></div>';
         html += '</div>';
       }
 
@@ -1288,9 +1392,13 @@
         window.addEventListener('message', function(e) {
           if (e.data && (e.data.type === 'sk:theme-update' || e.data.type === 'theme-preview')) {
             var d = e.data;
-            if (d.tokens) {
+            if (d.tokens && window.ThemeEngine) {
               window.ThemeEngine.register({ id: d.themeId || 'preview', name: d.name || 'Preview', tokens: d.tokens }, { silent: true });
               window.ThemeEngine.apply(d.themeId || 'preview', d.mode || window.ThemeEngine.mode);
+            }
+            if (d.sections && currentProduct) {
+              applyThemeSectionsToProduct(currentProduct, d.sections);
+              renderProductPage(currentProduct);
             }
           }
         });

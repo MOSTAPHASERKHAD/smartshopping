@@ -52,23 +52,31 @@
   ThemeCustomizerClass.prototype.open = function(themeId, targetType, targetId) {
     var self = this;
     targetType = targetType || 'product';
-    targetId = targetId || '2';
+    targetId = String(targetId || '2');
     themeId = themeId || (Engine && Engine.getActiveThemeId ? Engine.getActiveThemeId() : 'default');
+    STORE_URL = (targetType === 'product') ? ('product.html?product=' + encodeURIComponent(targetId) + '&preview=1') : 'index.html?preview=1';
 
     if (global.apiGet) {
       global.apiGet('admin_get_theme', { id: themeId }, function(res) {
         var theme = (res && res.theme) ? res.theme : (Engine && Engine.get ? Engine.get(themeId) : null);
         var sections = (theme && theme.sections && Object.keys(theme.sections).length) ? theme.sections : (Schema ? Schema.defaultSectionsConfig() : {});
         var tokens = (theme && theme.tokens) ? theme.tokens : (Schema ? Schema.defaultTokens() : {});
-        self.init({
-          themeId: themeId,
-          themeName: (theme && (theme.title || theme.name)) || themeId,
-          targetType: targetType,
-          targetId: targetId,
-          tokens: tokens,
-          sections: sections
+
+        // Fetch saved section overrides for this specific target
+        global.apiGet('theme_sections', { target_type: targetType, target_id: targetId }, function(secRes) {
+          if (secRes && secRes.ok && secRes.config && secRes.config.sections && Object.keys(secRes.config.sections).length > 0) {
+            sections = secRes.config.sections;
+          }
+          self.init({
+            themeId: themeId,
+            themeName: (theme && (theme.title || theme.name)) || themeId,
+            targetType: targetType,
+            targetId: targetId,
+            tokens: tokens,
+            sections: sections
+          });
+          self.renderUI();
         });
-        self.renderUI();
       });
     } else {
       var theme = (Engine && Engine.get) ? Engine.get(themeId) : null;
@@ -218,7 +226,7 @@
         if (global.toast) global.toast('❌ ' + errStr, true);
         return;
       }
-      if (global.toast) global.toast('✅ تم حفظ وتطبيق تخصيصات الثيم بنجاح!', true);
+      if (global.toast) global.toast('✅ تم حفظ وتطبيق تخصيصات الثيم بنجاح! يمكنك الآن معاينة صفحة الهبوط مباشرة.', true);
     });
   };
 
@@ -249,7 +257,9 @@
     html += '</div>';
 
     // Action Buttons
+    var landingUrl = (state.targetType === 'product' && state.targetId) ? ('product.html?product=' + encodeURIComponent(state.targetId)) : 'index.html';
     html += '<div style="display:flex;align-items:center;gap:10px;">';
+    html += '<a id="sk-preview-landing-btn" href="' + landingUrl + '" target="_blank" rel="noopener" style="background:#3b82f6;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-weight:600;font-size:0.85rem;display:flex;align-items:center;gap:6px;">👁️ معاينة صفحة الهبوط ↗</a>';
     html += '<button type="button" onclick="ThemeCustomizer.save()" style="background:#10b981;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">💾 حفظ التعديلات</button>';
     html += '<button type="button" onclick="ThemeCustomizer.close()" style="background:transparent;color:#94a3b8;border:1px solid #475569;padding:8px 14px;border-radius:8px;cursor:pointer;">✕ إغلاق</button>';
     html += '</div>';

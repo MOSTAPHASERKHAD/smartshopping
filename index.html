@@ -1303,6 +1303,16 @@ function init(){
   });
   function applySettings(d){
     if(d.gemini_api_key){chatAIEnabled=true;try{delete d.gemini_api_key}catch(e){}}
+
+    // Apply server default theme if configured
+    if(d.theme_default && window.ThemeEngine) {
+      try {
+        if(d.theme_config) {
+          window.ThemeEngine.register({ id: d.theme_default, name: d.theme_default, tokens: d.theme_config }, { silent: true });
+        }
+        window.ThemeEngine.apply(d.theme_default);
+      } catch(e) { console.warn('ThemeEngine apply error:', e); }
+    }
     
     // Apply custom logo if configured in Admin
     if(d.store_logo && typeof d.store_logo === 'string' && d.store_logo.trim() !== '') {
