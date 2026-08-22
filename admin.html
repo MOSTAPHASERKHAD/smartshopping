@@ -374,7 +374,8 @@
   <div id="sec-orders" class="hidden">
     <div class="top-bar">
       <h1><span data-i18n="orders">الطلبات</span> <span class="count-badge" id="orders-count-badge"></span></h1>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" id="btnBulkPrint" onclick="printBulkOrders()" disabled style="background:#4f46e5;color:#fff;border-color:#4f46e5;opacity:0.5;cursor:not-allowed">🖨️ طباعة الطلبات المحددة (<span id="selectedOrdersCount">0</span>)</button>
         <button class="btn btn-success btn-sm" onclick="exportOrdersCSV()" data-i18n="btn_export_csv">📥 تصدير CSV</button>
         <button class="btn btn-danger btn-sm" onclick="deleteSelectedOrders()" data-i18n="btn_delete_selected">🗑 حذف المحدد</button>
       </div>
@@ -1497,9 +1498,34 @@ function exportOrdersCSV() {
   toast('تم تصدير ' + allOrders.length + ' طلب');
 }
 
-// ===== DELETE ORDERS =====
+// ===== SELECT & DELETE ORDERS =====
 function toggleSelectAll(cb) {
   document.querySelectorAll('.order-check').forEach(function(c) { c.checked = cb.checked; });
+  updateSelectedOrdersState();
+}
+
+function updateSelectedOrdersState() {
+  var checked = document.querySelectorAll('.order-check:checked');
+  var btnBulkPrint = document.getElementById('btnBulkPrint');
+  var countBadge = document.getElementById('selectedOrdersCount');
+  var count = checked.length;
+  if (countBadge) countBadge.textContent = count;
+  if (btnBulkPrint) {
+    btnBulkPrint.disabled = (count === 0);
+    if (count > 0) {
+      btnBulkPrint.style.opacity = '1';
+      btnBulkPrint.style.cursor = 'pointer';
+    } else {
+      btnBulkPrint.style.opacity = '0.5';
+      btnBulkPrint.style.cursor = 'not-allowed';
+    }
+  }
+  var selectAll = document.getElementById('selectAllOrders');
+  var total = document.querySelectorAll('.order-check').length;
+  if (selectAll) {
+    selectAll.checked = (total > 0 && count === total);
+    selectAll.indeterminate = (count > 0 && count < total);
+  }
 }
 
 function deleteOrder(row, name) {
@@ -2086,7 +2112,7 @@ function renderOrders() {
     var itemsText = items.map(function(it) { return esc(it.name || it.title || '') + ' x' + it.qty; }).join(', ');
     var oid = esc(o.order_id || '');
     return '<tr>' +
-      '<td style="width:36px;text-align:center"><input type="checkbox" class="order-check" value="' + oid + '"></td>' +
+      '<td style="width:36px;text-align:center"><input type="checkbox" class="order-check" value="' + oid + '" onchange="updateSelectedOrdersState()"></td>' +
       '<td><strong style="color:var(--accent);font-family:monospace;font-size:0.82rem">' + esc(o.order_id) + '</strong></td>' +
       '<td style="white-space:nowrap;color:var(--text3);font-size:0.78rem">' + esc((o.created_at || '').substring(0, 10)) + '</td>' +
       '<td><div style="font-weight:600">' + esc(o.name) + '</div>' + (itemsText ? '<div style="font-size:0.72rem;color:var(--text3)">' + itemsText + '</div>' : '') + '</td>' +
@@ -2109,6 +2135,7 @@ function renderOrders() {
     '</tr>';
   }).join('');
   document.getElementById('orders-list').innerHTML = html;
+  updateSelectedOrdersState();
 }
 
 function updateOrderStatus(orderId, status) {
@@ -2132,6 +2159,125 @@ function updateOrderStatus(orderId, status) {
       loadOrders();
     }
   });
+}
+
+function generateOrderLabelHtml(o) {
+  var items = [];
+  try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
+  var itemsRows = items.map(function(it) {
+    return '<tr>' +
+      '<td style="padding:3px 5px;border:1px solid #000;font-size:9.5px;text-align:right;">' + esc(it.name || it.title || '') + '</td>' +
+      '<td style="padding:3px 5px;border:1px solid #000;font-size:9.5px;text-align:center;font-weight:800;width:28px;">' + (it.qty || 1) + '</td>' +
+      '<td style="padding:3px 5px;border:1px solid #000;font-size:9.5px;text-align:left;font-weight:800;width:60px;">' + Number(it.price * (it.qty || 1)).toLocaleString() + ' دج</td>' +
+    '</tr>';
+  }).join('');
+
+  var rawNote = String(o.notes || '');
+  var addrMatch = rawNote.match(/\| (.+)$/);
+  var orderAddrRaw = addrMatch ? addrMatch[1] : '';
+  var orderNoteRaw = addrMatch ? rawNote.replace(' | ' + orderAddrRaw, '') : rawNote;
+  var orderNote = esc(orderNoteRaw.trim());
+  var orderAddr = orderAddrRaw ? esc(orderAddrRaw.trim()) : '';
+
+  var subtotal = Number(o.subtotal || 0);
+  var shipCost = Number(o.shipping_cost || 0);
+  var grandTotal = subtotal + shipCost;
+  var storeName = (window.storeSettings && window.storeSettings.store_name) ? window.storeSettings.store_name : 'Smart Shopping';
+
+  return '<div class="bulk-label">' +
+    '<div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid #000;padding-bottom:4px;margin-bottom:6px;">' +
+        '<div>' +
+          '<div style="font-weight:900;font-size:12px;color:#000;">' + esc(storeName) + '</div>' +
+          '<div style="font-size:8.5px;color:#555;">وصل شحن وتسليم (COD)</div>' +
+        '</div>' +
+        '<div style="text-align:left;">' +
+          '<div style="font-family:monospace;font-weight:900;font-size:13px;color:#000;direction:ltr;">' + esc(o.order_id) + '</div>' +
+          '<div style="font-size:8.5px;color:#555;">' + esc((o.created_at || '').substring(0, 16)) + '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:4px;padding:5px 6px;margin-bottom:6px;font-size:9.5px;line-height:1.4;">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:2px;">' +
+          '<span>العميل: <strong style="font-size:10.5px;">' + esc(o.name) + '</strong></span>' +
+          '<span style="direction:ltr;font-family:monospace;font-weight:800;font-size:10.5px;">📞 ' + esc(o.phone) + '</span>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:2px;">' +
+          '<span>الولاية: <strong>' + esc(o.wilaya_ar || o.wilaya || '-') + (o.municipality ? ' — ' + esc(o.municipality) : '') + '</strong></span>' +
+          '<span>' + (o.delivery_type === 'Office' ? '🏢 استلام من المكتب' : '🏠 توصيل للمنزل') + '</span>' +
+        '</div>' +
+        (orderAddr ? '<div style="margin-top:2px;">العنوان: <strong>' + orderAddr + '</strong></div>' : '') +
+        (orderNote ? '<div style="margin-top:2px;color:#475569;">ملاحظة: ' + orderNote + '</div>' : '') +
+      '</div>' +
+
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:6px;">' +
+        '<thead>' +
+          '<tr style="background:#f1f5f9;">' +
+            '<th style="padding:3px 5px;border:1px solid #000;text-align:right;font-size:9px;">المنتج</th>' +
+            '<th style="padding:3px 5px;border:1px solid #000;text-align:center;font-size:9px;width:28px;">الكمية</th>' +
+            '<th style="padding:3px 5px;border:1px solid #000;text-align:left;font-size:9px;width:60px;">المجموع</th>' +
+          '</tr>' +
+        '</thead>' +
+        '<tbody>' + (itemsRows || '<tr><td colspan="3" style="padding:4px;border:1px solid #000;text-align:center;">' + esc(o.name) + '</td></tr>') + '</tbody>' +
+      '</table>' +
+    '</div>' +
+
+    '<div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;background:#000;color:#fff;padding:5px 8px;border-radius:4px;font-weight:900;font-size:11px;margin-top:4px;">' +
+        '<span>المبلغ المستحق (COD):</span>' +
+        '<span style="font-size:12.5px;letter-spacing:0.5px;">' + grandTotal.toLocaleString() + ' DZD</span>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:8.5px;color:#444;margin-top:3px;padding:0 2px;">' +
+        '<span>شركة الشحن: ' + esc(o.delivery_company || 'Yalidine') + '</span>' +
+        '<span>التوصيل: ' + (shipCost > 0 ? (shipCost.toLocaleString() + ' دج') : 'مجاني') + '</span>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function printBulkOrders() {
+  var checked = document.querySelectorAll('.order-check:checked');
+  if (!checked.length) {
+    toast('يرجى تحديد طلب واحد على الأقل للطباعة');
+    return;
+  }
+
+  var orderIds = Array.from(checked).map(function(c) { return c.value; });
+  var selectedOrders = allOrders.filter(function(o) { return orderIds.indexOf(o.order_id) > -1; });
+
+  if (!selectedOrders.length) {
+    toast('لم يتم العثور على بيانات الطلبات المحددة');
+    return;
+  }
+
+  // Remove any existing bulk container
+  var existing = document.getElementById('bulk-print-container');
+  if (existing) existing.remove();
+
+  var container = document.createElement('div');
+  container.id = 'bulk-print-container';
+
+  var html = selectedOrders.map(function(o) {
+    return generateOrderLabelHtml(o);
+  }).join('');
+
+  container.innerHTML = html;
+  document.body.appendChild(container);
+  document.body.classList.add('bulk-printing');
+
+  function cleanup() {
+    document.body.classList.remove('bulk-printing');
+    var el = document.getElementById('bulk-print-container');
+    if (el) el.remove();
+    window.removeEventListener('afterprint', cleanup);
+  }
+
+  window.addEventListener('afterprint', cleanup);
+
+  setTimeout(function() {
+    window.print();
+    setTimeout(cleanup, 2500);
+  }, 100);
 }
 
 function viewOrder(orderId) {

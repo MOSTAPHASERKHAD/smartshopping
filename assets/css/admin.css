@@ -265,10 +265,11 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
 .analytics-meta-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;flex-wrap:wrap}
 
 /* Print Shipping Label (A6) */
+/* Print Shipping Label (A6 and Bulk 4-on-A4) */
 @media print {
   @page {
-    size: A6 portrait;
-    margin: 5mm;
+    size: A4 portrait;
+    margin: 0;
   }
   *, *::before, *::after {
     box-sizing: border-box !important;
@@ -288,20 +289,22 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
     text-align: right !important;
     font-family: 'Cairo', system-ui, -apple-system, sans-serif !important;
   }
-  body > *:not(#orderModal),
-  .sidebar,
-  .top-bar,
-  .stats,
-  .panel,
-  .chart-row,
-  .login-screen,
-  .toast,
-  .no-print,
-  .modal-close,
-  .modal-overlay:not(#orderModal) {
+
+  /* Single Order Print via Order Modal */
+  body:not(.bulk-printing) > *:not(#orderModal),
+  body:not(.bulk-printing) .sidebar,
+  body:not(.bulk-printing) .top-bar,
+  body:not(.bulk-printing) .stats,
+  body:not(.bulk-printing) .panel,
+  body:not(.bulk-printing) .chart-row,
+  body:not(.bulk-printing) .login-screen,
+  body:not(.bulk-printing) .toast,
+  body:not(.bulk-printing) .no-print,
+  body:not(.bulk-printing) .modal-close,
+  body:not(.bulk-printing) .modal-overlay:not(#orderModal) {
     display: none !important;
   }
-  #orderModal {
+  body:not(.bulk-printing) #orderModal {
     position: static !important;
     display: block !important;
     opacity: 1 !important;
@@ -314,7 +317,7 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
     inset: auto !important;
     overflow: visible !important;
   }
-  #orderModal .modal {
+  body:not(.bulk-printing) #orderModal .modal {
     position: static !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -328,7 +331,7 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
     padding: 0 !important;
     margin: 0 !important;
   }
-  #orderModal .modal-header {
+  body:not(.bulk-printing) #orderModal .modal-header {
     border-bottom: 2px solid #000 !important;
     padding: 6px 10px !important;
     display: flex !important;
@@ -336,35 +339,79 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
     align-items: center !important;
     background: #f1f5f9 !important;
   }
-  #orderModal .modal-header h3 {
+  body:not(.bulk-printing) #orderModal .modal-header h3 {
     font-size: 13px !important;
     font-weight: 900 !important;
     color: #000 !important;
     margin: 0 !important;
   }
-  #orderModal .modal-body {
+  body:not(.bulk-printing) #orderModal .modal-body {
     padding: 8px 10px !important;
     font-size: 11px !important;
     line-height: 1.4 !important;
     color: #000 !important;
   }
-  #orderDetail table {
+  body:not(.bulk-printing) #orderDetail table {
     width: 100% !important;
     border-collapse: collapse !important;
     margin: 6px 0 !important;
     font-size: 10px !important;
   }
-  #orderDetail table th,
-  #orderDetail table td {
+  body:not(.bulk-printing) #orderDetail table th,
+  body:not(.bulk-printing) #orderDetail table td {
     border: 1px solid #333 !important;
     padding: 3px 5px !important;
     color: #000 !important;
     text-align: right !important;
   }
-  #orderDetail table th {
+  body:not(.bulk-printing) #orderDetail table th {
     background: #f1f5f9 !important;
     font-weight: 800 !important;
   }
+
+  /* Bulk Print 4-A6-per-A4 sheet */
+  body.bulk-printing > *:not(#bulk-print-container),
+  body.bulk-printing .sidebar,
+  body.bulk-printing .top-bar,
+  body.bulk-printing .stats,
+  body.bulk-printing .panel,
+  body.bulk-printing .chart-row,
+  body.bulk-printing .login-screen,
+  body.bulk-printing .toast,
+  body.bulk-printing .modal-overlay,
+  body.bulk-printing #orderModal,
+  body.bulk-printing .no-print {
+    display: none !important;
+  }
+
+  body.bulk-printing #bulk-print-container {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    width: 210mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .bulk-label {
+    width: 105mm !important;
+    height: 148.5mm !important;
+    max-height: 148.5mm !important;
+    box-sizing: border-box !important;
+    padding: 6mm !important;
+    border: 1px dashed #94a3b8 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 10px !important;
+    line-height: 1.35 !important;
+  }
+
   .print-only {
     display: block !important;
   }
