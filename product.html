@@ -1406,16 +1406,18 @@
         ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers)
         : { subtotal: basePrice * currentQty, freeShipping: false };
 
+      var finalOrderSubtotal = Number(tierResult.subtotal) || (basePrice * currentQty);
+
       var variantTitle = Object.values(window.selectedVariantState || {}).filter(Boolean).join(' / ');
 
       var items = JSON.stringify([{
         id: currentProduct.id,
         title: (currentProduct.title_ar || currentProduct.name) + (variantTitle ? ' (' + variantTitle + ')' : ''),
-        price: basePrice,
+        price: (currentQty > 0) ? Math.round(finalOrderSubtotal / currentQty) : basePrice,
         qty: currentQty,
         variant_selection: window.selectedVariantState,
         variant_title: variantTitle,
-        tier_subtotal: tierResult.subtotal
+        tier_subtotal: finalOrderSubtotal
       }]);
 
       var fullNote = notes ? (notes + ' | ' + address) : address;
@@ -1433,6 +1435,9 @@
         municipality: commune,
         delivery_type: deliveryType,
         items_json: items,
+        subtotal: finalOrderSubtotal,
+        total_price: finalOrderSubtotal,
+        selected_bundle_price: finalOrderSubtotal,
         note: fullNote,
         coupon_code: '',
         utm_source: utm.utm_source || '',

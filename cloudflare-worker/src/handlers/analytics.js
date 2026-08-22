@@ -148,9 +148,9 @@ export async function getCampaignAnalytics(env, params = {}, tenantId = DEFAULT_
           COALESCE(NULLIF(utm_content, ''), '[Unspecified Ad]') AS utm_content,
           status,
           COUNT(*) AS order_count,
-          SUM(subtotal - discount + shipping_cost) AS total_revenue,
-          SUM(subtotal) AS total_subtotal,
-          SUM(shipping_cost) AS total_shipping
+          SUM(COALESCE(subtotal, 0) - COALESCE(discount, 0) + COALESCE(shipping_cost, 0)) AS total_revenue,
+          SUM(COALESCE(subtotal, 0)) AS total_subtotal,
+          SUM(COALESCE(shipping_cost, 0)) AS total_shipping
         FROM orders
         WHERE (tenant_id = ? OR tenant_id IS NULL) AND ${dateCondition}
         GROUP BY utm_campaign, utm_term, utm_content, status

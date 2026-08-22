@@ -1397,12 +1397,13 @@ function loadDashboard() {
       document.getElementById('stat-orders').textContent = data.orders.length;
       var pending = data.orders.filter(function(o) { return o.status === 'pending'; }).length;
       document.getElementById('stat-pending').textContent = pending;
-      var revenue = data.orders.reduce(function(s, o) { return s + (Number(o.subtotal) || 0); }, 0);
+      var activeOrders = data.orders.filter(function(o) { return o.status !== 'cancelled'; });
+      var revenue = activeOrders.reduce(function(s, o) { return s + (Number(o.subtotal) || 0); }, 0);
       document.getElementById('stat-revenue').textContent = revenue.toLocaleString() + ' DZD';
       var today = new Date().toISOString().substring(0,10);
       var todayOrders = data.orders.filter(function(o) { return o.created_at && o.created_at.substring(0,10) === today; });
       document.getElementById('stat-today').textContent = todayOrders.length;
-      var todayRev = todayOrders.reduce(function(s, o) { return s + (Number(o.subtotal) || 0); }, 0);
+      var todayRev = todayOrders.filter(function(o) { return o.status !== 'cancelled'; }).reduce(function(s, o) { return s + (Number(o.subtotal) || 0); }, 0);
       document.getElementById('stat-today-revenue').textContent = todayRev.toLocaleString() + ' DZD';
       if (oldCount > 0 && data.orders.length > oldCount) {
         playNotification();
