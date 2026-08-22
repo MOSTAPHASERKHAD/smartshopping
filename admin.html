@@ -844,7 +844,10 @@
 <div class="modal">
   <div class="modal-header">
     <h3>تفاصيل الطلب</h3>
-    <button class="modal-close" onclick="closeOrderModal()">✕</button>
+    <div style="display:flex;align-items:center;gap:8px" class="no-print">
+      <button type="button" class="btn btn-warning btn-sm" onclick="printOrderLabel()" style="background:#f59e0b;color:#fff;font-weight:700;padding:4px 10px;font-size:0.8rem">🖨️ طباعة الوصل (A6)</button>
+      <button class="modal-close" onclick="closeOrderModal()">✕</button>
+    </div>
   </div>
   <div class="modal-body" id="orderDetail"></div>
 </div>
@@ -2137,7 +2140,7 @@ function viewOrder(orderId) {
   var items = [];
   try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
   var itemsHtml = items.map(function(it) {
-    return '<tr><td>' + esc(it.name || it.title || '') + '</td><td>' + it.qty + '</td><td>' + Number(it.price).toLocaleString() + ' DZD</td><td>' + Number(it.price * it.qty).toLocaleString() + ' DZD</td></tr>';
+    return '<tr><td>' + esc(it.name || it.title || '') + '</td><td style="text-align:center">' + it.qty + '</td><td>' + Number(it.price).toLocaleString() + ' DZD</td><td style="font-weight:700">' + Number(it.price * it.qty).toLocaleString() + ' DZD</td></tr>';
   }).join('');
   var rawNote = String(o.notes || '');
   var addrMatch = rawNote.match(/\| (.+)$/);
@@ -2145,36 +2148,51 @@ function viewOrder(orderId) {
   var orderNoteRaw = addrMatch ? rawNote.replace(' | ' + orderAddrRaw, '') : rawNote;
   var orderNote = esc(orderNoteRaw);
   var orderAddr = orderAddrRaw ? esc(orderAddrRaw) : '';
+  var subtotal = Number(o.subtotal || 0);
+  var shipCost = Number(o.shipping_cost || 0);
+  var grandTotal = subtotal + shipCost;
 
   document.getElementById('orderDetail').innerHTML =
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
-      '<div><strong>رقم الطلب:</strong><br>' + esc(o.order_id) + '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">' +
+      '<div><strong>رقم الطلب:</strong><br><span style="font-family:monospace;font-weight:800;font-size:1.05rem">' + esc(o.order_id) + '</span></div>' +
       '<div><strong>التاريخ:</strong><br>' + esc(o.created_at) + '</div>' +
-      '<div><strong>العميل:</strong><br>' + esc(o.name) + '</div>' +
-      '<div><strong>الهاتف:</strong><br><a href="https://wa.me/' + esc(o.phone) + '" target="_blank" style="color:var(--accent)">' + esc(o.phone) + '</a></div>' +
-      '<div><strong>الولاية:</strong><br>' + esc(o.wilaya_ar || '') + ' (' + esc(o.wilaya_en || '') + ')</div>' +
-      '<div><strong>التوصيل:</strong><br>' + (o.delivery_type === 'Office' ? 'مكتب' : 'منزل') + '</div>' +
+      '<div><strong>العميل:</strong><br><strong style="font-size:1rem">' + esc(o.name) + '</strong></div>' +
+      '<div><strong>الهاتف:</strong><br><a href="https://wa.me/' + esc(o.phone) + '" target="_blank" style="color:var(--accent);font-weight:800;direction:ltr;display:inline-block">' + esc(o.phone) + '</a></div>' +
+      '<div><strong>الولاية والبلدية:</strong><br>' + esc(o.wilaya_ar || '') + (o.municipality ? ' — ' + esc(o.municipality) : '') + '</div>' +
+      '<div><strong>نوع التوصيل:</strong><br>' + (o.delivery_type === 'Office' ? '🏢 مكتب (Stop Desk)' : '🏠 لباب المنزل (À Domicile)') + '</div>' +
       '<div style="grid-column:1/-1"><strong>الشحن:</strong><br>' +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px">' +
-          '<label style="font-size:.75rem">سعر التوصيل (دج)</label><input id="o_ship_cost" type="number" style="width:90px" value="' + Number(o.shipping_cost || 0) + '">' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px" class="no-print">' +
+          '<label style="font-size:.75rem">سعر التوصيل (دج)</label><input id="o_ship_cost" type="number" style="width:90px" value="' + shipCost + '">' +
           '<label style="font-size:.75rem">شركة التوصيل</label><input id="o_ship_company" style="width:110px" value="' + esc(o.delivery_company || 'yalidine') + '">' +
           '<label style="font-size:.75rem">رقم التتبع</label><input id="o_ship_tracking" style="width:140px" value="' + esc(o.tracking_code || '') + '">' +
           '<button class="btn btn-accent btn-xs" onclick="saveOrderShipping(\'' + esc(o.order_id) + '\')">حفظ</button>' +
         '</div>' +
+        '<div class="print-only" style="display:none;margin-top:2px;">' +
+          'شركة الشحن: <strong>' + esc(o.delivery_company || 'yalidine') + '</strong>' +
+          (shipCost > 0 ? ' | سعر التوصيل: <strong>' + shipCost.toLocaleString() + ' DZD</strong>' : ' | التوصيل: <strong>مجاني (0 DZD)</strong>') +
+          (o.tracking_code ? ' | رقم التتبع: <strong>' + esc(o.tracking_code) + '</strong>' : '') +
+        '</div>' +
       '</div>' +
-      (orderAddr ? '<div style="grid-column:1/-1"><strong>العنوان:</strong><br>' + orderAddr + '</div>' : '') +
-      (orderNote ? '<div style="grid-column:1/-1"><strong>الملاحظة:</strong><br>' + orderNote + '</div>' : '') +
+      (orderAddr ? '<div style="grid-column:1/-1"><strong>العنوان الدقيق:</strong><br>' + orderAddr + '</div>' : '') +
+      (orderNote ? '<div style="grid-column:1/-1"><strong>ملاحظة الطلب:</strong><br>' + orderNote + '</div>' : '') +
     '</div>' +
-    '<h4 style="margin-bottom:8px">المنتجات</h4>' +
-    '<table style="width:100%;border-collapse:collapse;margin-bottom:16px"><thead><tr style="background:var(--bg)"><th style="padding:8px;text-align:right">المنتج</th><th style="padding:8px;text-align:right">الكمية</th><th style="padding:8px;text-align:right">السعر</th><th style="padding:8px;text-align:right">الإجمالي</th></tr></thead><tbody>' + itemsHtml + '</tbody></table>' +
-    '<div style="text-align:left;font-weight:700;font-size:1.1rem">المجموع: ' + Number(o.subtotal).toLocaleString() + ' DZD</div>' +
-    '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">' +
+    '<h4 style="margin-bottom:6px;font-size:.9rem">المنتجات المطلوبة</h4>' +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:var(--bg)"><th style="padding:6px 8px;text-align:right">المنتج</th><th style="padding:6px 8px;text-align:center">الكمية</th><th style="padding:6px 8px;text-align:right">السعر</th><th style="padding:6px 8px;text-align:right">الإجمالي</th></tr></thead><tbody>' + itemsHtml + '</tbody></table>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg);padding:8px 12px;border-radius:6px;border:1px dashed var(--border);font-weight:700;font-size:1rem;margin-bottom:12px">' +
+      '<span>المبلغ الإجمالي عند الاستلام (COD):</span><span style="color:var(--accent);font-size:1.15rem;font-weight:900">' + grandTotal.toLocaleString() + ' DZD</span>' +
+    '</div>' +
+    '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap" class="no-print">' +
+      '<button type="button" class="btn btn-warning" onclick="printOrderLabel()" style="background:#f59e0b;color:#fff;font-weight:700">🖨️ طباعة الوصل (A6)</button>' +
       '<a href="https://wa.me/' + esc(o.phone) + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success">📱 واتساب العميل</a>' +
       '<a href="tel:' + esc(o.phone) + '" class="btn btn-info">📞 اتصال</a>' +
-      '<button class="btn btn-outline" onclick="closeOrderModal()">إغلاق</button>' +
+      '<button type="button" class="btn btn-outline" onclick="closeOrderModal()">إغلاق</button>' +
     '</div>';
 
   document.getElementById('orderModal').classList.add('open');
+}
+
+function printOrderLabel() {
+  window.print();
 }
 
 function closeOrderModal() { document.getElementById('orderModal').classList.remove('open'); }
