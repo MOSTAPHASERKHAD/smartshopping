@@ -249,19 +249,24 @@
     setStatus('⏳ جارٍ حفظ وتطبيق تخصيصات الثيم...', 'info', true);
 
     var sectionsJson = JSON.stringify(state.sections || {});
-
-    global.apiPost('admin_save_theme_sections', {
+    var payload = {
       theme_id: state.themeId,
       target_type: state.targetType,
       target_id: state.targetId,
       sections_json: sectionsJson,
       sections: sectionsJson
-    }, function(res) {
+    };
+
+    console.log('[ThemeCustomizer] Sending save payload:', payload);
+
+    global.apiPost('admin_save_theme_sections', payload, function(res) {
       if (res && res.error) {
         var errStr = typeof res.error === 'object' ? (res.error.message || res.error.code || JSON.stringify(res.error)) : String(res.error);
+        console.error('[ThemeCustomizer] Save failed:', errStr, res);
         setStatus('❌ فشل الحفظ: ' + errStr, 'error', false);
         return;
       }
+      console.log('[ThemeCustomizer] Save successful:', res);
       setStatus('✅ تم حفظ التعديلات بنجاح! يمكنك الآن معاينة صفحة الهبوط.', 'success', false);
     });
   };

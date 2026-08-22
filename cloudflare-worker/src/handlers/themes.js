@@ -349,14 +349,49 @@ export async function adminSaveThemeSections(env, params, tenantId = DEFAULT_MAS
 
   try { JSON.parse(sectionsJson); } catch (e) { return { ok: false, error: 'تنسيق sections غير صحيح' }; }
 
-  await env.DB.prepare(`
-    INSERT INTO theme_section_configs (tenant_id, target_type, target_id, theme_id, sections_json, updated_at)
-    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    ON CONFLICT(tenant_id, target_type, target_id) DO UPDATE SET
-      theme_id = excluded.theme_id,
-      sections_json = excluded.sections_json,
-      updated_at = excluded.updated_at
-  `).bind(tenantId, targetType, targetId, themeId, sectionsJson).run();
+  try {
+    await env.DB.prepare(`
+      INSERT INTO theme_section_configs (tenant_id, target_type, target_id, theme_id, sections_json, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(tenant_id, target_type, target_id) DO UPDATE SET
+        theme_id = excluded.theme_id,
+        sections_json = excluded.sections_json,
+        updated_at = excluded.updated_at
+    `).bind(tenantId, targetType, targetId, themeId, sectionsJson).run();
+  } catch (err) {
+    // إذا لم يكن جدول theme_section_configs منشأ بعد في قاعدة بيانات D1 الحية، يتم إنشاؤه تلقائياً
+    try {
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS theme_section_configs (
+          id            INTEGER PRIMARY KEY AUTOINCREMENT,
+          tenant_id     TEXT NOT NULL DEFAULT 'tenant_master_default',
+          target_type   TEXT NOT NULL DEFAULT 'global' CHECK(target_type IN ('global', 'product', 'page', 'collection')),
+          target_id     TEXT NOT NULL DEFAULT 'default',
+          theme_id      TEXT DEFAULT NULL,
+          sections_json TEXT NOT NULL DEFAULT '{}',
+          created_at    TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+          updated_at    TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+          UNIQUE(tenant_id, target_type, target_id)
+        )
+      `).run();
+
+      await env.DB.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_sec_configs_target ON theme_section_configs(tenant_id, target_type, target_id)
+      `).run();
+
+      await env.DB.prepare(`
+        INSERT INTO theme_section_configs (tenant_id, target_type, target_id, theme_id, sections_json, updated_at)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(tenant_id, target_type, target_id) DO UPDATE SET
+          theme_id = excluded.theme_id,
+          sections_json = excluded.sections_json,
+          updated_at = excluded.updated_at
+      `).bind(tenantId, targetType, targetId, themeId, sectionsJson).run();
+    } catch (fallbackErr) {
+      console.error('[adminSaveThemeSections D1 Error]', fallbackErr?.message || fallbackErr);
+      return { ok: false, error: 'فشل حفظ إعدادات الأقسام في قاعدة البيانات: ' + (fallbackErr?.message || 'DB Error') };
+    }
+  }
 
   if (env.CACHE) {
     await env.CACHE.delete(`tenant:${tenantId}:sections:${targetType}:${targetId}`).catch(() => {});
