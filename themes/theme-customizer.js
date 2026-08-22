@@ -29,6 +29,40 @@
     });
   }
 
+  function normalizeSections(inputSections) {
+    var defaults = (Schema && Schema.defaultSectionsConfig) ? Schema.defaultSectionsConfig() : {};
+    if (!inputSections || typeof inputSections !== 'object' || Object.keys(inputSections).length === 0) {
+      return defaults;
+    }
+    var merged = {};
+    // 1. Preserve all canonical schema registry sections (ensures new sections like countdown-timer appear for all themes)
+    Object.keys(defaults).forEach(function(secId) {
+      var def = defaults[secId];
+      if (inputSections[secId]) {
+        var saved = inputSections[secId];
+        merged[secId] = {
+          type: saved.type || def.type,
+          name: saved.name || def.name,
+          icon: saved.icon || def.icon,
+          order: typeof saved.order === 'number' ? saved.order : def.order,
+          enabled: saved.enabled !== false,
+          settings: Object.assign({}, def.settings || {}, saved.settings || {})
+        };
+      } else {
+        merged[secId] = JSON.parse(JSON.stringify(def));
+      }
+    });
+
+    // 2. Include any extra custom sections from saved state
+    Object.keys(inputSections).forEach(function(secId) {
+      if (!merged[secId]) {
+        merged[secId] = inputSections[secId];
+      }
+    });
+
+    return merged;
+  }
+
   function ThemeCustomizerClass() {
     this.state = state;
   }
@@ -44,7 +78,7 @@
     state.targetType = opts.targetType || 'product';
     state.targetId = String(opts.targetId || '2');
     state.tokens = opts.tokens || (Schema ? Schema.defaultTokens() : {});
-    state.sections = opts.sections || (Schema ? Schema.defaultSectionsConfig() : {});
+    state.sections = normalizeSections(opts.sections);
     state.activeSectionId = Object.keys(state.sections)[0] || 'hero-banner';
     state.customizerOpen = true;
   };
