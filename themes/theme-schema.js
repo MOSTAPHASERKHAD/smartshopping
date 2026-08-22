@@ -120,11 +120,24 @@
         badge_text: 'تخفيض حصري'
       }
     },
+    'countdown-timer': {
+      type: 'countdown',
+      name: 'عداد العرض التنازلي (24 ساعة)',
+      icon: '⏳',
+      defaultOrder: 2,
+      defaultVisible: true,
+      defaultSettings: {
+        title: '🔥 عرض خاص لفترة محدودة',
+        message: 'ينتهي العرض وتخفيض السعر خلال:',
+        end_at: '',
+        accent_color: '#e94560'
+      }
+    },
     'fast-order-form': {
       type: 'order-form',
-      name: 'استمارة الطلب السريع (الترتيب #2)',
+      name: 'استمارة الطلب السريع (الدفع عند الاستلام)',
       icon: '📝',
-      defaultOrder: 2,
+      defaultOrder: 3,
       defaultVisible: true,
       defaultSettings: {
         title: 'استمارة الطلب السريع (الدفع عند الاستلام)',

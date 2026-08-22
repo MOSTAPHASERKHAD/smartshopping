@@ -335,6 +335,14 @@
         }
       }
 
+      var countdownSec = sections['countdown-timer'] || sections['countdown'];
+      if (countdownSec) {
+        p.landing_config.sections.countdown = (countdownSec.enabled !== false);
+        if (countdownSec.settings) {
+          p.landing_config.countdown = countdownSec.settings;
+        }
+      }
+
       var detailsSec = sections['rich-text-details'] || sections['details'];
       if (detailsSec) {
         p.landing_config.sections.details = (detailsSec.enabled !== false);
@@ -457,7 +465,10 @@
       var showReviews = !isCustom || (sec.reviews !== false);
       var showFaq = !isCustom || (sec.faq !== false);
       var showTrust = !isCustom || (sec.trust !== false);
+      var showCountdown = !isCustom || (sec.countdown !== false);
       var showForm = true; // Always displayed
+
+      var countdownCfg = lpCfg.countdown || {};
 
       var customHero = lpCfg.hero || {};
       var accentColor = (customHero.accent_color && /^#[0-9a-fA-F]{6}$/.test(customHero.accent_color)) ? customHero.accent_color : null;
@@ -541,6 +552,28 @@
       }
       infoHtml += '<div class="pl-free-shipping-pill" id="plHeroFreeShippingBadge" style="' + (isFreeShippingNow ? 'display:inline-flex;' : 'display:none;') + 'align-items:center;gap:4px;background:#dcfce7;color:#15803d;font-size:0.82rem;font-weight:800;padding:4px 10px;border-radius:20px;border:1px solid rgba(22,163,74,0.3);margin-right:auto;">' + (isStoreFreeShipping ? '🚚 التوصيل مجاني إلى جميع الولايات' : (isTierFreeShipping ? '🎁 شحن مجاني مع هذا العرض' : '🚚 التوصيل مجاني لهذا المنتج')) + '</div>';
       infoHtml += '</div>';
+
+      // ── Dynamic 24-Hour Countdown Timer Card ──
+      if (showCountdown && (countdownCfg.end_at || (countdownCfg.enabled !== false && lpCfg.countdown))) {
+        var cdTitle = (countdownCfg.title && countdownCfg.title.trim()) ? countdownCfg.title.trim() : '🔥 عرض خاص لفترة محدودة';
+        var cdMsg = (countdownCfg.message && countdownCfg.message.trim()) ? countdownCfg.message.trim() : 'ينتهي العرض وتخفيض السعر خلال:';
+        var cdAccent = (countdownCfg.accent_color && /^#[0-9a-fA-F]{6}$/.test(countdownCfg.accent_color)) ? countdownCfg.accent_color : (accentColor || '#e11d48');
+
+        infoHtml += '<div class="pl-countdown-card" id="plCountdownWidget" style="border-color:' + escHtml(cdAccent) + '40; display:none;">';
+        infoHtml += '<div class="pl-countdown-header">';
+        infoHtml += '<span class="pl-countdown-title" id="plCountdownTitle" style="color:' + escHtml(cdAccent) + ';">' + escHtml(cdTitle) + '</span>';
+        infoHtml += '</div>';
+        infoHtml += '<div class="pl-countdown-msg" id="plCountdownMsg">' + escHtml(cdMsg) + '</div>';
+        infoHtml += '<div class="pl-countdown-timer-grid" id="plCountdownGrid">';
+        infoHtml += '<div class="pl-countdown-unit"><div class="pl-countdown-num" id="plCdHours">00</div><div class="pl-countdown-lbl">ساعة</div></div>';
+        infoHtml += '<div class="pl-countdown-sep" style="color:' + escHtml(cdAccent) + ';">:</div>';
+        infoHtml += '<div class="pl-countdown-unit"><div class="pl-countdown-num" id="plCdMins">00</div><div class="pl-countdown-lbl">دقيقة</div></div>';
+        infoHtml += '<div class="pl-countdown-sep" style="color:' + escHtml(cdAccent) + ';">:</div>';
+        infoHtml += '<div class="pl-countdown-unit"><div class="pl-countdown-num" id="plCdSecs">00</div><div class="pl-countdown-lbl">ثانية</div></div>';
+        infoHtml += '</div>';
+        infoHtml += '<div class="pl-countdown-expired" id="plCountdownExpired" style="display:none;">انتهى العرض</div>';
+        infoHtml += '</div>';
+      }
 
       // ── Variant Swatches Block ──
       if (typeof renderVariantSwatches === 'function' && p.variant_options && p.variant_options.length > 0) {
@@ -755,9 +788,93 @@
 
       container.innerHTML = html;
 
+      // ── Initialize Synchronized Countdown Timer ──
+      if (showCountdown && countdownCfg && (countdownCfg.end_at || (countdownCfg.enabled !== false && lpCfg.countdown))) {
+        initCountdownTimer(countdownCfg);
+      } else {
+        var cdWidget = document.getElementById('plCountdownWidget');
+        if (cdWidget) cdWidget.style.display = 'none';
+      }
+
       // Update sticky bottom price
       var stickyPriceEl = document.getElementById('plStickyPriceVal');
       if (stickyPriceEl) stickyPriceEl.textContent = priceStr;
+    }
+
+    // --- Dynamic Synchronized Countdown Timer Engine ---
+    var _countdownTimerInterval = null;
+
+    function initCountdownTimer(countdownCfg) {
+      if (_countdownTimerInterval) {
+        clearInterval(_countdownTimerInterval);
+        _countdownTimerInterval = null;
+      }
+
+      var widget = document.getElementById('plCountdownWidget');
+      if (!widget) return;
+
+      if (!countdownCfg || countdownCfg.enabled === false) {
+        widget.style.display = 'none';
+        return;
+      }
+
+      var titleEl = document.getElementById('plCountdownTitle');
+      var msgEl = document.getElementById('plCountdownMsg');
+      var gridEl = document.getElementById('plCountdownGrid');
+      var expEl = document.getElementById('plCountdownExpired');
+      var hoursEl = document.getElementById('plCdHours');
+      var minsEl = document.getElementById('plCdMins');
+      var secsEl = document.getElementById('plCdSecs');
+
+      if (titleEl && countdownCfg.title) titleEl.textContent = countdownCfg.title;
+      if (msgEl && countdownCfg.message) msgEl.textContent = countdownCfg.message;
+
+      var endAtStr = (countdownCfg.end_at || '').trim();
+      if (!endAtStr) {
+        widget.style.display = 'none';
+        return;
+      }
+
+      var targetTimestamp = new Date(endAtStr).getTime();
+      if (isNaN(targetTimestamp)) {
+        widget.style.display = 'none';
+        return;
+      }
+
+      function update() {
+        var now = Date.now();
+        var diff = targetTimestamp - now;
+
+        if (diff <= 0) {
+          if (_countdownTimerInterval) {
+            clearInterval(_countdownTimerInterval);
+            _countdownTimerInterval = null;
+          }
+          if (gridEl) gridEl.style.display = 'none';
+          if (expEl) {
+            expEl.style.display = 'block';
+            expEl.textContent = 'انتهى العرض';
+          }
+          return;
+        }
+
+        if (gridEl) gridEl.style.display = 'flex';
+        if (expEl) expEl.style.display = 'none';
+
+        var totalSeconds = Math.floor(diff / 1000);
+        var hours = Math.floor(totalSeconds / 3600);
+        var minutes = Math.floor((totalSeconds % 3600) / 60);
+        var seconds = totalSeconds % 60;
+
+        if (hoursEl) hoursEl.textContent = String(hours).padStart(2, '0');
+        if (minsEl) minsEl.textContent = String(minutes).padStart(2, '0');
+        if (secsEl) secsEl.textContent = String(seconds).padStart(2, '0');
+      }
+
+      update();
+      widget.style.display = 'block';
+
+      _countdownTimerInterval = setInterval(update, 1000);
     }
 
     // --- Helper for FAQ Items ---

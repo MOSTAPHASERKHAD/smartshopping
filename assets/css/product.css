@@ -1528,3 +1528,84 @@ body.ltr .pl-lb-nav.next {
   margin-top: 2px;
 }
 
+/* ── Dynamic 24-Hour Countdown Timer Card ── */
+.pl-countdown-card {
+  background: linear-gradient(135deg, rgba(233, 69, 96, 0.06) 0%, rgba(245, 158, 11, 0.07) 100%);
+  border: 1.5px solid rgba(233, 69, 96, 0.25);
+  border-radius: var(--ds-radius-md, 10px);
+  padding: 12px 14px;
+  margin: 12px 0;
+  text-align: center;
+  box-shadow: var(--ds-shadow-xs, 0 1px 2px rgba(0, 0, 0, 0.04));
+  transition: all 0.2s ease-in-out;
+}
+
+.pl-countdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.pl-countdown-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--ds-accent, #e11d48);
+}
+
+.pl-countdown-msg {
+  font-size: 0.8rem;
+  color: var(--ds-text-secondary, #475569);
+  margin-bottom: 8px;
+}
+
+.pl-countdown-timer-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  direction: rtl;
+}
+
+.pl-countdown-unit {
+  background: var(--ds-surface, #ffffff);
+  border: 1px solid rgba(233, 69, 96, 0.18);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  border-radius: var(--ds-radius-sm, 6px);
+  min-width: 52px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pl-countdown-num {
+  font-size: 1.25rem;
+  font-weight: 900;
+  font-family: system-ui, -apple-system, monospace;
+  color: var(--ds-text-primary, #0f172a);
+  line-height: 1.1;
+}
+
+.pl-countdown-lbl {
+  font-size: 0.65rem;
+  color: var(--ds-text-muted, #94a3b8);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.pl-countdown-sep {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--ds-accent, #e11d48);
+  margin-top: -10px;
+}
+
+.pl-countdown-expired {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--ds-danger, #dc2626);
+  padding: 6px 0;
+}

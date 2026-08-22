@@ -363,12 +363,43 @@
       html += '</div>';
 
       if (isSelected && sec.settings) {
+        var SETTING_LABELS = {
+          headline: 'العنوان الرئيسي',
+          subtitle: 'العنوان الفرعي',
+          cta_label: 'نص زر الطلب (CTA)',
+          urgency_text: 'نص الاستعجال',
+          accent_color: 'لون التمييز',
+          badge_text: 'نص الشارة',
+          title: 'العنوان',
+          message: 'رسالة العرض',
+          end_at: 'تاريخ ووقت انتهاء العرض (ISO 8601)',
+          delivery_note: 'ملاحظة التوصيل',
+          submit_btn_text: 'نص زر تأكيد الطلب',
+          badge1_title: 'عنوان الشارة الأولى',
+          badge1_desc: 'وصف الشارة الأولى',
+          badge2_title: 'عنوان الشارة الثانية',
+          badge2_desc: 'وصف الشارة الثانية',
+          badge3_title: 'عنوان الشارة الثالثة',
+          badge3_desc: 'وصف الشارة الثالثة'
+        };
+
         html += '<div style="padding:12px;background:#1e293b;border-top:1px solid #334155;">';
         Object.keys(sec.settings).forEach(function(sKey) {
           var sVal = sec.settings[sKey];
-          if (typeof sVal === 'string' || typeof sVal === 'number') {
+          var labelText = SETTING_LABELS[sKey] || sKey;
+
+          if (sKey === 'end_at') {
+            html += '<div style="margin-bottom:12px;background:#0f172a;padding:10px;border-radius:8px;border:1px solid #334155;">';
+            html += '<label style="display:block;font-size:0.8rem;color:#f59e0b;font-weight:700;margin-bottom:4px;">⏱️ ' + esc(labelText) + '</label>';
+            html += '<div style="display:flex;gap:6px;align-items:center;">';
+            html += '<input type="text" id="sk-input-end-at" value="' + esc(sVal) + '" placeholder="2026-08-23T15:00:00Z" oninput="ThemeCustomizer.updateSectionSetting(\'' + esc(sid) + '\', \'end_at\', this.value)" style="flex:1;background:#1e293b;border:1px solid #475569;border-radius:6px;padding:7px 10px;color:#fff;font-size:0.82rem;font-family:monospace;direction:ltr;">';
+            html += '<button type="button" onclick="ThemeCustomizer.set24HourOffer(\'' + esc(sid) + '\')" style="background:#f59e0b;color:#111;border:none;border-radius:6px;padding:7px 10px;font-weight:800;font-size:0.78rem;cursor:pointer;white-space:nowrap;" title="تعيين العداد لينتهي بعد 24 ساعة من الآن">⚡ +24 ساعة</button>';
+            html += '</div>';
+            html += '<div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;">اضغط الزر لبدء عداد 24 ساعة موحد لجميع الزوار من الآن</div>';
+            html += '</div>';
+          } else if (typeof sVal === 'string' || typeof sVal === 'number') {
             html += '<div style="margin-bottom:10px;">';
-            html += '<label style="display:block;font-size:0.8rem;color:#94a3b8;margin-bottom:4px;">' + esc(sKey) + '</label>';
+            html += '<label style="display:block;font-size:0.8rem;color:#94a3b8;margin-bottom:4px;">' + esc(labelText) + '</label>';
             html += '<input type="text" value="' + esc(sVal) + '" oninput="ThemeCustomizer.updateSectionSetting(\'' + esc(sid) + '\', \'' + esc(sKey) + '\', this.value)" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:6px 10px;color:#fff;font-size:0.85rem;box-sizing:border-box;">';
             html += '</div>';
           }
@@ -379,6 +410,14 @@
     });
 
     container.innerHTML = html;
+  };
+
+  ThemeCustomizerClass.prototype.set24HourOffer = function(sectionId) {
+    sectionId = sectionId || 'countdown-timer';
+    var endIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    this.updateSectionSetting(sectionId, 'end_at', endIso);
+    this.refreshSectionsList();
+    this.sendPreviewUpdate();
   };
 
   ThemeCustomizerClass.prototype.selectSection = function(sectionId) {
@@ -399,6 +438,7 @@
   ThemeCustomizerClass.reorderSection = function(sId, ord) { return instance.reorderSection(sId, ord); };
   ThemeCustomizerClass.moveSection = function(sId, dir) { return instance.moveSection(sId, dir); };
   ThemeCustomizerClass.updateSectionSetting = function(sId, k, v) { return instance.updateSectionSetting(sId, k, v); };
+  ThemeCustomizerClass.set24HourOffer = function(sId) { return instance.set24HourOffer(sId); };
   ThemeCustomizerClass.setDeviceMode = function(m) { return instance.setDeviceMode(m); };
   ThemeCustomizerClass.sendPreviewUpdate = function() { return instance.sendPreviewUpdate(); };
   ThemeCustomizerClass.selectSection = function(sId) { return instance.selectSection(sId); };
