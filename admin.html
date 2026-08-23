@@ -377,6 +377,7 @@
       <h1><span data-i18n="orders">الطلبات</span> <span class="count-badge" id="orders-count-badge"></span></h1>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm" id="btnBulkSendStaff" onclick="sendBulkOrdersToStaff()" disabled style="background:#059669;color:#fff;border-color:#059669;opacity:0.5;cursor:not-allowed">📲 إرسال المحدد للعامل (<span id="selectedOrdersCountStaff">0</span>)</button>
+        <button class="btn btn-sm" id="btnBulkSendCustomers" onclick="startCustomerWhatsAppDispatch()" disabled style="background:#2563eb;color:#fff;border-color:#2563eb;opacity:0.5;cursor:not-allowed">📲 إرسال رسائل الزبائن (<span id="selectedOrdersCountCustomers">0</span>)</button>
         <button class="btn btn-primary btn-sm" id="btnBulkPrint" onclick="printBulkOrders()" disabled style="background:#4f46e5;color:#fff;border-color:#4f46e5;opacity:0.5;cursor:not-allowed">🖨️ طباعة الطلبات المحددة (<span id="selectedOrdersCount">0</span>)</button>
         <button class="btn btn-success btn-sm" onclick="exportOrdersCSV()" data-i18n="btn_export_csv">📥 تصدير CSV</button>
         <button class="btn btn-danger btn-sm" onclick="deleteSelectedOrders()" data-i18n="btn_delete_selected">🗑 حذف المحدد</button>
@@ -551,6 +552,29 @@
             </small>
             <div id="staff_members_container" style="display:flex;flex-direction:column;gap:8px"></div>
             <input type="hidden" id="set_staff_whatsapp">
+          </div>
+          <div class="form-group" style="grid-column:1/-1;background:var(--surface,#fff);padding:14px;border-radius:8px;border:1px solid var(--border,#e2e8f0);box-shadow:0 1px 3px rgba(0,0,0,0.03)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+              <label style="font-weight:700;font-size:0.92rem;margin:0;color:var(--text,#1e293b)">📱 قالب رسالة واتساب للزبائن (Customer WhatsApp Template)</label>
+              <button type="button" class="btn btn-outline btn-xs" onclick="resetDefaultCustomerWaTemplate()" style="font-weight:600">استعادة القالب الافتراضي</button>
+            </div>
+            <small style="display:block;color:var(--text3,#64748b);font-size:0.75rem;margin-bottom:8px">
+              تُستخدم هذه الرسالة عند إرسال تفاصيل الطلبية مباشرة إلى الزبائن عبر واتساب. يمكنك تخصيص النص باستخدام المتغيرات أدناه.
+            </small>
+            <textarea id="set_customer_wa_template" rows="8" style="width:100%;font-size:0.85rem;line-height:1.5;padding:10px;border-radius:6px;border:1px solid var(--border,#cbd5e1);font-family:inherit"></textarea>
+            <div style="margin-top:6px;font-size:0.75rem;color:var(--text3,#64748b);line-height:1.4">
+              <strong>المتغيرات المتاحة:</strong>
+              <code style="background:var(--bg,#f1f5f9);padding:2px 4px;border-radius:4px;margin:2px">{customer_name}</code>
+              <code style="background:var(--bg,#f1f5f9);padding:2px 4px;border-radius:4px;margin:2px">{store_name}</code>
+              <code style="background:var(--bg,#f1f5f9);padding:2px 4px;border-radius:4px;margin:2px">{order_id}</code>
+              <code style="background:var(--bg,#f1f5f9);padding:2px 4px;border-radius:4px;margin:2px">{items}</code>
+              <code style="background:var(--bg,#f1f5f9);padding:2px 4px;border-radius:4px;margin:2px">{total}</code>
+              <code style="background:var(--bg,#f1f5f9);padding:2px 4px;border-radius:4px;margin:2px">{subtotal}</code>
+              <code style="background:var(--bg,#f1f5f9);padding:2px 4px;border-radius:4px;margin:2px">{shipping_cost}</code>
+              <code style="background:var(--bg,#f1f5f9);padding:2px 4px;border-radius:4px;margin:2px">{wilaya}</code>
+              <code style="background:var(--bg,#f1f5f9);padding:2px 4px;border-radius:4px;margin:2px">{municipality}</code>
+              <code style="background:var(--bg,#f1f5f9);padding:2px 4px;border-radius:4px;margin:2px">{delivery_type}</code>
+            </div>
           </div>
           <div class="form-group"><label>العملة</label><input id="set_currency" value="DZD"></div>
           <div class="form-group"><label>Facebook Pixel ID</label><input id="set_pixel_id" placeholder=" opcional"></div>
@@ -926,6 +950,97 @@
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
       <button type="button" class="btn btn-outline" onclick="closeStaffSelectModal()">إلغاء</button>
       <button type="button" class="btn btn-success" id="btnConfirmStaffDispatch" onclick="confirmStaffDispatch()" style="background:#059669;color:#fff;border-color:#059669;font-weight:700">إرسال عبر واتساب 🚀</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Customer WhatsApp Sequential Dispatcher Modal -->
+<div class="modal-overlay" id="customerWhatsAppModal">
+<div class="modal" style="max-width:540px">
+  <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:8px">
+      <h3 style="margin:0">📲 إرسال رسائل الزبائن</h3>
+      <span id="cwaStepBadge" style="background:var(--accent,#2563eb);color:#fff;font-size:0.75rem;padding:2px 8px;border-radius:12px;font-weight:700">1 / 1</span>
+    </div>
+    <button class="modal-close" onclick="closeCustomerWhatsAppModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <!-- Active Queue Item View -->
+    <div id="cwaActiveView">
+      <div id="cwaDuplicateWarning" style="display:none;padding:8px 12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;color:#92400e;font-size:0.82rem;margin-bottom:12px">
+        ⚠️ تمت معالجة هذه الطلبية في هذه الجلسة مسبقاً.
+      </div>
+
+      <div style="background:var(--bg,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div>
+            <span style="font-size:0.78rem;color:var(--text3,#64748b)">الزبون:</span>
+            <strong id="cwaCustName" style="font-size:0.95rem;color:var(--text,#1e293b);margin-right:4px">-</strong>
+          </div>
+          <div>
+            <span style="font-size:0.78rem;color:var(--text3,#64748b)">رقم الطلب:</span>
+            <strong id="cwaOrderId" style="font-size:0.9rem;color:var(--accent,#2563eb);font-family:monospace;direction:ltr;margin-right:4px">#-</strong>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span style="font-size:0.78rem;color:var(--text3,#64748b)">الهاتف:</span>
+            <span id="cwaCustPhone" style="font-size:0.9rem;font-weight:700;font-family:monospace;direction:ltr;text-align:right">-</span>
+          </div>
+          <div>
+            <span style="font-size:0.78rem;color:var(--text3,#64748b)">الإجمالي:</span>
+            <strong id="cwaOrderTotal" style="font-size:0.95rem;color:#059669;margin-right:4px">- دج</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px">
+        <label style="font-size:0.82rem;font-weight:700;color:var(--text2,#334155);margin-bottom:4px;display:block">
+          معاينة الرسالة الجاهزة للإرسال:
+        </label>
+        <textarea id="cwaMessagePreview" rows="8" style="width:100%;font-size:0.85rem;line-height:1.5;padding:10px;border-radius:6px;border:1px solid var(--border,#cbd5e1);background:#fff;resize:vertical;font-family:inherit"></textarea>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border,#e2e8f0)">
+        <button type="button" class="btn btn-primary" id="btnCwaOpenWa" onclick="openCurrentCustomerWhatsApp()" style="background:#2563eb;color:#fff;border-color:#2563eb;font-weight:700;padding:8px 14px">
+          📲 فتح واتساب
+        </button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="btn btn-success" id="btnCwaSentNext" onclick="markCustomerWhatsAppAction('sent')" style="background:#059669;color:#fff;border-color:#059669;font-weight:700;padding:8px 12px">
+            ✅ تم الإرسال — التالي
+          </button>
+          <button type="button" class="btn btn-outline" id="btnCwaNeedsCall" onclick="markCustomerWhatsAppAction('needs_call')" style="color:#d97706;border-color:#f59e0b;padding:8px 10px" title="تحديد أن الرقم يحتاج اتصال هاتفي أو لا يعمل على واتساب">
+            📞 يحتاج اتصال
+          </button>
+          <button type="button" class="btn btn-outline" id="btnCwaSkip" onclick="markCustomerWhatsAppAction('skipped')" style="color:var(--text3,#64748b);padding:8px 10px">
+            ⏭ تخطي
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary View when Queue Completes -->
+    <div id="cwaSummaryView" style="display:none;text-align:center;padding:16px 8px">
+      <div style="font-size:2.5rem;margin-bottom:8px">🎉</div>
+      <h3 style="margin:0 0 12px 0;color:var(--text,#1e293b)">اكتملت معالجة الرسائل بنجاح</h3>
+      <div style="display:flex;justify-content:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+        <div style="background:#ecfdf5;border:1px solid #10b981;border-radius:8px;padding:10px 16px;min-width:100px">
+          <div style="font-size:1.3rem;font-weight:700;color:#059669" id="cwaSummarySent">0</div>
+          <div style="font-size:0.78rem;color:#065f46">✅ تم الإرسال</div>
+        </div>
+        <div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:10px 16px;min-width:100px">
+          <div style="font-size:1.3rem;font-weight:700;color:#d97706" id="cwaSummaryNeedsCall">0</div>
+          <div style="font-size:0.78rem;color:#92400e">📞 يحتاج اتصال</div>
+        </div>
+        <div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;padding:10px 16px;min-width:100px">
+          <div style="font-size:1.3rem;font-weight:700;color:#475569" id="cwaSummarySkipped">0</div>
+          <div style="font-size:0.78rem;color:#334155">⏭ تم التخطي</div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="closeCustomerWhatsAppModal()" style="padding:8px 24px;font-weight:700">
+        إغلاق
+      </button>
     </div>
   </div>
 </div>
@@ -1599,11 +1714,14 @@ function updateSelectedOrdersState() {
   var checked = document.querySelectorAll('.order-check:checked');
   var btnBulkPrint = document.getElementById('btnBulkPrint');
   var btnBulkSendStaff = document.getElementById('btnBulkSendStaff');
+  var btnBulkSendCustomers = document.getElementById('btnBulkSendCustomers');
   var countBadge = document.getElementById('selectedOrdersCount');
   var countBadgeStaff = document.getElementById('selectedOrdersCountStaff');
+  var countBadgeCustomers = document.getElementById('selectedOrdersCountCustomers');
   var count = checked.length;
   if (countBadge) countBadge.textContent = count;
   if (countBadgeStaff) countBadgeStaff.textContent = count;
+  if (countBadgeCustomers) countBadgeCustomers.textContent = count;
   if (btnBulkPrint) {
     btnBulkPrint.disabled = (count === 0);
     if (count > 0) {
@@ -1622,6 +1740,16 @@ function updateSelectedOrdersState() {
     } else {
       btnBulkSendStaff.style.opacity = '0.5';
       btnBulkSendStaff.style.cursor = 'not-allowed';
+    }
+  }
+  if (btnBulkSendCustomers) {
+    btnBulkSendCustomers.disabled = (count === 0);
+    if (count > 0) {
+      btnBulkSendCustomers.style.opacity = '1';
+      btnBulkSendCustomers.style.cursor = 'pointer';
+    } else {
+      btnBulkSendCustomers.style.opacity = '0.5';
+      btnBulkSendCustomers.style.cursor = 'not-allowed';
     }
   }
   var selectAll = document.getElementById('selectAllOrders');
@@ -2805,6 +2933,197 @@ function sendBulkOrdersToStaff() {
   }
 }
 
+// ===== CUSTOMER WHATSAPP SEQUENTIAL DISPATCHER =====
+var DEFAULT_CUSTOMER_WA_TEMPLATE =
+  '👋 مرحباً {customer_name}\n\n' +
+  'شكراً لطلبك من متجر {store_name} ❤️\n\n' +
+  'تم استلام طلبيتك بنجاح، وسنقوم بمتابعة طلبك والتواصل معك لتأكيد المعلومات.\n\n' +
+  '📋 رقم الطلب: #{order_id}\n\n' +
+  '🛍️ المنتجات:\n{items}\n\n' +
+  '💰 المبلغ الإجمالي: {total} دج\n\n' +
+  'شكراً لثقتك بنا 🌷';
+
+window.customerWaSession = window.customerWaSession || {
+  processed: {}, // { [orderId]: 'sent' | 'needs_call' | 'skipped' }
+  queue: [],
+  currentIndex: 0,
+  stats: { sent: 0, needs_call: 0, skipped: 0 }
+};
+
+function generateCustomerWhatsAppMessage(o, customTemplate) {
+  var tpl = customTemplate || (window.settings && window.settings.customer_wa_template) || DEFAULT_CUSTOMER_WA_TEMPLATE;
+
+  var custName = (o.name && String(o.name).trim()) ? String(o.name).trim() : 'زبوننا الكريم';
+  var storeName = (window.settings && (window.settings.store_name_ar || window.settings.store_name_en))
+    ? (window.settings.store_name_ar || window.settings.store_name_en)
+    : 'المتجر';
+
+  var items = [];
+  try {
+    items = (typeof o.items_json === 'string') ? JSON.parse(o.items_json || '[]') : (o.items_json || []);
+  } catch(e) {
+    items = [];
+  }
+  var itemsText = '';
+  if (Array.isArray(items) && items.length > 0) {
+    itemsText = items.map(function(it) {
+      var name = (it && (it.name || it.title)) ? String(it.name || it.title).trim() : 'منتج';
+      var qty = (it && it.qty) ? it.qty : 1;
+      return '• ' + name + ' ×' + qty;
+    }).join('\n');
+  } else {
+    itemsText = '• ' + (o.name || 'منتج') + ' ×1';
+  }
+
+  var subtotal = Number(o.subtotal || 0);
+  var discount = Number(o.discount || 0);
+  var shipCost = (o.shipping_cost !== null && o.shipping_cost !== undefined && o.shipping_cost !== '') ? Number(o.shipping_cost) : null;
+  var grandTotal = Number(o.total || (subtotal + (shipCost || 0) - discount));
+  var shipText = (shipCost !== null && !isNaN(shipCost)) ? (shipCost > 0 ? (shipCost.toLocaleString() + ' دج') : 'مجاني') : 'يحدد لاحقاً';
+
+  var wilaya = (o.wilaya_ar || o.wilaya || '').trim() || '-';
+  var mun = (o.municipality || '').trim() || '-';
+  var isOffice = (o.delivery_type === 'Office' || o.delivery_type === 'office');
+  var delType = isOffice ? 'استلام من المكتب (Stop Desk)' : 'توصيل لباب المنزل (À Domicile)';
+
+  var msg = tpl
+    .replace(/\{customer_name\}/g, custName)
+    .replace(/\{store_name\}/g, storeName)
+    .replace(/\{order_id\}/g, o.order_id || '')
+    .replace(/\{items\}/g, itemsText)
+    .replace(/\{total\}/g, grandTotal.toLocaleString())
+    .replace(/\{subtotal\}/g, subtotal.toLocaleString() + ' دج')
+    .replace(/\{shipping_cost\}/g, shipText)
+    .replace(/\{wilaya\}/g, wilaya)
+    .replace(/\{municipality\}/g, mun)
+    .replace(/\{delivery_type\}/g, delType);
+
+  return msg;
+}
+
+function startCustomerWhatsAppDispatch(singleOrderId) {
+  var selectedOrders = [];
+  if (singleOrderId) {
+    var single = allOrders.find(function(x) { return x.order_id === singleOrderId; });
+    if (single) selectedOrders = [single];
+  } else {
+    var checked = document.querySelectorAll('.order-check:checked');
+    if (!checked.length) {
+      toast('يرجى تحديد طلبية واحدة على الأقل');
+      return;
+    }
+    var orderIds = Array.from(checked).map(function(c) { return c.value; });
+    selectedOrders = allOrders.filter(function(o) { return orderIds.indexOf(o.order_id) > -1; });
+  }
+
+  if (!selectedOrders.length) {
+    toast('لم يتم العثور على بيانات الطلبات المحددة');
+    return;
+  }
+
+  window.customerWaSession.queue = selectedOrders;
+  window.customerWaSession.currentIndex = 0;
+  window.customerWaSession.stats = { sent: 0, needs_call: 0, skipped: 0 };
+
+  renderCurrentCustomerQueueItem();
+  var modal = document.getElementById('customerWhatsAppModal');
+  if (modal) modal.classList.add('open');
+}
+
+function renderCurrentCustomerQueueItem() {
+  var sess = window.customerWaSession;
+  var totalCount = sess.queue.length;
+  var idx = sess.currentIndex;
+
+  var activeView = document.getElementById('cwaActiveView');
+  var summaryView = document.getElementById('cwaSummaryView');
+
+  if (idx >= totalCount) {
+    // Show Summary
+    if (activeView) activeView.style.display = 'none';
+    if (summaryView) {
+      summaryView.style.display = 'block';
+      document.getElementById('cwaSummarySent').textContent = sess.stats.sent;
+      document.getElementById('cwaSummaryNeedsCall').textContent = sess.stats.needs_call;
+      document.getElementById('cwaSummarySkipped').textContent = sess.stats.skipped;
+    }
+    return;
+  }
+
+  if (activeView) activeView.style.display = 'block';
+  if (summaryView) summaryView.style.display = 'none';
+
+  var o = sess.queue[idx];
+  var custName = (o.name && String(o.name).trim()) ? String(o.name).trim() : 'زبون';
+  var custPhone = (o.phone && String(o.phone).trim()) ? String(o.phone).trim() : '-';
+  var normPhone = normalizePhone(o.phone);
+  var grandTotal = Number(o.total || 0);
+
+  document.getElementById('cwaStepBadge').textContent = (idx + 1) + ' / ' + totalCount;
+  document.getElementById('cwaCustName').textContent = custName;
+  document.getElementById('cwaOrderId').textContent = '#' + (o.order_id || '');
+  document.getElementById('cwaCustPhone').textContent = custPhone + (normPhone ? '' : ' (⚠️ غير صالح)');
+  document.getElementById('cwaOrderTotal').textContent = grandTotal.toLocaleString() + ' دج';
+
+  var prevStatus = sess.processed[o.order_id];
+  var dupWarn = document.getElementById('cwaDuplicateWarning');
+  if (dupWarn) {
+    if (prevStatus) {
+      dupWarn.style.display = 'block';
+      var statusMap = { sent: 'تم الإرسال مسبقاً', needs_call: 'يحتاج اتصال مسبقاً', skipped: 'تم التخطي مسبقاً' };
+      dupWarn.textContent = '⚠️ تمت معالجة هذه الطلبية في هذه الجلسة مسبقاً (' + (statusMap[prevStatus] || prevStatus) + ').';
+    } else {
+      dupWarn.style.display = 'none';
+    }
+  }
+
+  var msg = generateCustomerWhatsAppMessage(o);
+  var previewEl = document.getElementById('cwaMessagePreview');
+  if (previewEl) previewEl.value = msg;
+}
+
+function openCurrentCustomerWhatsApp() {
+  var sess = window.customerWaSession;
+  if (sess.currentIndex >= sess.queue.length) return;
+  var o = sess.queue[sess.currentIndex];
+  var normPhone = normalizePhone(o.phone);
+  if (!normPhone) {
+    toast('رقم هاتف الزبون غير صالح أو غير جزائري');
+    return;
+  }
+  var previewEl = document.getElementById('cwaMessagePreview');
+  var msg = (previewEl && previewEl.value) ? previewEl.value : generateCustomerWhatsAppMessage(o);
+  var url = 'https://wa.me/' + normPhone + '?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function markCustomerWhatsAppAction(actionType) {
+  var sess = window.customerWaSession;
+  if (sess.currentIndex >= sess.queue.length) return;
+  var o = sess.queue[sess.currentIndex];
+
+  sess.processed[o.order_id] = actionType;
+  if (sess.stats[actionType] !== undefined) {
+    sess.stats[actionType]++;
+  }
+
+  sess.currentIndex++;
+  renderCurrentCustomerQueueItem();
+}
+
+function closeCustomerWhatsAppModal() {
+  var modal = document.getElementById('customerWhatsAppModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function resetDefaultCustomerWaTemplate() {
+  var el = document.getElementById('set_customer_wa_template');
+  if (el) {
+    el.value = DEFAULT_CUSTOMER_WA_TEMPLATE;
+    toast('تم استعادة القالب الافتراضي');
+  }
+}
+
 // ===== SHIPPING MANAGEMENT (Phase 17) =====
 var adminShippingConfig = null;
 var selectedCarrierId = 'yalidine';
@@ -3426,6 +3745,7 @@ function loadSettings() {
     if(document.getElementById('set_ai_prompt')) document.getElementById('set_ai_prompt').value = data.ai_prompt || '';
     if(document.getElementById('set_fb_ad_account_id')) document.getElementById('set_fb_ad_account_id').value = data.fb_ad_account_id || data.ad_account_id || '';
     if(document.getElementById('set_usd_to_dzd_rate')) document.getElementById('set_usd_to_dzd_rate').value = data.usd_to_dzd_rate || '230';
+    if(document.getElementById('set_customer_wa_template')) document.getElementById('set_customer_wa_template').value = data.customer_wa_template || DEFAULT_CUSTOMER_WA_TEMPLATE;
     document.getElementById('set_capi_enabled').value = data.capi_enabled || 'true';
     var logoPrev = document.getElementById('logo_preview');
     if(logoPrev) logoPrev.src = (data.store_logo && String(data.store_logo).trim()) ? data.store_logo : 'logo1.png';
@@ -3482,6 +3802,7 @@ async function saveSettings() {
     shipping_remote: document.getElementById('set_shipping_remote').value || '0',
     fb_ad_account_id: (document.getElementById('set_fb_ad_account_id')||{}).value || '',
     usd_to_dzd_rate: (document.getElementById('set_usd_to_dzd_rate')||{}).value || '230',
+    customer_wa_template: (document.getElementById('set_customer_wa_template')||{}).value || '',
     ai_prompt: (document.getElementById('set_ai_prompt')||{}).value || '',
     capi_enabled: (document.getElementById('set_capi_enabled')||{}).value || 'true'
   };
