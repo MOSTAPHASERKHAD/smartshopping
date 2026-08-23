@@ -2886,22 +2886,35 @@ function generateBulkStaffWhatsAppMessage(orders) {
     '⚡ يرجى الاتصال بالزبائن وتأكيد الطلبيات ثم تجهيزها للشحن 🚀';
 }
 
+function ensureSettingsLoaded(cb) {
+  if (window.settings && Object.keys(window.settings).length > 0) {
+    cb();
+  } else {
+    apiGet('admin_settings', {}, function(data) {
+      if (data) settings = data;
+      cb();
+    });
+  }
+}
+
 function sendOrderToStaff(orderId) {
   var o = allOrders.find(function(x) { return x.order_id === orderId; });
   if (!o) {
     toast('لم يتم العثور على بيانات الطلب');
     return;
   }
-  var staffList = getStaffWhatsAppList();
-  if (!staffList.length) {
-    toast('يرجى إضافة مسؤول تأكيد من الإعدادات أولاً');
-    return;
-  }
-  if (staffList.length === 1) {
-    executeSingleStaffDispatch(orderId, staffList[0].phone);
-  } else {
-    openStaffSelectModal({ type: 'single', orderId: orderId }, staffList);
-  }
+  ensureSettingsLoaded(function() {
+    var staffList = getStaffWhatsAppList();
+    if (!staffList.length) {
+      toast('يرجى إضافة مسؤول تأكيد من الإعدادات أولاً');
+      return;
+    }
+    if (staffList.length === 1) {
+      executeSingleStaffDispatch(orderId, staffList[0].phone);
+    } else {
+      openStaffSelectModal({ type: 'single', orderId: orderId }, staffList);
+    }
+  });
 }
 
 function sendBulkOrdersToStaff() {
@@ -2916,21 +2929,23 @@ function sendBulkOrdersToStaff() {
     toast('لم يتم العثور على بيانات الطلبات المحددة');
     return;
   }
-  var staffList = getStaffWhatsAppList();
-  if (!staffList.length) {
-    toast('يرجى إضافة مسؤول تأكيد من الإعدادات أولاً');
-    return;
-  }
-  if (staffList.length === 1) {
-    var count = selectedOrders.length;
-    var staffName = staffList[0].name || 'مسؤول التأكيد';
-    if (!confirm('سيتم إرسال ' + count + ' طلبيات إلى ' + staffName + ' في رسالة واحدة. هل تريد المتابعة؟')) {
+  ensureSettingsLoaded(function() {
+    var staffList = getStaffWhatsAppList();
+    if (!staffList.length) {
+      toast('يرجى إضافة مسؤول تأكيد من الإعدادات أولاً');
       return;
     }
-    executeBulkStaffDispatch(selectedOrders, staffList[0].phone);
-  } else {
-    openStaffSelectModal({ type: 'bulk', selectedOrders: selectedOrders }, staffList);
-  }
+    if (staffList.length === 1) {
+      var count = selectedOrders.length;
+      var staffName = staffList[0].name || 'مسؤول التأكيد';
+      if (!confirm('سيتم إرسال ' + count + ' طلبيات إلى ' + staffName + ' في رسالة واحدة. هل تريد المتابعة؟')) {
+        return;
+      }
+      executeBulkStaffDispatch(selectedOrders, staffList[0].phone);
+    } else {
+      openStaffSelectModal({ type: 'bulk', selectedOrders: selectedOrders }, staffList);
+    }
+  });
 }
 
 // ===== CUSTOMER WHATSAPP SEQUENTIAL DISPATCHER =====
@@ -3021,13 +3036,15 @@ function startCustomerWhatsAppDispatch(singleOrderId) {
     return;
   }
 
-  window.customerWaSession.queue = selectedOrders;
-  window.customerWaSession.currentIndex = 0;
-  window.customerWaSession.stats = { sent: 0, needs_call: 0, skipped: 0 };
+  ensureSettingsLoaded(function() {
+    window.customerWaSession.queue = selectedOrders;
+    window.customerWaSession.currentIndex = 0;
+    window.customerWaSession.stats = { sent: 0, needs_call: 0, skipped: 0 };
 
-  renderCurrentCustomerQueueItem();
-  var modal = document.getElementById('customerWhatsAppModal');
-  if (modal) modal.classList.add('open');
+    renderCurrentCustomerQueueItem();
+    var modal = document.getElementById('customerWhatsAppModal');
+    if (modal) modal.classList.add('open');
+  });
 }
 
 function renderCurrentCustomerQueueItem() {
@@ -4409,6 +4426,9 @@ function showAdminPanel() {
   if (window.ThemeCustomizer) { ThemeCustomizer.autoOpen(); }
   setAdminLang(currentAdminLang);
   loadDashboard();
+  apiGet('admin_settings', {}, function(data) {
+    if (data) settings = data;
+  });
   startAutoRefresh();
 }
 
