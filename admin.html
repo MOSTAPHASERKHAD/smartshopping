@@ -376,6 +376,7 @@
     <div class="top-bar">
       <h1><span data-i18n="orders">الطلبات</span> <span class="count-badge" id="orders-count-badge"></span></h1>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" id="btnBulkSendStaff" onclick="sendBulkOrdersToStaff()" disabled style="background:#059669;color:#fff;border-color:#059669;opacity:0.5;cursor:not-allowed">📲 إرسال المحدد للعامل (<span id="selectedOrdersCountStaff">0</span>)</button>
         <button class="btn btn-primary btn-sm" id="btnBulkPrint" onclick="printBulkOrders()" disabled style="background:#4f46e5;color:#fff;border-color:#4f46e5;opacity:0.5;cursor:not-allowed">🖨️ طباعة الطلبات المحددة (<span id="selectedOrdersCount">0</span>)</button>
         <button class="btn btn-success btn-sm" onclick="exportOrdersCSV()" data-i18n="btn_export_csv">📥 تصدير CSV</button>
         <button class="btn btn-danger btn-sm" onclick="deleteSelectedOrders()" data-i18n="btn_delete_selected">🗑 حذف المحدد</button>
@@ -540,6 +541,7 @@
           <div class="form-group"><label>رابط المتجر</label><input id="set_store_url" placeholder="https://smartshopping.click"></div>
           <div class="form-group"><label>رقم واتساب</label><input id="set_whatsapp"></div>
           <div class="form-group"><label>رقم الهاتف</label><input id="set_phone"></div>
+          <div class="form-group"><label>رقم واتساب مسؤول التأكيد / العامل</label><input id="set_staff_whatsapp" placeholder="مثال: 0555123456 أو 213555123456"></div>
           <div class="form-group"><label>العملة</label><input id="set_currency" value="DZD"></div>
           <div class="form-group"><label>Facebook Pixel ID</label><input id="set_pixel_id" placeholder=" opcional"></div>
           <div class="form-group"><label>Google Analytics 4 ID</label><input id="set_ga4_id" placeholder="G-XXXXXXXXXX"></div>
@@ -1568,9 +1570,12 @@ function toggleSelectAll(cb) {
 function updateSelectedOrdersState() {
   var checked = document.querySelectorAll('.order-check:checked');
   var btnBulkPrint = document.getElementById('btnBulkPrint');
+  var btnBulkSendStaff = document.getElementById('btnBulkSendStaff');
   var countBadge = document.getElementById('selectedOrdersCount');
+  var countBadgeStaff = document.getElementById('selectedOrdersCountStaff');
   var count = checked.length;
   if (countBadge) countBadge.textContent = count;
+  if (countBadgeStaff) countBadgeStaff.textContent = count;
   if (btnBulkPrint) {
     btnBulkPrint.disabled = (count === 0);
     if (count > 0) {
@@ -1579,6 +1584,16 @@ function updateSelectedOrdersState() {
     } else {
       btnBulkPrint.style.opacity = '0.5';
       btnBulkPrint.style.cursor = 'not-allowed';
+    }
+  }
+  if (btnBulkSendStaff) {
+    btnBulkSendStaff.disabled = (count === 0);
+    if (count > 0) {
+      btnBulkSendStaff.style.opacity = '1';
+      btnBulkSendStaff.style.cursor = 'pointer';
+    } else {
+      btnBulkSendStaff.style.opacity = '0.5';
+      btnBulkSendStaff.style.cursor = 'not-allowed';
     }
   }
   var selectAll = document.getElementById('selectAllOrders');
@@ -2211,6 +2226,7 @@ function renderOrders() {
       '</select></td>' +
       '<td><div style="display:inline-flex;gap:4px;white-space:nowrap">' +
         '<button class="btn btn-info btn-xs" onclick="viewOrder(\'' + oid + '\')">' + adminT('btn_details') + '</button> ' +
+        '<button class="btn btn-success btn-xs" onclick="sendOrderToStaff(\'' + oid + '\')" title="إرسال الطلب لمسؤول التأكيد عبر واتساب" style="background:#059669;border-color:#059669">📲 إرسال للعامل</button> ' +
         '<a href="https://wa.me/' + esc(o.phone || '') + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-xs">' + adminT('btn_whatsapp') + '</a> ' +
         '<button class="btn btn-danger btn-xs" onclick="deleteOrder(\'' + oid + '\',\'' + oid + '\')">' + adminT('btn_delete') + '</button>' +
       '</div></td>' +
@@ -2411,7 +2427,8 @@ function viewOrder(orderId) {
     '</div>' +
     '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap" class="no-print">' +
       '<button type="button" class="btn btn-warning" onclick="printOrderLabel()" style="background:#f59e0b;color:#fff;font-weight:700">🖨️ طباعة الوصل (A6)</button>' +
-      '<a href="https://wa.me/' + esc(o.phone) + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success">📱 واتساب العميل</a>' +
+      '<button type="button" class="btn btn-success" onclick="sendOrderToStaff(\'' + esc(o.order_id) + '\')" style="background:#059669;color:#fff;font-weight:700">📲 إرسال تفاصيل الطلبية لمسؤول التأكيد</button>' +
+      '<a href="https://wa.me/' + esc(o.phone) + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-outline">📱 واتساب العميل</a>' +
       '<a href="tel:' + esc(o.phone) + '" class="btn btn-info">📞 اتصال</a>' +
       '<button type="button" class="btn btn-outline" onclick="closeOrderModal()">إغلاق</button>' +
     '</div>';
@@ -2443,6 +2460,154 @@ function saveOrderShipping(orderId) {
       toast('خطأ في حفظ الشحن: ' + ((data && data.error) || 'خطأ غير معروف'));
     }
   });
+}
+
+// ===== STAFF WHATSAPP CONFIRMATION DISPATCHER =====
+
+function normalizePhone(rawPhone) {
+  if (!rawPhone) return '';
+  var digits = String(rawPhone).replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('00213')) {
+    digits = digits.slice(2);
+  } else if (digits.startsWith('0') && digits.length === 10) {
+    digits = '213' + digits.slice(1);
+  } else if (digits.length === 9 && (digits.startsWith('5') || digits.startsWith('6') || digits.startsWith('7'))) {
+    digits = '213' + digits;
+  }
+  return digits;
+}
+
+function getStaffWhatsAppPhone() {
+  var raw = (window.settings && window.settings.set_staff_whatsapp) ? window.settings.set_staff_whatsapp : '';
+  if (!raw) {
+    var inputEl = document.getElementById('set_staff_whatsapp');
+    if (inputEl && inputEl.value) raw = inputEl.value;
+  }
+  return normalizePhone(raw);
+}
+
+function formatSingleOrderBlock(o, orderIndex) {
+  var header = orderIndex ? ('📦 الطلبية ' + orderIndex + '\n📋 رقم الطلب: #' + (o.order_id || '')) : ('📋 رقم الطلب: #' + (o.order_id || ''));
+  var custName = (o.name && String(o.name).trim()) ? String(o.name).trim() : '-';
+  var custPhone = (o.phone && String(o.phone).trim()) ? String(o.phone).trim() : '-';
+  var wilaya = (o.wilaya_ar || o.wilaya || '').trim();
+  var mun = (o.municipality || '').trim();
+  var loc = mun ? (wilaya ? wilaya + ' - ' + mun : mun) : (wilaya || '-');
+  var isOffice = (o.delivery_type === 'Office' || o.delivery_type === 'office');
+  var delType = isOffice ? '🏢 استلام من المكتب (Stop Desk)' : '🏠 توصيل لباب المنزل (À Domicile)';
+
+  var items = [];
+  try {
+    items = (typeof o.items_json === 'string') ? JSON.parse(o.items_json || '[]') : (o.items_json || []);
+  } catch(e) {
+    items = [];
+  }
+  var itemsText = '';
+  if (Array.isArray(items) && items.length > 0) {
+    itemsText = items.map(function(it) {
+      var name = (it && (it.name || it.title)) ? String(it.name || it.title).trim() : 'منتج';
+      var qty = (it && it.qty) ? it.qty : 1;
+      return '• ' + name + ' ×' + qty;
+    }).join('\n');
+  } else {
+    itemsText = '• ' + (o.name || 'منتج') + ' ×1';
+  }
+
+  var subtotal = Number(o.subtotal || 0);
+  var discount = Number(o.discount || 0);
+  var couponCode = (o.coupon_code && String(o.coupon_code).trim()) ? String(o.coupon_code).trim() : '';
+  var shipCost = (o.shipping_cost !== null && o.shipping_cost !== undefined && o.shipping_cost !== '') ? Number(o.shipping_cost) : null;
+  var grandTotal = Number(o.total || (subtotal + (shipCost || 0) - discount));
+  var shipText = (shipCost !== null && !isNaN(shipCost)) ? (shipCost > 0 ? (shipCost.toLocaleString() + ' دج') : 'مجاني') : 'يحدد لاحقاً';
+
+  var custPhoneNorm = normalizePhone(o.phone);
+  var custWaLink = custPhoneNorm ? ('https://wa.me/' + custPhoneNorm) : '-';
+
+  var rawNote = String(o.notes || '').trim();
+  var addrMatch = rawNote.match(/\| (.+)$/);
+  var exactAddr = addrMatch ? addrMatch[1].trim() : '';
+  var customerNote = addrMatch ? rawNote.replace(' | ' + exactAddr, '').trim() : rawNote;
+
+  var block = header + '\n\n' +
+    '👤 اسم الزبون: ' + custName + '\n' +
+    '📞 هاتف الزبون: ' + custPhone + '\n\n' +
+    '📍 العنوان: ' + loc + (exactAddr ? (' (' + exactAddr + ')') : '') + '\n' +
+    '🚚 نوع التوصيل: ' + delType + '\n\n' +
+    '🛍️ المنتجات:\n' + itemsText + '\n\n' +
+    (subtotal > 0 ? ('💵 قيمة المنتجات: ' + subtotal.toLocaleString() + ' دج\n') : '') +
+    (discount > 0 ? ('🎁 الخصم: -' + discount.toLocaleString() + ' دج' + (couponCode ? ' (' + couponCode + ')' : '') + '\n') : '') +
+    '🚚 التوصيل: ' + shipText + '\n' +
+    '💰 المبلغ الإجمالي: ' + grandTotal.toLocaleString() + ' دج\n' +
+    (customerNote ? ('📝 ملاحظة: ' + customerNote + '\n') : '') + '\n' +
+    '💬 مراسلة الزبون عبر واتساب:\n' + custWaLink;
+
+  return block;
+}
+
+function generateStaffWhatsAppMessage(order) {
+  var block = formatSingleOrderBlock(order);
+  return '🔔 طلبية جديدة للتأكيد والشحن\n' +
+    '━━━━━━━━━━━━━━━━━━\n\n' +
+    block + '\n\n' +
+    '━━━━━━━━━━━━━━━━━━\n' +
+    '⚡ يرجى الاتصال بالزبون وتأكيد الطلبية ثم تجهيزها للشحن 🚀';
+}
+
+function generateBulkStaffWhatsAppMessage(orders) {
+  var count = orders.length;
+  var blocks = orders.map(function(o, i) {
+    return formatSingleOrderBlock(o, i + 1);
+  }).join('\n\n━━━━━━━━━━━━━━━━━━\n\n');
+
+  return '🔔 طلبيات جديدة للتأكيد والشحن\n' +
+    '📦 عدد الطلبيات: ' + count + '\n\n' +
+    '━━━━━━━━━━━━━━━━━━\n\n' +
+    blocks + '\n\n' +
+    '━━━━━━━━━━━━━━━━━━\n' +
+    '⚡ يرجى الاتصال بالزبائن وتأكيد الطلبيات ثم تجهيزها للشحن 🚀';
+}
+
+function sendOrderToStaff(orderId) {
+  var o = allOrders.find(function(x) { return x.order_id === orderId; });
+  if (!o) {
+    toast('لم يتم العثور على بيانات الطلب');
+    return;
+  }
+  var staffPhone = getStaffWhatsAppPhone();
+  if (!staffPhone) {
+    toast('يرجى إضافة رقم واتساب مسؤول التأكيد أولاً من الإعدادات');
+    return;
+  }
+  var msg = generateStaffWhatsAppMessage(o);
+  var url = 'https://wa.me/' + staffPhone + '?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function sendBulkOrdersToStaff() {
+  var checked = document.querySelectorAll('.order-check:checked');
+  if (!checked.length) {
+    toast('يرجى تحديد طلبية واحدة على الأقل');
+    return;
+  }
+  var orderIds = Array.from(checked).map(function(c) { return c.value; });
+  var selectedOrders = allOrders.filter(function(o) { return orderIds.indexOf(o.order_id) > -1; });
+  if (!selectedOrders.length) {
+    toast('لم يتم العثور على بيانات الطلبات المحددة');
+    return;
+  }
+  var staffPhone = getStaffWhatsAppPhone();
+  if (!staffPhone) {
+    toast('يرجى إضافة رقم واتساب مسؤول التأكيد أولاً من الإعدادات');
+    return;
+  }
+  var count = selectedOrders.length;
+  if (!confirm('سيتم إرسال ' + count + ' طلبيات إلى مسؤول التأكيد في رسالة واحدة. هل تريد المتابعة؟')) {
+    return;
+  }
+  var msg = generateBulkStaffWhatsAppMessage(selectedOrders);
+  var url = 'https://wa.me/' + staffPhone + '?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 // ===== SHIPPING MANAGEMENT (Phase 17) =====
@@ -3028,6 +3193,9 @@ function loadSettings() {
     document.getElementById('set_store_url').value = data.store_url || '';
     document.getElementById('set_whatsapp').value = data.whatsapp || '';
     document.getElementById('set_phone').value = data.phone || '';
+    if (document.getElementById('set_staff_whatsapp')) {
+      document.getElementById('set_staff_whatsapp').value = data.set_staff_whatsapp || '';
+    }
     document.getElementById('set_currency').value = data.currency || 'DZD';
     document.getElementById('set_pixel_id').value = data.pixel_id || '';
     document.getElementById('set_ga4_id').value = data.ga4_id || '';
@@ -3056,6 +3224,7 @@ async function saveSettings() {
     store_url: document.getElementById('set_store_url').value,
     whatsapp: document.getElementById('set_whatsapp').value,
     phone: document.getElementById('set_phone').value,
+    set_staff_whatsapp: (document.getElementById('set_staff_whatsapp')||{}).value || '',
     currency: document.getElementById('set_currency').value,
     pixel_id: document.getElementById('set_pixel_id').value,
     ga4_id: document.getElementById('set_ga4_id').value,
