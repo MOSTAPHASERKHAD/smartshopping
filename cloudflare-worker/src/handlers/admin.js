@@ -12,7 +12,7 @@
  * - الصفحات (Admin)
  */
 
-import { sanitize, sanitizeNumber } from '../utils/sanitize.js';
+import { sanitize, sanitizeNumber, normalizePhone } from '../utils/sanitize.js';
 import {
   sha256,
   verifyAdminPassword,
@@ -70,15 +70,64 @@ export async function adminUpdateSettings(env, params, tenantId = DEFAULT_MASTER
     'admin_recovery_code',
   ]);
 
+  // مفاتيح تحفظ JSON كقيمة — تُحقَّق بنيوياً بدل sanitize() العام
+  const JSON_VALUE_KEYS = new Set(['staff_whatsapp_list', 'shipping_config']);
+
   const updates = [];
 
   for (const [key, value] of Object.entries(params)) {
     if (['action', 'token'].includes(key)) continue;
     if (IMMUTABLE_KEYS.has(key)) continue;
 
-    const cleanKey   = sanitize(key,   100);
-    const maxLen     = (cleanKey === 'shipping_config' || cleanKey === 'custom_css' || cleanKey === 'ai_prompt') ? 100000 : 5000;
-    let   cleanValue = sanitize(value, maxLen);
+    const cleanKey   = sanitize(key, 100);
+    let   cleanValue;
+
+    if (JSON_VALUE_KEYS.has(cleanKey)) {
+      // ── JSON path: parse → validate schema → re-stringify ──
+      let parsed;
+      try {
+        parsed = JSON.parse(String(value || ''));
+      } catch {
+        return { ok: false, error: `قيمة ${cleanKey} ليست JSON صالحاً` };
+      }
+
+      if (cleanKey === 'staff_whatsapp_list') {
+        if (!Array.isArray(parsed)) {
+          return { ok: false, error: 'staff_whatsapp_list يجب أن تكون مصفوفة' };
+        }
+        if (parsed.length > 30) {
+          return { ok: false, error: 'الحد الأقصى لمسؤولي التأكيد 30' };
+        }
+        const validated = [];
+        for (const item of parsed) {
+          if (!item || typeof item !== 'object' || Array.isArray(item)) {
+            return { ok: false, error: 'عنصر غير صالح في قائمة مسؤولي التأكيد' };
+          }
+          const id    = String(item.id   || '').substring(0, 50);
+          const name  = String(item.name || '').substring(0, 100);
+          const phone = normalizePhone(String(item.phone || ''));
+          const active = (item.active === true || item.active === 'true');
+          if (!id)    return { ok: false, error: 'معرّف مسؤول التأكيد مطلوب' };
+          if (!phone) return { ok: false, error: 'رقم هاتف غير صالح لمسؤول: ' + (name || id) };
+          validated.push({ id, name, phone, active });
+        }
+        cleanValue = JSON.stringify(validated);
+      } else if (cleanKey === 'shipping_config') {
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+          return { ok: false, error: 'shipping_config يجب أن يكون كائناً' };
+        }
+        if (parsed.carriers !== undefined && !Array.isArray(parsed.carriers)) {
+          return { ok: false, error: 'shipping_config.carriers يجب أن تكون مصفوفة' };
+        }
+        cleanValue = JSON.stringify(parsed);
+        if (cleanValue.length > 100000) {
+          return { ok: false, error: 'shipping_config تجاوز الحد الأقصى للحجم' };
+        }
+      }
+    } else {
+      const maxLen = (cleanKey === 'custom_css' || cleanKey === 'ai_prompt') ? 100000 : 5000;
+      cleanValue = sanitize(value, maxLen);
+    }
 
     if (cleanKey === 'admin_password' && cleanValue) {
       cleanValue = await sha256(cleanValue);

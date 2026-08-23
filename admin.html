@@ -3494,6 +3494,10 @@ async function saveSettings() {
     data.admin_password = await hashPasswordAsync(passValue);
   }
   apiPost('admin_update_settings', data, function(res) {
+    if (res && res.error) {
+      toast('❌ خطأ في الحفظ: ' + (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error));
+      return;
+    }
     if (passChanged && res && res.recovery_code) {
       document.getElementById('recoveryCodeDisplay').textContent = res.recovery_code;
       document.getElementById('recoveryModal').style.display = 'flex';
