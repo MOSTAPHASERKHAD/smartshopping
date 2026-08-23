@@ -30,6 +30,28 @@ export function sanitizePhone(phone) {
 }
 
 /**
+ * تطبيع أرقام الهواتف للصيغة المعيارية الدولية بدون علامة +
+ * e.g. 0555123456 -> 213555123456
+ * e.g. +213555123456 -> 213555123456
+ * e.g. 00213555123456 -> 213555123456
+ * @param {string} rawPhone
+ * @returns {string}
+ */
+export function normalizePhone(rawPhone) {
+  if (!rawPhone) return '';
+  let digits = String(rawPhone).replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('00213')) {
+    digits = digits.slice(2);
+  } else if (digits.startsWith('0') && digits.length === 10) {
+    digits = '213' + digits.slice(1);
+  } else if (digits.length === 9 && (digits.startsWith('5') || digits.startsWith('6') || digits.startsWith('7'))) {
+    digits = '213' + digits;
+  }
+  return digits;
+}
+
+/**
  * تنظيف رقم مالي: أرقام ونقطة عشرية فقط
  * @param {any} value
  * @returns {number}

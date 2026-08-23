@@ -196,6 +196,7 @@ export class EmailProvider {
 
     if (env && env.RESEND_API_KEY) {
       try {
+        const fromAddress = env.EMAIL_FROM || 'SmartShopping <noreply@smartshopping.click>';
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -203,7 +204,7 @@ export class EmailProvider {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: env.EMAIL_FROM || 'SmartShopping <noreply@smartshopping.click>',
+            from: fromAddress,
             to: toList,
             subject: `🛍️ طلبية جديدة #${orderId} — ${storeName} (${Number(total).toLocaleString()} دج)`,
             html: `
@@ -251,13 +252,22 @@ export class EmailProvider {
             `,
           })
         });
+
+        let resJson = null;
+        try {
+          resJson = await res.json();
+        } catch (_) {}
+
         if (res.ok) {
-          return { delivered: true, status: 'DELIVERED', provider: 'resend' };
+          return { delivered: true, id: resJson?.id, status: 'DELIVERED', provider: 'resend' };
         }
-        console.error('[Email Error] Resend API returned error status for admin notification:', res.status);
-        return { delivered: false, status: 'PROVIDER_ERROR', provider: 'resend' };
+        console.error('[Email Error] Resend API returned error status for admin notification:', {
+          status: res.status,
+          code: resJson?.name || 'RESEND_API_ERROR'
+        });
+        return { delivered: false, status: 'PROVIDER_ERROR', code: resJson?.name || 'RESEND_API_ERROR', provider: 'resend' };
       } catch (e) {
-        console.error('[Email Error] Failed to send admin notification via Resend transport', e);
+        console.error('[Email Error] Failed to send admin notification via Resend transport:', { code: 'DISPATCH_ERROR' });
         return { delivered: false, status: 'DISPATCH_ERROR', provider: 'resend' };
       }
     }

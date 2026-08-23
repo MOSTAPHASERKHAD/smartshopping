@@ -335,7 +335,7 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
       );
     }
 
-    // ── إرسال إشعارات الطلب الجديد للإدارة (Email / WhatsApp) في الخلفية ──
+    // ── إرسال إشعارات الطلب الجديد للإدارة (Email) في الخلفية ──
     ctx.waitUntil(
       dispatchOrderNotifications(env, tenantId, {
         orderId: orderId,
@@ -357,35 +357,18 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 }
 
 /**
- * إرسال إشعار عبر CallMeBot WhatsApp API
- * @param {string} phoneWithCountryCode
- * @param {string} textMessage
- * @param {string} apiKey
+ * إرسال إشعارات الطلب الجديد للموظفين / المشرفين عبر البريد الإلكتروني (Resend)
  */
-export async function sendCallMeBotWhatsApp(phoneWithCountryCode, textMessage, apiKey) {
-  if (!phoneWithCountryCode || !textMessage || !apiKey) return { ok: false, error: 'MISSING_PARAMS' };
-  const cleanPhone = String(phoneWithCountryCode).replace(/[^0-9]/g, '');
-  if (!cleanPhone) return { ok: false, error: 'INVALID_PHONE' };
-  const url = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${encodeURIComponent(textMessage)}&apikey=${encodeURIComponent(apiKey)}`;
-  try {
-    const res = await fetch(url, { method: 'GET' });
-    const text = await res.text().catch(() => '');
-    return { ok: res.ok, status: res.status, body: text };
-  } catch (err) {
-    console.error('[WhatsApp Error] Failed to send CallMeBot message', err);
-    return { ok: false, error: err?.message };
-  }
-}
+export async function dispatchOrderNotifications(env, tenantId, orderData, secureItems = [], filterType = 'all') {
+  const result = {
+    email: { attempted: false, delivered: false }
+  };
 
-/**
- * إرسال إشعارات الطلب الجديد للموظفين / المشرفين عبر الإيميل والواتساب
- */
-export async function dispatchOrderNotifications(env, tenantId, orderData, secureItems = []) {
   try {
     const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
     const stmt = isMaster
-      ? env.DB.prepare(`SELECT key, value FROM settings WHERE (tenant_id = ? OR tenant_id IS NULL) AND key IN ('notification_email_enabled', 'notification_emails', 'notification_whatsapp_enabled', 'notification_whatsapp_numbers', 'notification_whatsapp_apikey', 'store_name')`).bind(tenantId)
-      : env.DB.prepare(`SELECT key, value FROM settings WHERE tenant_id = ? AND key IN ('notification_email_enabled', 'notification_emails', 'notification_whatsapp_enabled', 'notification_whatsapp_numbers', 'notification_whatsapp_apikey', 'store_name')`).bind(tenantId);
+      ? env.DB.prepare(`SELECT key, value FROM settings WHERE (tenant_id = ? OR tenant_id IS NULL) AND key IN ('notification_email_enabled', 'notification_emails', 'store_name')`).bind(tenantId)
+      : env.DB.prepare(`SELECT key, value FROM settings WHERE tenant_id = ? AND key IN ('notification_email_enabled', 'notification_emails', 'store_name')`).bind(tenantId);
 
     const { results } = await stmt.all();
     const cfg = {};
@@ -396,14 +379,15 @@ export async function dispatchOrderNotifications(env, tenantId, orderData, secur
 
     // 1. إشعارات البريد الإلكتروني (Resend)
     const emailEnabled = cfg.notification_email_enabled === 'true' || cfg.notification_email_enabled === '1';
-    if (emailEnabled && cfg.notification_emails) {
+    if ((filterType === 'all' || filterType === 'email') && emailEnabled && cfg.notification_emails) {
       const emailList = cfg.notification_emails
         .split(/[\n,;]+/)
         .map(e => e.trim().toLowerCase())
         .filter(e => e && e.includes('@') && e.includes('.'));
 
       if (emailList.length > 0) {
-        await EmailProvider.sendNewOrderAdminNotification({
+        result.email.attempted = true;
+        const emailRes = await EmailProvider.sendNewOrderAdminNotification({
           toList: emailList,
           orderId: orderData.orderId,
           customerName: orderData.name,
@@ -416,44 +400,20 @@ export async function dispatchOrderNotifications(env, tenantId, orderData, secur
           shippingCost: orderData.shippingCost,
           storeName: storeName,
           env: env,
-        }).catch(err => console.error('[NOTIF EMAIL ERROR]', err));
+        }).catch(err => {
+          console.error('[Email Error] Background email dispatch failed:', { code: 'DISPATCH_ERROR' });
+          return { delivered: false, status: 'DISPATCH_ERROR' };
+        });
+        result.email.delivered = !!emailRes?.delivered;
+        if (emailRes?.id) result.email.id = emailRes.id;
+        if (emailRes?.status) result.email.status = emailRes.status;
       }
     }
 
-    // 2. إشعارات الواتساب (CallMeBot)
-    const whatsappEnabled = cfg.notification_whatsapp_enabled === 'true' || cfg.notification_whatsapp_enabled === '1';
-    if (whatsappEnabled && cfg.notification_whatsapp_numbers) {
-      const numbersList = cfg.notification_whatsapp_numbers
-        .split(/[\n,;]+/)
-        .map(n => n.trim())
-        .filter(Boolean);
-
-      if (numbersList.length > 0) {
-        const notifMsg = `🛍️ *طلبية جديدة في المتجر!*\n` +
-`📦 *رقم الطلب:* #${orderData.orderId}\n` +
-`👤 *العميل:* ${orderData.name}\n` +
-`📱 *الهاتف:* ${orderData.phone}\n` +
-`📍 *الولاية:* ${orderData.wilayaAr || orderData.wilayaEn || '-'} ${orderData.municipality ? `(${orderData.municipality})` : ''}\n` +
-`🚚 *التوصيل:* ${orderData.deliveryType === 'office' ? 'استلام من المكتب' : 'توصيل للمنزل'}\n` +
-`🛒 *المنتجات:* ${formattedItems}\n` +
-`💰 *المجموع:* ${orderData.total} دج`;
-
-        for (const item of numbersList) {
-          let phoneNum = item;
-          let apiKey = cfg.notification_whatsapp_apikey || '';
-          if (item.includes(':')) {
-            const parts = item.split(':');
-            phoneNum = parts[0].trim();
-            apiKey = parts[1].trim() || apiKey;
-          }
-          if (phoneNum && apiKey) {
-            await sendCallMeBotWhatsApp(phoneNum, notifMsg, apiKey).catch(err => console.error('[NOTIF WA ERROR]', err));
-          }
-        }
-      }
-    }
+    return result;
   } catch (err) {
-    console.error('[Notification Dispatch Error]', err);
+    console.error('[Notification Dispatch Error]', { code: 'DISPATCH_EXCEPTION' });
+    return result;
   }
 }
 

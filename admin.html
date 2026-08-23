@@ -565,18 +565,21 @@
   <!-- Notifications Settings -->
   <div id="sec-notifications" class="hidden">
     <div class="top-bar">
-      <h1>🔔 إعدادات الإشعارات الفورية للطلبات (WhatsApp & Email)</h1>
-      <button class="btn btn-info btn-sm" onclick="testNotification()">🧪 إرسال إشعار تجريبي الآن</button>
+      <h1>🔔 إعدادات الإشعارات الفورية للطلبات (Email)</h1>
+      <button class="btn btn-info btn-sm" onclick="testNotification('email')">🧪 إرسال إشعار تجريبي للبريد</button>
     </div>
 
     <!-- Email Notifications Panel -->
     <div class="panel">
-      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <h3>✉️ إشعارات البريد الإلكتروني (Email Alerts via Resend)</h3>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700">
-          <input type="checkbox" id="notif_email_enabled">
-          <span>تفعيل الإشعارات عبر البريد</span>
-        </label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button type="button" class="btn btn-outline btn-xs" onclick="testNotification('email')">🧪 فحص البريد</button>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700">
+            <input type="checkbox" id="notif_email_enabled">
+            <span>تفعيل الإشعارات عبر البريد</span>
+          </label>
+        </div>
       </div>
       <div class="panel-body" id="notif_email_body">
         <p style="color:var(--text3);font-size:0.82rem;margin-bottom:12px">
@@ -585,41 +588,9 @@
         <div class="form-group">
           <label>قائمة عناوين البريد الإلكتروني المستلمة (اكتب كل إيميل في سطر أو مفصولة بفواصل)</label>
           <textarea id="notif_emails" rows="3" placeholder="owner@example.com&#10;manager@example.com&#10;support@example.com" style="font-family:monospace;direction:ltr;text-align:left"></textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- WhatsApp Notifications Panel -->
-    <div class="panel">
-      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center">
-        <h3>💬 إشعارات الواتساب (WhatsApp Alerts via CallMeBot API)</h3>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700">
-          <input type="checkbox" id="notif_whatsapp_enabled">
-          <span>تفعيل الإشعارات عبر الواتساب</span>
-        </label>
-      </div>
-      <div class="panel-body" id="notif_whatsapp_body">
-        <p style="color:var(--text3);font-size:0.82rem;margin-bottom:12px">
-          تلقي رسالة واتساب فورية إلى هاتفك أو هواتف موظفيك عند استلام أي طلبية جديدة فوراً بدون تأخير.
-        </p>
-        <div class="form-row">
-          <div class="form-group">
-            <label>قائمة أرقام الواتساب المستلمة (مع رمز الدولة - مثال: 213555123456)</label>
-            <textarea id="notif_whatsapp_numbers" rows="3" placeholder="213555123456&#10;213666789012&#10;213777889900:apikey_here" style="font-family:monospace;direction:ltr;text-align:left"></textarea>
-            <small style="color:var(--text3);font-size:.72rem;display:block;margin-top:4px">
-              💡 يمكنك كتابة الرقم وحده (لاستخدام المفتاح الافتراضي) أو بصيغة <code>رقم:مفتاح</code> لتخصيص مفتاح لكل رقم.
-            </small>
-          </div>
-          <div class="form-group">
-            <label>مفتاح CallMeBot API Key الافتراضي</label>
-            <input type="text" id="notif_whatsapp_apikey" placeholder="مثال: 123456" style="font-family:monospace;direction:ltr;text-align:left">
-            <div style="background:var(--bg);padding:10px;border-radius:6px;border:1px dashed var(--border);margin-top:8px;font-size:0.75rem;line-height:1.6;color:var(--text2)">
-              <strong>📌 كيفية الحصول على مفتاح CallMeBot مجاناً خلال دقيقة:</strong><br>
-              1. أضف الرقم <code>+34 644 44 49 64</code> إلى جهات اتصال هاتفك باسم CallMeBot.<br>
-              2. أرسل له رسالة واتساب: <code>I allow callmebot to send me messages</code><br>
-              3. سيرد عليك فوراً برسالة تحتوي على رمز الـ API Key الخاص برقمك.
-            </div>
-          </div>
+          <small style="color:var(--text3);font-size:.72rem;display:block;margin-top:4px">
+            🔒 يتم تأمين الإرسال عبر خادم Resend Email API المعتمد (Zero-Trust Server Secrets).
+          </small>
         </div>
       </div>
     </div>
@@ -627,7 +598,7 @@
     <!-- Actions & Save -->
     <div style="display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap">
       <button class="btn btn-accent" onclick="saveNotificationSettings()">💾 حفظ إعدادات الإشعارات</button>
-      <button class="btn btn-outline" onclick="testNotification()">🧪 إرسال إشعار تجريبي الآن</button>
+      <button class="btn btn-outline" onclick="testNotification('email')">🧪 إرسال إشعار تجريبي للبريد</button>
     </div>
   </div>
 
@@ -3122,31 +3093,19 @@ function loadNotificationSettings() {
     if (!data) return;
     var emailToggle = document.getElementById('notif_email_enabled');
     var emailArea = document.getElementById('notif_emails');
-    var waToggle = document.getElementById('notif_whatsapp_enabled');
-    var waArea = document.getElementById('notif_whatsapp_numbers');
-    var waKey = document.getElementById('notif_whatsapp_apikey');
 
     if (emailToggle) emailToggle.checked = (data.notification_email_enabled === 'true' || data.notification_email_enabled === '1');
     if (emailArea) emailArea.value = data.notification_emails || '';
-    if (waToggle) waToggle.checked = (data.notification_whatsapp_enabled === 'true' || data.notification_whatsapp_enabled === '1');
-    if (waArea) waArea.value = data.notification_whatsapp_numbers || '';
-    if (waKey) waKey.value = data.notification_whatsapp_apikey || '';
   });
 }
 
 function saveNotificationSettings() {
   var emailEnabled = (document.getElementById('notif_email_enabled') || {}).checked ? 'true' : 'false';
   var emails = (document.getElementById('notif_emails') || {}).value || '';
-  var waEnabled = (document.getElementById('notif_whatsapp_enabled') || {}).checked ? 'true' : 'false';
-  var waNumbers = (document.getElementById('notif_whatsapp_numbers') || {}).value || '';
-  var waApiKey = (document.getElementById('notif_whatsapp_apikey') || {}).value || '';
 
   var payload = {
     notification_email_enabled: emailEnabled,
-    notification_emails: emails.trim(),
-    notification_whatsapp_enabled: waEnabled,
-    notification_whatsapp_numbers: waNumbers.trim(),
-    notification_whatsapp_apikey: waApiKey.trim()
+    notification_emails: emails.trim()
   };
 
   apiPost('admin_update_settings', payload, function(res) {
@@ -3158,13 +3117,14 @@ function saveNotificationSettings() {
   });
 }
 
-function testNotification() {
-  toast('جاري إرسال إشعار تجريبي...');
-  apiPost('admin_test_notification', {}, function(res) {
+function testNotification(type) {
+  var t = type || 'email';
+  toast('جاري إرسال إشعار تجريبي للبريد الإلكتروني...');
+  apiPost('admin_test_notification', { type: t }, function(res) {
     if (res && res.ok) {
-      toast('✅ تم إرسال الإشعار التجريبي بنجاح! تحقق من البريد والواتساب.');
+      toast('✅ تم إرسال الإشعار التجريبي للبريد الإلكتروني بنجاح');
     } else {
-      toast('⚠️ حدث خطأ أثناء إرسال الإشعار التجريبي: ' + (res && res.error ? (res.error.message || res.error) : 'تحقق من المفاتيح'));
+      toast('⚠️ ' + (res && res.error ? (res.error.message || res.error) : 'تعذر إرسال الإشعار التجريبي، يرجى التحقق من مفتاح Resend والإعدادات'));
     }
   });
 }
