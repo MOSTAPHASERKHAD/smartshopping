@@ -160,9 +160,10 @@ export const ACTION_PERMISSIONS = {
   admin_update_order:   PERMISSIONS.ORDERS_UPDATE,
   admin_delete_order:   PERMISSIONS.ORDERS_DELETE,
 
-  // Settings
-  admin_settings:        PERMISSIONS.SETTINGS_READ,
-  admin_update_settings: PERMISSIONS.SETTINGS_UPDATE,
+  // Settings & Notifications
+  admin_settings:          PERMISSIONS.SETTINGS_READ,
+  admin_update_settings:   PERMISSIONS.SETTINGS_UPDATE,
+  admin_test_notification: PERMISSIONS.SETTINGS_UPDATE,
 
   // Coupons
   admin_list_coupons:   PERMISSIONS.COUPONS_READ,

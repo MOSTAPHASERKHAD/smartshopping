@@ -168,4 +168,105 @@ export class EmailProvider {
     }
     return { delivered: false, status: 'EMAIL_PROVIDER_UNCONFIGURED', provider: 'mock' };
   }
+
+  /**
+   * إرسال إشعار بوصول طلب جديد للإدارة / فريق العمل
+   * @param {{ toList: string[], orderId: string, customerName: string, phone: string, wilaya: string, municipality: string, deliveryType: string, items: string, total: number, shippingCost: number, storeName: string, env: object }} params
+   */
+  static async sendNewOrderAdminNotification({
+    toList = [],
+    orderId,
+    customerName,
+    phone,
+    wilaya = '',
+    municipality = '',
+    deliveryType = 'home',
+    items = '',
+    total = 0,
+    shippingCost = 0,
+    storeName = 'Smart Shopping',
+    env = {}
+  }) {
+    if (!Array.isArray(toList) || toList.length === 0) {
+      return { delivered: false, status: 'NO_RECIPIENTS', provider: 'resend' };
+    }
+
+    const deliveryTypeLabel = deliveryType === 'office' ? '🏢 استلام من المكتب' : '🏠 توصيل للمنزل';
+    const locationText = municipality ? `${wilaya} - ${municipality}` : wilaya;
+
+    if (env && env.RESEND_API_KEY) {
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: env.EMAIL_FROM || 'SmartShopping <noreply@smartshopping.click>',
+            to: toList,
+            subject: `🛍️ طلبية جديدة #${orderId} — ${storeName} (${Number(total).toLocaleString()} دج)`,
+            html: `
+              <div dir="rtl" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+                <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 16px;">
+                  <h2 style="color: #0f172a; margin: 0 0 6px 0; font-size: 22px;">🛍️ وصلتك طلبية جديدة!</h2>
+                  <p style="color: #64748b; margin: 0; font-size: 14px;">متجر ${storeName}</p>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b; width: 35%;"><strong>رقم الطلب:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #0f172a; font-family: monospace; font-weight: bold;">${orderId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>اسم العميل:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #0f172a; font-weight: bold;">${customerName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>رقم الهاتف:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #2563eb; font-weight: bold; font-family: monospace;"><a href="tel:${phone}" style="color:#2563eb;text-decoration:none">${phone}</a></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>العنوان / الولاية:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #0f172a;">${locationText || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>نوع التوصيل:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #0f172a;">${deliveryTypeLabel}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>المنتجات:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #0f172a; line-height: 1.5;">${items}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b;"><strong>المبلغ الإجمالي:</strong></td>
+                    <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #16a34a; font-size: 18px; font-weight: bold;">${Number(total).toLocaleString()} دج</td>
+                  </tr>
+                </table>
+
+                <div style="text-align: center; margin: 24px 0 12px;">
+                  <a href="https://smartshopping.click/admin.html" style="background-color: #0f172a; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">الانتقال للوحة التحكم</a>
+                </div>
+              </div>
+            `,
+          })
+        });
+        if (res.ok) {
+          return { delivered: true, status: 'DELIVERED', provider: 'resend' };
+        }
+        console.error('[Email Error] Resend API returned error status for admin notification:', res.status);
+        return { delivered: false, status: 'PROVIDER_ERROR', provider: 'resend' };
+      } catch (e) {
+        console.error('[Email Error] Failed to send admin notification via Resend transport', e);
+        return { delivered: false, status: 'DISPATCH_ERROR', provider: 'resend' };
+      }
+    }
+
+    if (env && env.ENVIRONMENT !== 'production') {
+      console.log(`[Email Mock] Admin order notification to: ${toList.join(', ')} | Order ID: ${orderId}`);
+    } else {
+      console.warn('[Email Warning] RESEND_API_KEY is not configured. Admin notification email skipped.');
+    }
+    return { delivered: false, status: 'EMAIL_PROVIDER_UNCONFIGURED', provider: 'mock' };
+  }
 }

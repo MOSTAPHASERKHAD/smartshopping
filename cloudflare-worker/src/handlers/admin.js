@@ -20,6 +20,7 @@ import {
   revokeAdminSession,
   DEFAULT_MASTER_TENANT_ID,
 } from '../utils/auth.js';
+import { dispatchOrderNotifications } from './orders.js';
 
 // ─────────────────────────────────────────────
 // ── المصادقة (Authentication) ──
@@ -514,4 +515,28 @@ export async function adminListAuditLogs(env, params = {}, tenantId = DEFAULT_MA
   `).bind(tenantId, limit).all();
 
   return { ok: true, logs: results };
+}
+
+// ─────────────────────────────────────────────
+// ── إشعارات الطلبات التجريبية (Test Notifications) ──
+// ─────────────────────────────────────────────
+
+export async function adminTestNotification(env, params = {}, tenantId = DEFAULT_MASTER_TENANT_ID) {
+  const sampleOrder = {
+    orderId: 'TEST-' + Math.floor(1000 + Math.random() * 9000),
+    name: 'عميل تجريبي (Test Customer)',
+    phone: '0555001122',
+    wilayaAr: 'الجزائر',
+    wilayaEn: 'Algiers',
+    municipality: 'باب الزوار',
+    deliveryType: 'home',
+    shippingCost: 500,
+    total: 4500,
+  };
+  const sampleItems = [
+    { name: 'منتج تجريبي للتأكد من الإشعارات', qty: 1, price: 4000 }
+  ];
+
+  await dispatchOrderNotifications(env, tenantId, sampleOrder, sampleItems);
+  return { ok: true, message: 'تم إرسال الإشعار التجريبي بنجاح' };
 }

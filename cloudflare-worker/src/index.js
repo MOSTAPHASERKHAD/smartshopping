@@ -79,7 +79,7 @@ import {
 
 // ── استيراد معالجات الأدمن ──
 import {
-  verifyAdmin, adminLogout, adminUpdateSettings,
+  verifyAdmin, adminLogout, adminUpdateSettings, adminTestNotification,
   adminListCoupons, adminAddCoupon, adminEditCoupon, adminDeleteCoupon,
   adminListTestimonials, adminAddTestimonial,
   adminEditTestimonial,  adminDeleteTestimonial,
@@ -395,9 +395,10 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   if (action === 'admin_update_order')   return adminUpdateOrder(env, params, tenantId);
   if (action === 'admin_delete_order')   return adminDeleteOrder(env, params, tenantId);
 
-  // ── الإعدادات ──
-  if (action === 'admin_settings')        return getSettings(env, tenantId);
-  if (action === 'admin_update_settings') return adminUpdateSettings(env, params, tenantId);
+  // ── الإعدادات والإشعارات ──
+  if (action === 'admin_settings')          return getSettings(env, tenantId);
+  if (action === 'admin_update_settings')   return adminUpdateSettings(env, params, tenantId);
+  if (action === 'admin_test_notification') return adminTestNotification(env, params, tenantId);
 
   // ── الكوبونات ──
   if (action === 'admin_list_coupons')   return adminListCoupons(env, tenantId);
