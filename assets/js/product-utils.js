@@ -522,19 +522,48 @@
   }
 
   /**
+   * Builds dynamic pricing tiers based on explicit custom tiers or active theme settings
+   */
+  function buildDynamicPricingTiers(basePrice, customTiers, themeSettings) {
+    basePrice = Number(basePrice || 0);
+    if (customTiers && Array.isArray(customTiers) && customTiers.length > 0) {
+      return customTiers;
+    }
+    var ts = themeSettings || {};
+    var d2 = (ts.tier2_discount_pct != null && !isNaN(Number(ts.tier2_discount_pct)))
+      ? Math.max(0, Math.min(100, Number(ts.tier2_discount_pct))) : 10;
+    var d3 = (ts.tier3_discount_pct != null && !isNaN(Number(ts.tier3_discount_pct)))
+      ? Math.max(0, Math.min(100, Number(ts.tier3_discount_pct))) : 20;
+    var fs3 = (ts.tier3_free_shipping !== undefined) ? (ts.tier3_free_shipping !== false) : true;
+
+    var p2 = Math.round(basePrice * 2 * (1 - d2 / 100));
+    var p3 = Math.round(basePrice * 3 * (1 - d3 / 100));
+
+    var badge2 = d2 > 0 ? ('وفر ' + d2 + '%') : '';
+    var badge3 = '';
+    if (fs3 && d3 > 0) {
+      badge3 = 'شحن مجاني + خصم ' + d3 + '%';
+    } else if (fs3) {
+      badge3 = 'شحن مجاني 🚚';
+    } else if (d3 > 0) {
+      badge3 = 'وفر ' + d3 + '%';
+    }
+
+    return [
+      { qty: 1, label: '1 قطعة (شراء عادي)', price: basePrice, subtext: 'السعر القياسي' },
+      { qty: 2, label: '2 قطع (الأكثر طلباً ⭐)', price: p2, badge: badge2, subtext: 'العرض الموصى به للمنازل' },
+      { qty: 3, label: '3 قطع (توفير كلي 🎁)', price: p3, free_shipping: fs3, badge: badge3, subtext: 'أفضل قيمة وأعلى توفير' }
+    ];
+  }
+
+  /**
    * Render HTML for Quantity Breaks & Bundle Offers
    */
-  function renderQuantityBreaks(tiers, basePrice, activeQty) {
+  function renderQuantityBreaks(tiers, basePrice, activeQty, themeSettings) {
     basePrice = Number(basePrice || 0);
     activeQty = Number(activeQty || 1);
 
-    if (!tiers || !Array.isArray(tiers) || tiers.length === 0) {
-      tiers = [
-        { qty: 1, label: '1 قطعة (شراء عادي)', price: basePrice, subtext: 'السعر القياسي' },
-        { qty: 2, label: '2 قطع (الأكثر طلباً ⭐)', price: Math.round(basePrice * 2 * 0.9), badge: 'وفر 10%', subtext: 'العرض الموصى به للمنازل' },
-        { qty: 3, label: '3 قطع (توفير كلي 🎁)', price: Math.round(basePrice * 3 * 0.8), free_shipping: true, badge: 'شحن مجاني + خصم 20%', subtext: 'أفضل قيمة وأعلى توفير' }
-      ];
-    }
+    tiers = buildDynamicPricingTiers(basePrice, tiers, themeSettings);
 
     var html = '<div class="pl-bundles-container">';
     html += '<div class="pl-bundle-header"><span>🎁 اختر الكمية والعرض المناسب:</span></div>';
@@ -575,12 +604,16 @@
   /**
    * Authoritatively calculate tier pricing and savings
    */
-  function calculateTierSubtotal(basePrice, qty, tiers) {
+  function calculateTierSubtotal(basePrice, qty, tiers, themeSettings) {
     basePrice = Number(basePrice || 0);
     qty = Math.max(1, parseInt(qty || 1, 10));
 
-    if (tiers && Array.isArray(tiers) && tiers.length > 0) {
-      var matchedTier = tiers.find(function(t) { return Number(t.qty) === qty; });
+    var effectiveTiers = (tiers && Array.isArray(tiers) && tiers.length > 0)
+      ? tiers
+      : buildDynamicPricingTiers(basePrice, null, themeSettings);
+
+    if (effectiveTiers && Array.isArray(effectiveTiers) && effectiveTiers.length > 0) {
+      var matchedTier = effectiveTiers.find(function(t) { return Number(t.qty) === qty; });
       if (matchedTier) {
         var tierPrice = Number(matchedTier.price || (basePrice * qty));
         var standardPrice = basePrice * qty;
@@ -617,6 +650,7 @@
     calculateClientShippingCost: calculateClientShippingCost,
     trackAnalyticsEvent: trackAnalyticsEvent,
     renderVariantSwatches: renderVariantSwatches,
+    buildDynamicPricingTiers: buildDynamicPricingTiers,
     renderQuantityBreaks: renderQuantityBreaks,
     calculateTierSubtotal: calculateTierSubtotal
   };

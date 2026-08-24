@@ -924,14 +924,23 @@
               <div class="config-check-grid">
                 <label class="config-check"><input type="checkbox" id="lp_s_hero" checked> الواجهة الرئيسية (Hero)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_gallery" checked> معرض الصور (Gallery)</label>
-                <label class="config-check"><input type="checkbox" id="lp_s_pricing_tiers" checked> 🎁 عروض الكميات والتوفير (Quantity Bundles / Offers)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_form" checked disabled> 🛒 استمارة اطلب الآن (Form - #2 بعد الصور)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_trust" checked> شريط الثقة والتوصيل (Trust)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_details" checked> التفاصيل والوصف (Details)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_features" checked> المميزات والخصائص (Features)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_reviews" checked> التقييمات والضمان (Reviews)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_faq" checked> الأسئلة الشائعة (FAQ)</label>
+                <input type="checkbox" id="lp_s_pricing_tiers" style="display:none" checked>
               </div>
+            </div>
+            <div class="form-group full" style="margin-bottom:12px;background:rgba(255,255,255,0.03);padding:10px 12px;border-radius:8px;border:1px solid var(--border,#334155)">
+              <label style="font-weight:700;margin-bottom:6px;display:block">🎁 عروض الكميات والتوفير (Quantity Offers / Bundles)</label>
+              <select id="lp_s_pricing_tiers_override" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border,#334155);background:var(--card,#1e293b);color:var(--text,#f8fafc);font-size:0.9rem">
+                <option value="inherit">🌐 تلقائي — استخدام إعدادات الثيم (Theme Default)</option>
+                <option value="enabled">✅ تفعيل إجباري لهذا المنتج (Force ON)</option>
+                <option value="disabled">🚫 إخفاء وتعطيل لهذا المنتج (Force OFF)</option>
+              </select>
+              <small style="color:var(--text2,#94a3b8);display:block;margin-top:4px">تحديد ظهور بطاقات عروض التوفير 1/2/3 قطع لهذا المنتج خصيصاً أو اتباع إعدادات الثيم المركزية.</small>
             </div>
             <div class="config-section-title">Hero</div>
             <div class="form-group full"><label>العنوان الرئيسي</label><input id="lp_hero_title"></div>
@@ -2349,6 +2358,9 @@ function resetLpEditor() {
     var el = document.getElementById('lp_s_' + k);
     if (el) el.checked = true;
   });
+  if (document.getElementById('lp_s_pricing_tiers_override')) {
+    document.getElementById('lp_s_pricing_tiers_override').value = 'inherit';
+  }
   document.getElementById('lp_hero_title').value = '';
   document.getElementById('lp_hero_subtitle').value = '';
   document.getElementById('lp_cta_label').value = 'اطلب الآن';
@@ -2414,6 +2426,16 @@ function collectLpEditorConfig() {
     var el = document.getElementById('lp_s_' + k);
     if (el) sections[k] = el.checked;
   });
+  var overrideEl = document.getElementById('lp_s_pricing_tiers_override');
+  if (overrideEl) {
+    if (overrideEl.value === 'enabled') {
+      sections.pricing_tiers = true;
+    } else if (overrideEl.value === 'disabled') {
+      sections.pricing_tiers = false;
+    } else {
+      delete sections.pricing_tiers;
+    }
+  }
   var features = lpFeatureRows.map(function(f, i) {
     return {
       icon:  document.getElementById('lp_feat_icon_' + i).value,
@@ -2465,6 +2487,26 @@ function loadLpEditorConfig(raw) {
       el.checked = true; // default enabled for backward compatibility
     }
   });
+  var overrideEl = document.getElementById('lp_s_pricing_tiers_override');
+  if (overrideEl) {
+    if (cfg.sections && cfg.sections.pricing_tiers === false) {
+      overrideEl.value = 'disabled';
+    } else if (cfg.sections && cfg.sections.pricing_tiers === true) {
+      overrideEl.value = 'enabled';
+    } else {
+      overrideEl.value = 'inherit';
+    }
+  }
+  var overrideEl = document.getElementById('lp_s_pricing_tiers_override');
+  if (overrideEl) {
+    if (cfg.sections && cfg.sections.pricing_tiers === false) {
+      overrideEl.value = 'disabled';
+    } else if (cfg.sections && cfg.sections.pricing_tiers === true) {
+      overrideEl.value = 'enabled';
+    } else {
+      overrideEl.value = 'inherit';
+    }
+  }
   if (cfg.hero) {
     if (cfg.hero.headline)     document.getElementById('lp_hero_title').value = cfg.hero.headline;
     if (cfg.hero.subtitle)     document.getElementById('lp_hero_subtitle').value = cfg.hero.subtitle;
@@ -4980,7 +5022,8 @@ function showAdminPanel() {
     <button class="ai-chip" onclick="triggerAiMode('product_profitability')">📦 ربحية المنتجات ومصفوفة الـ 6</button>
     <button class="ai-chip" onclick="triggerAiMode('delivery_intelligence')">🚚 استخبارات الشحن والولايات</button>
     <button class="ai-chip" onclick="triggerAiMode('inventory_risk')">⚠️ مخاطر المخزون وتأمين الطلب</button>
-    <button class="ai-chip" onclick="triggerAiMode('experiment_manager')">🧪 مدير تجارب النمو</button>
+    <button class="ai-chip" onclick="triggerAiMode('growth_experiments')">🚀 قائد التجارب (Growth Experiments)</button>
+    <button class="ai-chip" onclick="triggerAiMode('experiment_manager')">🧪 مدير تجارب النمو (Experiment Manager)</button>
     <button class="ai-chip" onclick="triggerAiMode('store_overview')">📊 تحليل شامل للمتجر</button>
     <button class="ai-chip" onclick="triggerAiMode('whatsapp_draft')">✍️ مسودة WhatsApp للعميل</button>
   </div>

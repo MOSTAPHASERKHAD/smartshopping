@@ -376,6 +376,12 @@
         if (formSec.settings.title) p.landing_config.form_title = formSec.settings.title;
         if (formSec.settings.submit_btn_text) p.landing_config.submit_btn_text = formSec.settings.submit_btn_text;
         p.landing_config.form_settings = formSec.settings;
+        p.landing_config.theme_pricing_tiers = {
+          show_pricing_tiers: formSec.settings.show_pricing_tiers !== false,
+          tier2_discount_pct: formSec.settings.tier2_discount_pct,
+          tier3_discount_pct: formSec.settings.tier3_discount_pct,
+          tier3_free_shipping: formSec.settings.tier3_free_shipping
+        };
       }
 
       var trustSec = sections['trust-signals'] || sections['trust'];
@@ -595,7 +601,25 @@
       var showFaq = !isCustom || (sec.faq !== false);
       var showTrust = !isCustom || (sec.trust !== false);
       var showCountdown = !isCustom || (sec.countdown !== false);
-      var showPricingTiers = !isCustom || (sec.pricing_tiers !== false);
+
+      // ── Resolve Pricing Tiers / Quantity Offers Precedence (Product Override > Theme Settings > Defaults) ──
+      var themeTierSettings = {};
+      if (lpCfg.theme_pricing_tiers) {
+        themeTierSettings = lpCfg.theme_pricing_tiers;
+      } else if (storeSettings && storeSettings.theme_config && storeSettings.theme_config.sections) {
+        var tsSec = storeSettings.theme_config.sections['fast-order-form'] || storeSettings.theme_config.sections['order-form'];
+        if (tsSec && tsSec.settings) themeTierSettings = tsSec.settings;
+      }
+
+      var themeShowTiers = (themeTierSettings.show_pricing_tiers !== undefined) ? (themeTierSettings.show_pricing_tiers !== false) : true;
+      var showPricingTiers;
+      if (sec.pricing_tiers === false || sec.pricing_tiers === 'disabled') {
+        showPricingTiers = false;
+      } else if (sec.pricing_tiers === true || sec.pricing_tiers === 'enabled') {
+        showPricingTiers = true;
+      } else {
+        showPricingTiers = themeShowTiers;
+      }
       var showForm = true; // Always displayed
 
       var countdownCfg = lpCfg.countdown || {};
@@ -747,7 +771,7 @@
 
       // ── Quantity Breaks / Bundle Offers or Standard Quantity Selector ──
       if (showPricingTiers && typeof renderQuantityBreaks === 'function') {
-        html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1);
+        html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1, themeTierSettings);
       } else {
         var curQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
         html += '<div class="pl-field-group" style="margin-bottom:16px">';
@@ -1519,12 +1543,28 @@
 
       var lpCfg = currentProduct.landing_config || {};
       if (typeof lpCfg === 'string' && lpCfg.trim()) { try { lpCfg = JSON.parse(lpCfg); } catch(e) { lpCfg = {}; } }
-      var isCustom = (lpCfg.mode === 'custom');
       var sec = lpCfg.sections || {};
-      var showPricingTiers = !isCustom || (sec.pricing_tiers !== false);
+
+      var themeTierSettings = {};
+      if (lpCfg.theme_pricing_tiers) {
+        themeTierSettings = lpCfg.theme_pricing_tiers;
+      } else if (storeSettings && storeSettings.theme_config && storeSettings.theme_config.sections) {
+        var tsSec = storeSettings.theme_config.sections['fast-order-form'] || storeSettings.theme_config.sections['order-form'];
+        if (tsSec && tsSec.settings) themeTierSettings = tsSec.settings;
+      }
+
+      var themeShowTiers = (themeTierSettings.show_pricing_tiers !== undefined) ? (themeTierSettings.show_pricing_tiers !== false) : true;
+      var showPricingTiers;
+      if (sec.pricing_tiers === false || sec.pricing_tiers === 'disabled') {
+        showPricingTiers = false;
+      } else if (sec.pricing_tiers === true || sec.pricing_tiers === 'enabled') {
+        showPricingTiers = true;
+      } else {
+        showPricingTiers = themeShowTiers;
+      }
 
       var tierResult = (showPricingTiers && typeof calculateTierSubtotal === 'function')
-        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers)
+        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings)
         : { subtotal: basePrice * currentQty, freeShipping: false, saveAmount: 0 };
 
       var effectiveSubtotal = tierResult.subtotal;
@@ -1634,14 +1674,30 @@
 
       var lpCfg = currentProduct.landing_config || {};
       if (typeof lpCfg === 'string' && lpCfg.trim()) { try { lpCfg = JSON.parse(lpCfg); } catch(e) { lpCfg = {}; } }
-      var isCustom = (lpCfg.mode === 'custom');
       var sec = lpCfg.sections || {};
-      var showPricingTiers = !isCustom || (sec.pricing_tiers !== false);
+
+      var themeTierSettings = {};
+      if (lpCfg.theme_pricing_tiers) {
+        themeTierSettings = lpCfg.theme_pricing_tiers;
+      } else if (storeSettings && storeSettings.theme_config && storeSettings.theme_config.sections) {
+        var tsSec = storeSettings.theme_config.sections['fast-order-form'] || storeSettings.theme_config.sections['order-form'];
+        if (tsSec && tsSec.settings) themeTierSettings = tsSec.settings;
+      }
+
+      var themeShowTiers = (themeTierSettings.show_pricing_tiers !== undefined) ? (themeTierSettings.show_pricing_tiers !== false) : true;
+      var showPricingTiers;
+      if (sec.pricing_tiers === false || sec.pricing_tiers === 'disabled') {
+        showPricingTiers = false;
+      } else if (sec.pricing_tiers === true || sec.pricing_tiers === 'enabled') {
+        showPricingTiers = true;
+      } else {
+        showPricingTiers = themeShowTiers;
+      }
 
       var currentQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
       var basePrice = Number(currentProduct.effectivePrice || currentProduct.price || 0);
       var tierResult = (showPricingTiers && typeof calculateTierSubtotal === 'function')
-        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers)
+        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings)
         : { subtotal: basePrice * currentQty, freeShipping: false };
 
       var finalOrderSubtotal = Number(tierResult.subtotal) || (basePrice * currentQty);

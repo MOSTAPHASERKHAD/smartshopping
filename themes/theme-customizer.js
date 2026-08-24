@@ -410,6 +410,10 @@
           delivery_note: 'ملاحظة التوصيل',
           submit_btn_text: 'نص زر تأكيد الطلب',
           show_quantity_selector: 'إظهار خيار تحديد الكمية',
+          show_pricing_tiers: '🎁 إظهار عروض الكميات والتوفير (Bundles)',
+          tier2_discount_pct: '🏷️ نسبة خصم عرض قطعتين (%)',
+          tier3_discount_pct: '🎁 نسبة خصم عرض 3 قطع (%)',
+          tier3_free_shipping: '🚚 شحن مجاني لعرض 3 قطع',
           show_wilaya_selector: 'إظهار خيار الولاية',
           show_email_field: 'إظهار حقل البريد الإلكتروني',
           show_baladiya_field: 'إظهار حقل البلدية',
@@ -437,6 +441,12 @@
             html += '<button type="button" onclick="ThemeCustomizer.set24HourOffer(\'' + esc(sid) + '\')" style="background:#f59e0b;color:#111;border:none;border-radius:6px;padding:7px 10px;font-weight:800;font-size:0.78rem;cursor:pointer;white-space:nowrap;" title="تعيين العداد لينتهي بعد 24 ساعة من الآن">⚡ +24 ساعة</button>';
             html += '</div>';
             html += '<div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;">اضغط الزر لبدء عداد 24 ساعة موحد لجميع الزوار من الآن</div>';
+            html += '</div>';
+          } else if (sKey === 'tier2_discount_pct' || sKey === 'tier3_discount_pct') {
+            var numVal = Math.max(0, Math.min(100, parseInt(sVal, 10) || 0));
+            html += '<div style="margin-bottom:10px;background:#0f172a;padding:8px 10px;border-radius:6px;border:1px solid #334155;">';
+            html += '<label style="display:block;font-size:0.8rem;color:#e2e8f0;margin-bottom:4px;">' + esc(labelText) + '</label>';
+            html += '<input type="number" min="0" max="100" step="1" value="' + esc(numVal) + '" oninput="var v=Math.max(0,Math.min(100,parseInt(this.value,10)||0));ThemeCustomizer.updateSectionSetting(\'' + esc(sid) + '\', \'' + esc(sKey) + '\', v)" style="width:100%;background:#1e293b;border:1px solid #475569;border-radius:6px;padding:6px 10px;color:#fff;font-size:0.85rem;box-sizing:border-box;">';
             html += '</div>';
           } else if (typeof sVal === 'boolean') {
             html += '<div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;background:#0f172a;padding:8px 10px;border-radius:6px;border:1px solid #334155;">';

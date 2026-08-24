@@ -94,6 +94,32 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
   if (!productIds.length) return { ok: false, error: 'بيانات السلة غير صالحة' };
 
   const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+
+  // ── 🔒 جلب إعدادات الثيم النشط للمتجر لحساب عروض الكميات بدقة ──
+  let storeThemeSections = null;
+  try {
+    const themeSettingStmt = isMaster
+      ? env.DB.prepare(`SELECT key, value FROM settings WHERE key IN ('theme_default', 'theme_config') AND (tenant_id = ? OR tenant_id IS NULL)`).bind(tenantId)
+      : env.DB.prepare(`SELECT key, value FROM settings WHERE key IN ('theme_default', 'theme_config') AND tenant_id = ?`).bind(tenantId);
+    const { results: themeSettingRows } = await themeSettingStmt.all();
+    const stMap = {};
+    for (const r of (themeSettingRows || [])) stMap[r.key] = r.value;
+
+    if (stMap.theme_config) {
+      const parsedThemeCfg = typeof stMap.theme_config === 'string' ? JSON.parse(stMap.theme_config) : stMap.theme_config;
+      if (parsedThemeCfg && parsedThemeCfg.sections) storeThemeSections = parsedThemeCfg.sections;
+    } else if (stMap.theme_default) {
+      const themeRowStmt = isMaster
+        ? env.DB.prepare(`SELECT config_json FROM themes WHERE name = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(stMap.theme_default, tenantId)
+        : env.DB.prepare(`SELECT config_json FROM themes WHERE name = ? AND tenant_id = ? LIMIT 1`).bind(stMap.theme_default, tenantId);
+      const themeRow = await themeRowStmt.first();
+      if (themeRow && themeRow.config_json) {
+        const parsed = typeof themeRow.config_json === 'string' ? JSON.parse(themeRow.config_json) : themeRow.config_json;
+        if (parsed && parsed.sections) storeThemeSections = parsed.sections;
+      }
+    }
+  } catch (_) {}
+
   const placeholders = productIds.map(() => '?').join(',');
   const productStmt = isMaster
     ? env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json FROM products WHERE id IN (${placeholders}) AND (tenant_id = ? OR tenant_id IS NULL)`).bind(...productIds, tenantId)
@@ -128,20 +154,67 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
     // ── 🔒 حساب السعر والخصم الكمي على الخادم حصرياً (Server-Authoritative Pricing Tiers) ──
     let tiers = [];
+    let isTiersDisabled = false;
+    let isTiersExplicitEnabled = false;
+    let customTiers = null;
+
     if (dbProduct.landing_config_json) {
       try {
         const lp = typeof dbProduct.landing_config_json === 'string'
           ? JSON.parse(dbProduct.landing_config_json)
           : (dbProduct.landing_config_json || {});
-        const isTiersDisabled = (lp.sections && lp.sections.pricing_tiers === false);
-        if (!isTiersDisabled) {
-          if (Array.isArray(lp.pricing_tiers) && lp.pricing_tiers.length > 0) {
-            tiers = lp.pricing_tiers;
-          } else if (lp.sections && lp.sections.pricing_tiers && Array.isArray(lp.sections.pricing_tiers.tiers)) {
-            tiers = lp.sections.pricing_tiers.tiers;
-          }
+
+        if (lp.sections && (lp.sections.pricing_tiers === false || lp.sections.pricing_tiers === 'disabled')) {
+          isTiersDisabled = true;
+        } else if (lp.sections && (lp.sections.pricing_tiers === true || lp.sections.pricing_tiers === 'enabled')) {
+          isTiersExplicitEnabled = true;
+        }
+
+        if (Array.isArray(lp.pricing_tiers) && lp.pricing_tiers.length > 0) {
+          customTiers = lp.pricing_tiers;
+        } else if (lp.sections && lp.sections.pricing_tiers && Array.isArray(lp.sections.pricing_tiers.tiers)) {
+          customTiers = lp.sections.pricing_tiers.tiers;
         }
       } catch (_) {}
+    }
+
+    if (!isTiersDisabled) {
+      if (customTiers && customTiers.length > 0) {
+        tiers = customTiers;
+      } else {
+        // Resolve Active Theme Settings
+        let themeShowTiers = true;
+        let tier2Pct = 10;
+        let tier3Pct = 20;
+        let tier3FreeShipping = true;
+
+        if (storeThemeSections) {
+          const tsSec = storeThemeSections['fast-order-form'] || storeThemeSections['order-form'];
+          if (tsSec && tsSec.settings) {
+            if (tsSec.settings.show_pricing_tiers !== undefined) themeShowTiers = (tsSec.settings.show_pricing_tiers !== false);
+            if (tsSec.settings.tier2_discount_pct != null && !isNaN(Number(tsSec.settings.tier2_discount_pct))) {
+              tier2Pct = Math.max(0, Math.min(100, Number(tsSec.settings.tier2_discount_pct)));
+            }
+            if (tsSec.settings.tier3_discount_pct != null && !isNaN(Number(tsSec.settings.tier3_discount_pct))) {
+              tier3Pct = Math.max(0, Math.min(100, Number(tsSec.settings.tier3_discount_pct)));
+            }
+            if (tsSec.settings.tier3_free_shipping !== undefined) {
+              tier3FreeShipping = (tsSec.settings.tier3_free_shipping !== false);
+            }
+          }
+        }
+
+        const effectiveShow = isTiersExplicitEnabled ? true : themeShowTiers;
+        if (effectiveShow) {
+          const p2 = Math.round(basePrice * 2 * (1 - tier2Pct / 100));
+          const p3 = Math.round(basePrice * 3 * (1 - tier3Pct / 100));
+          tiers = [
+            { qty: 1, price: basePrice },
+            { qty: 2, price: p2 },
+            { qty: 3, price: p3, free_shipping: tier3FreeShipping }
+          ];
+        }
+      }
     }
 
     let itemSubtotal = basePrice * qty;
