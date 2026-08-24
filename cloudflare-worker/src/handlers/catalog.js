@@ -69,14 +69,32 @@ export async function getCatalog(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
 
   const { results } = await stmt.all();
 
-  // ── حوِّل حقول JSON من نص إلى كائنات ──
-  const products = (results || []).map(p => ({
-    ...p,
-    gallery_json:    safeParseJson(p.gallery_json,    []),
-    variant_options: safeParseJson(p.variant_options, []),
-    tags_json:       safeParseJson(p.tags_json,       []),
-    landing_config:  normalizeLandingConfig(p.landing_config_json),
-  }));
+  // ── حوِّل حقول JSON من نص إلى كائنات مع إخفاء سعر الجملة عن الزوار العامين ──
+  const products = (results || []).map(p => {
+    const landingConfig = normalizeLandingConfig(p.landing_config_json);
+    if (landingConfig && landingConfig.cost_price !== undefined) {
+      delete landingConfig.cost_price;
+    }
+    return {
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      description_long: p.description_long,
+      price: p.price,
+      price_old: p.price_old,
+      image_url: p.image_url,
+      gallery_json:    safeParseJson(p.gallery_json,    []),
+      variant_options: safeParseJson(p.variant_options, []),
+      category:        p.category,
+      stock:           p.stock,
+      tags_json:       safeParseJson(p.tags_json,       []),
+      sku:             p.sku,
+      weight:          p.weight,
+      sort_order:      p.sort_order,
+      created_at:      p.created_at,
+      landing_config:  landingConfig,
+    };
+  });
 
   const result = { products };
 
@@ -390,12 +408,17 @@ export async function adminListProducts(env, tenantId = DEFAULT_MASTER_TENANT_ID
 
   const { results } = await stmt.all();
 
-  const products = (results || []).map(p => ({
-    ...p,
-    gallery_json:    safeParseJson(p.gallery_json,    []),
-    variant_options: safeParseJson(p.variant_options, []),
-    tags_json:       safeParseJson(p.tags_json,       []),
-  }));
+  const products = (results || []).map(p => {
+    const landingConfig = normalizeLandingConfig(p.landing_config_json);
+    return {
+      ...p,
+      gallery_json:    safeParseJson(p.gallery_json,    []),
+      variant_options: safeParseJson(p.variant_options, []),
+      tags_json:       safeParseJson(p.tags_json,       []),
+      landing_config:  landingConfig,
+      cost_price:      landingConfig.cost_price != null ? landingConfig.cost_price : null,
+    };
+  });
 
   return { products };
 }

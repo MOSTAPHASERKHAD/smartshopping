@@ -787,7 +787,7 @@
         <div class="form-group">
           <label>سعر البيع (ديتاي) *</label>
           <div class="input-group">
-            <input type="number" id="p_price" required min="0" step="any" placeholder="1500">
+            <input type="number" id="p_price" required min="0" step="any" placeholder="1500" oninput="updateLpMarginBadge()">
             <span class="input-addon">دج</span>
           </div>
         </div>
@@ -801,7 +801,7 @@
         <div class="form-group">
           <label>💰 سعر الجملة / سعر التكلفة <small style="color:var(--text3);font-weight:normal">(لحساب الأرباح وحماية العروض والـ AI)</small></label>
           <div class="input-group">
-            <input type="number" id="p_cost_price" min="0" step="any" placeholder="1000">
+            <input type="number" id="p_cost_price" min="0" step="any" placeholder="1000" oninput="updateLpMarginBadge()">
             <span class="input-addon">دج</span>
           </div>
         </div>
@@ -894,6 +894,30 @@
                 </select>
               </div>
               <div class="form-group"></div>
+            </div>
+            <!-- Unit Economics & Wholesale Cost for Landing Page (Admin Only) -->
+            <div class="lp-commercial-card" style="background:rgba(255,255,255,0.03);border:1px solid var(--border-color,#334155);border-radius:8px;padding:12px;margin:10px 0 14px 0">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <strong style="font-size:0.82rem;color:var(--text,#f8fafc)">💰 اقتصاديات الوحدة لصفحة الهبوط (Unit Economics)</strong>
+                <span class="badge badge-info" style="font-size:0.68rem;padding:2px 8px">للأدمن فقط 🔒</span>
+              </div>
+              <div class="form-row" style="margin:0;gap:12px">
+                <div class="form-group" style="margin-bottom:0;flex:1">
+                  <label style="font-size:0.75rem">سعر البيع المعروض</label>
+                  <div class="input-group">
+                    <input type="number" id="lp_selling_price_display" readonly style="background:rgba(255,255,255,0.05);color:var(--text)" placeholder="0">
+                    <span class="input-addon">دج</span>
+                  </div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;flex:1">
+                  <label style="font-size:0.75rem">💰 سعر الجملة / التكلفة (Wholesale Cost)</label>
+                  <div class="input-group">
+                    <input type="number" id="lp_cost_price" min="0" step="any" placeholder="1000" oninput="syncLpCostPrice(this.value)">
+                    <span class="input-addon">دج</span>
+                  </div>
+                </div>
+              </div>
+              <div id="lp_margin_badge" style="margin-top:8px;font-size:0.78rem;color:var(--text2,#94a3b8)"></div>
             </div>
             <div class="form-group full" style="margin-bottom:8px">
               <label>الأقسام المعروضة (يمكنك إخفاء أي قسم بالنقر عليه)</label>
@@ -2337,6 +2361,9 @@ function resetLpEditor() {
   document.getElementById('lp_seo_desc').value = '';
   document.getElementById('lp_seo_image').value = '';
   document.getElementById('lp_whatsapp_text').value = '';
+  if (document.getElementById('lp_cost_price')) document.getElementById('lp_cost_price').value = '';
+  if (document.getElementById('lp_selling_price_display')) document.getElementById('lp_selling_price_display').value = '';
+  updateLpMarginBadge();
 }
 
 function renderLpFeatures() {
@@ -2450,8 +2477,46 @@ function loadLpEditorConfig(raw) {
     if (cfg.seo.image_url)   document.getElementById('lp_seo_image').value = cfg.seo.image_url;
   }
   if (cfg.whatsapp_text) document.getElementById('lp_whatsapp_text').value = cfg.whatsapp_text;
-  if (document.getElementById('p_cost_price') && cfg.cost_price != null) {
-    document.getElementById('p_cost_price').value = cfg.cost_price;
+  if (cfg.cost_price != null) {
+    if (document.getElementById('p_cost_price')) document.getElementById('p_cost_price').value = cfg.cost_price;
+    if (document.getElementById('lp_cost_price')) document.getElementById('lp_cost_price').value = cfg.cost_price;
+  }
+  updateLpMarginBadge();
+}
+
+function syncLpCostPrice(val) {
+  if (document.getElementById('p_cost_price')) {
+    document.getElementById('p_cost_price').value = val;
+  }
+  updateLpMarginBadge();
+}
+
+function updateLpMarginBadge() {
+  var pInput = document.getElementById('p_price');
+  var cInput = document.getElementById('p_cost_price');
+  var lpDisplay = document.getElementById('lp_selling_price_display');
+  var lpCost = document.getElementById('lp_cost_price');
+  var badge = document.getElementById('lp_margin_badge');
+  if (!badge) return;
+
+  var price = pInput && pInput.value.trim() !== '' ? Number(pInput.value) : 0;
+  var cost = (cInput && cInput.value.trim() !== '') ? Number(cInput.value) : ((lpCost && lpCost.value.trim() !== '') ? Number(lpCost.value) : null);
+
+  if (lpDisplay) lpDisplay.value = price || '';
+  if (lpCost && cost != null && lpCost.value !== String(cost)) lpCost.value = cost;
+
+  if (price > 0 && cost != null && !isNaN(cost) && cost >= 0) {
+    var margin = price - cost;
+    var marginPct = Math.round((margin / price) * 100);
+    if (margin >= 0) {
+      badge.innerHTML = '<span style="color:#10b981;font-weight:700">🟢 هامش الربح الإجمالي: +' + margin.toLocaleString('ar-DZ') + ' دج (' + marginPct + '%)</span>';
+    } else {
+      badge.innerHTML = '<span style="color:#ef4444;font-weight:700">🔴 تحذير خسارة: سعر البيع أقل من التكلفة بمقدار ' + Math.abs(margin).toLocaleString('ar-DZ') + ' دج</span>';
+    }
+  } else if (cost == null || isNaN(cost) || cost <= 0) {
+    badge.innerHTML = '<span style="color:#94a3b8;font-size:0.75rem">🟡 لم يتم تحديد سعر الجملة بعد (ضروري لحسابات الأرباح وحماية العروض والذكاء التجاري)</span>';
+  } else {
+    badge.innerHTML = '';
   }
 }
 
@@ -2459,7 +2524,7 @@ function openLpPreview() {
   var id = document.getElementById('p_id').value;
   if (!id) { toast('احفظ المنتج أولاً ثم معاينة صفحة الهبوط'); return; }
   var origin = window.location.origin;
-  var url = origin + '/product.html?product=' + encodeURIComponent(id);
+  var url = origin + '/product.html?product=' + encodeURIComponent(id) + '&admin_preview=1';
   window.open(url, '_blank');
 }
 
@@ -2474,6 +2539,8 @@ function editProduct(id) {
   if (p.landing_config && p.landing_config.cost_price != null) costVal = p.landing_config.cost_price;
   else if (p.cost_price != null) costVal = p.cost_price;
   if (document.getElementById('p_cost_price')) document.getElementById('p_cost_price').value = costVal;
+  if (document.getElementById('lp_cost_price')) document.getElementById('lp_cost_price').value = costVal;
+  updateLpMarginBadge();
 
   document.getElementById('p_image_url').value = p.image_url || '';
   document.getElementById('p_category').value = p.category || '';
