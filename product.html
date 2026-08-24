@@ -117,7 +117,60 @@
     </div>
     <button type="button" class="pl-lb-nav prev" id="plLbPrev" onclick="navLightbox(-1, event)" aria-label="السابق">›</button>
     <button type="button" class="pl-lb-nav next" id="plLbNext" onclick="navLightbox(1, event)" aria-label="التالي">‹</button>
-    <div class="pl-lb-hint"><span>💡 انقر نقراً مزدوجاً للتكبير السريع، أو اسحب للتحريك والتكبير باللمس</span></div>
+  <!-- Review Submission Modal -->
+  <div id="plAddReviewModal" class="pl-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="plModalReviewTitle">
+    <div class="pl-modal-card">
+      <div class="pl-modal-header">
+        <h3 id="plModalReviewTitle">✍️ أضف تقييمك للمنتج</h3>
+        <button type="button" class="pl-modal-close-btn" onclick="closeAddReviewModal()" aria-label="إغلاق">✕</button>
+      </div>
+      <form id="plAddReviewForm" onsubmit="submitProductReview(event)">
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:0.85rem;font-weight:700;margin-bottom:4px;">تقييمك بالنجوم *</label>
+          <div class="pl-star-picker" id="plStarPicker">
+            <button type="button" class="pl-star-btn active" onclick="setAddReviewRating(1)">★</button>
+            <button type="button" class="pl-star-btn active" onclick="setAddReviewRating(2)">★</button>
+            <button type="button" class="pl-star-btn active" onclick="setAddReviewRating(3)">★</button>
+            <button type="button" class="pl-star-btn active" onclick="setAddReviewRating(4)">★</button>
+            <button type="button" class="pl-star-btn active" onclick="setAddReviewRating(5)">★</button>
+          </div>
+          <input type="hidden" id="plReviewRatingVal" value="5">
+        </div>
+
+        <div class="pl-field-group" style="margin-bottom:12px;">
+          <label for="plReviewAuthorName">الاسم الكامل *</label>
+          <input type="text" id="plReviewAuthorName" required placeholder="مثال: محمد الجزائري" autocomplete="name">
+        </div>
+
+        <div class="pl-field-group" style="margin-bottom:12px;">
+          <label for="plReviewAuthorPhone">رقم الهاتف (اختياري)</label>
+          <input type="tel" id="plReviewAuthorPhone" placeholder="مثال: 0555123456" autocomplete="tel" dir="ltr" style="text-align:right">
+        </div>
+
+        <div class="pl-field-group" style="margin-bottom:12px;">
+          <label for="plReviewContent">رأيك وتجربتك في المنتج *</label>
+          <textarea id="plReviewContent" rows="3" required placeholder="اكتب تقييمك الصادق عن جودة المنتج وسرعة التوصيل..."></textarea>
+        </div>
+
+        <div class="pl-field-group" style="margin-bottom:12px;">
+          <label for="plReviewPhotoInput">📷 إضافة صورة للمنتج (اختياري)</label>
+          <input type="file" id="plReviewPhotoInput" accept="image/*" onchange="handleReviewPhotoSelect(this)">
+          <div id="plReviewPhotoPreview" style="margin-top:6px;display:none;"></div>
+        </div>
+
+        <div class="pl-field-group" style="margin-bottom:16px;">
+          <label for="plReviewCaptchaInput">التحقق الأمني: كم ناتج <span id="plReviewCaptchaQuestion" style="font-weight:800;color:var(--ds-accent,#e11d48);"></span> ؟ *</label>
+          <input type="text" id="plReviewCaptchaInput" required placeholder="اكتب الرقم هنا" style="width:120px;text-align:center;">
+        </div>
+
+        <div id="plReviewModalMsg" style="display:none;padding:10px;border-radius:8px;margin-bottom:12px;font-size:0.85rem;font-weight:700;"></div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button type="button" class="pl-btn-empty-review" onclick="closeAddReviewModal()" style="background:transparent;color:var(--ds-text-secondary,#475569);border:1px solid var(--ds-border,#e2e8f0);">إلغاء</button>
+          <button type="submit" class="pl-btn-add-review" id="plSubmitReviewBtn" style="padding:10px 24px;">إرسال التقييم</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Minimal Footer -->
@@ -352,6 +405,9 @@
       var reviewsSec = sections['testimonials-reviews'] || sections['reviews'];
       if (reviewsSec) {
         p.landing_config.sections.reviews = (reviewsSec.enabled !== false);
+        if (reviewsSec.settings) {
+          p.landing_config.reviews = reviewsSec.settings;
+        }
       }
 
       var faqSec = sections['faq-accordion'] || sections['faq'];
@@ -362,6 +418,8 @@
         }
       }
     }
+
+    var productReviews = [];
 
     // --- Load Product from Catalog ---
     function loadProductPage() {
@@ -396,22 +454,33 @@
 
           currentProduct = normalizeProduct(rawProduct);
 
-          // Fetch dynamic theme sections for product (priority over legacy landing_config)
+          // Fetch dynamic theme sections & product reviews in parallel
           var sectionsUrl = API_URL + '?action=get_theme_sections&target_type=product&target_id=' + encodeURIComponent(pid) + (currentStoreSlug ? '&store=' + encodeURIComponent(currentStoreSlug) : '');
-          fetch(sectionsUrl)
-            .then(function(r) { return r.json(); })
-            .then(function(secRes) {
-              if (secRes && secRes.ok && secRes.config && secRes.config.sections) {
-                applyThemeSectionsToProduct(currentProduct, secRes.config.sections);
-                if (secRes.config.theme_id && window.ThemeEngine) {
-                  try { window.ThemeEngine.apply(secRes.config.theme_id); } catch(_) {}
-                }
+          var reviewsUrl = API_URL + '?action=get_reviews&product_id=' + encodeURIComponent(pid) + (currentStoreSlug ? '&store=' + encodeURIComponent(currentStoreSlug) : '');
+
+          Promise.all([
+            fetch(sectionsUrl).then(function(r) { return r.json(); }).catch(function() { return null; }),
+            fetch(reviewsUrl).then(function(r) { return r.json(); }).catch(function() { return null; })
+          ]).then(function(results) {
+            var secRes = results[0];
+            var revRes = results[1];
+
+            if (revRes && Array.isArray(revRes.reviews)) {
+              productReviews = revRes.reviews;
+            } else {
+              productReviews = [];
+            }
+
+            if (secRes && secRes.ok && secRes.config && secRes.config.sections) {
+              applyThemeSectionsToProduct(currentProduct, secRes.config.sections);
+              if (secRes.config.theme_id && window.ThemeEngine) {
+                try { window.ThemeEngine.apply(secRes.config.theme_id); } catch(_) {}
               }
-              renderProductPage(currentProduct);
-            })
-            .catch(function() {
-              renderProductPage(currentProduct);
-            });
+            }
+            renderProductPage(currentProduct);
+          }).catch(function() {
+            renderProductPage(currentProduct);
+          });
 
           // Listen to form focus as InitiateCheckout trigger
           function onFormFocus() {
@@ -533,10 +602,13 @@
         infoHtml += '<p class="pl-product-subtitle" style="font-size:1.02rem;color:var(--ds-text2,#64748b);margin:-4px 0 12px;line-height:1.5">' + escHtml(subtitle) + '</p>';
       }
 
-      if (showReviews) {
+      if (showReviews && productReviews && productReviews.length > 0) {
+        var sumRating = 0;
+        productReviews.forEach(function(r) { sumRating += Number(r.rating || 5); });
+        var avgRat = (sumRating / productReviews.length).toFixed(1);
         infoHtml += '<div class="pl-rating-row">';
-        infoHtml += '<span class="pl-stars" style="color:var(--ds-success)">🛡️</span>';
-        infoHtml += '<span>منتج أصلي مع ضمان المعاينة قبل الدفع</span>';
+        infoHtml += '<span class="pl-stars" style="color:#f59e0b">★ ' + avgRat + '</span>';
+        infoHtml += '<span style="color:var(--ds-text2,#64748b);font-size:0.88rem;">(' + productReviews.length + ' تقييم معتمد)</span>';
         infoHtml += '</div>';
       }
 
@@ -799,6 +871,73 @@
           html += createFaqItem('هل أستطيع معاينة المنتج قبل الدفع؟', 'نعم بالتأكيد، يمكنك معاينة الطرد والتأكد من سلامته ومطابقته للطلب قبل تسليم المبلغ للموزع.');
         }
         html += '</div>';
+        html += '</div>';
+      }
+
+      // ── Position 7: Customer Reviews Section ──
+      if (showReviews) {
+        var revCfg = lpCfg.reviews || {};
+        var revTitle = (revCfg.title && revCfg.title.trim()) ? revCfg.title.trim() : 'آراء وتقييمات المشترين';
+
+        html += '<div class="pl-card-section pl-reviews-section" id="plReviewsSection">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">';
+        html += '<h2 class="pl-section-title" style="margin-bottom:0;border-bottom:none;padding-bottom:0;"><span>💬</span><span>' + escHtml(revTitle) + '</span></h2>';
+        html += '<button type="button" class="pl-btn-add-review" onclick="openAddReviewModal()">✍️ أضف تقييمك</button>';
+        html += '</div>';
+
+        if (productReviews && productReviews.length > 0) {
+          var totalScore = 0;
+          productReviews.forEach(function(r) { totalScore += Number(r.rating || 5); });
+          var avgScore = (totalScore / productReviews.length).toFixed(1);
+
+          html += '<div class="pl-reviews-summary-bar">';
+          html += '<div class="pl-reviews-avg-box">';
+          html += '<div class="pl-reviews-avg-num">' + avgScore + '</div>';
+          html += '<div class="pl-reviews-avg-stars">' + renderStars(Math.round(totalScore / productReviews.length)) + '</div>';
+          html += '<div class="pl-reviews-count">بناءً على ' + productReviews.length + ' تقييم معتمد</div>';
+          html += '</div>';
+          html += '</div>';
+
+          html += '<div class="pl-reviews-list">';
+          productReviews.forEach(function(r) {
+            var rRating = Math.min(5, Math.max(1, parseInt(r.rating || 5)));
+            var rName = (r.author_name && String(r.author_name).trim()) ? String(r.author_name).trim() : 'مشتري';
+            var rContent = (r.content && String(r.content).trim()) ? String(r.content).trim() : '';
+            var rDate = r.created_at ? new Date(r.created_at).toLocaleDateString('ar-DZ') : '';
+            var rImage = (r.image_url && (r.image_url.startsWith('https://') || r.image_url.startsWith('http://'))) ? r.image_url : '';
+
+            html += '<div class="pl-review-card">';
+            html += '<div class="pl-review-card-header">';
+            html += '<div class="pl-review-author-info">';
+            html += '<div class="pl-review-author-name"><strong>' + escHtml(rName) + '</strong></div>';
+            if (rDate) html += '<div class="pl-review-date">' + escHtml(rDate) + '</div>';
+            html += '</div>';
+            html += '<div class="pl-review-stars">' + renderStars(rRating) + '</div>';
+            html += '</div>';
+
+            if (rContent) {
+              html += '<p class="pl-review-text">' + escHtml(rContent) + '</p>';
+            }
+
+            if (rImage) {
+              html += '<div class="pl-review-img-wrap">';
+              html += '<img src="' + escHtml(rImage) + '" alt="صورة التقييم" class="pl-review-thumbnail" onclick="window.open(\'' + escHtml(rImage) + '\', \'_blank\')">';
+              html += '</div>';
+            }
+
+            html += '</div>';
+          });
+          html += '</div>';
+        } else {
+          // Honest empty state: ZERO fake names, ZERO fake 5-star ratings, ZERO fake 4.9 or 500 buyers numbers!
+          html += '<div class="pl-reviews-empty-state">';
+          html += '<div class="pl-reviews-empty-icon">⭐</div>';
+          html += '<h3 class="pl-reviews-empty-title">كن أول من يضع تقييمًا لهذا المنتج</h3>';
+          html += '<p class="pl-reviews-empty-desc">شاركنا تجربتك مع المنتج وساعد المشترين الآخرين في اتخاذ القرار.</p>';
+          html += '<button type="button" class="pl-btn-empty-review" onclick="openAddReviewModal()">✍️ أضف تقييمك الآن</button>';
+          html += '</div>';
+        }
+
         html += '</div>';
       }
 
@@ -1535,6 +1674,226 @@
         submitBtn.textContent = '🛒 تأكيد الطلب الآن (الدفع عند الاستلام)';
         showToast('تعذر إرسال الطلب حالياً. يرجى التحقق من الاتصال والمحاولة مجدداً.', 'error');
       });
+    }
+
+    // --- Customer Reviews Helpers & Modal ---
+    function renderStars(rating) {
+      var r = Math.min(5, Math.max(1, parseInt(rating || 5)));
+      var stars = '';
+      for (var i = 1; i <= 5; i++) {
+        stars += (i <= r) ? '★' : '☆';
+      }
+      return stars;
+    }
+
+    var _reviewCaptchaAnswer = 0;
+    var _selectedReviewPhotoBase64 = '';
+
+    function genReviewCaptcha() {
+      var a = Math.floor(Math.random() * 9) + 1;
+      var b = Math.floor(Math.random() * 9) + 1;
+      _reviewCaptchaAnswer = a + b;
+      var qEl = document.getElementById('plReviewCaptchaQuestion');
+      if (qEl) qEl.textContent = a + ' + ' + b;
+      var inEl = document.getElementById('plReviewCaptchaInput');
+      if (inEl) inEl.value = '';
+    }
+
+    function openAddReviewModal() {
+      var modal = document.getElementById('plAddReviewModal');
+      if (!modal) return;
+      var form = document.getElementById('plAddReviewForm');
+      if (form) form.reset();
+      setAddReviewRating(5);
+      _selectedReviewPhotoBase64 = '';
+      var prev = document.getElementById('plReviewPhotoPreview');
+      if (prev) { prev.innerHTML = ''; prev.style.display = 'none'; }
+      var msgEl = document.getElementById('plReviewModalMsg');
+      if (msgEl) msgEl.style.display = 'none';
+      var submitBtn = document.getElementById('plSubmitReviewBtn');
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'إرسال التقييم'; }
+      genReviewCaptcha();
+      modal.classList.add('open');
+    }
+
+    function closeAddReviewModal() {
+      var modal = document.getElementById('plAddReviewModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function setAddReviewRating(val) {
+      val = Math.min(5, Math.max(1, parseInt(val || 5)));
+      var ratingValInput = document.getElementById('plReviewRatingVal');
+      if (ratingValInput) ratingValInput.value = val;
+      var btns = document.querySelectorAll('#plStarPicker .pl-star-btn');
+      btns.forEach(function(btn, idx) {
+        btn.classList.toggle('active', idx < val);
+      });
+    }
+
+    function handleReviewPhotoSelect(input) {
+      var prev = document.getElementById('plReviewPhotoPreview');
+      if (!prev) return;
+      _selectedReviewPhotoBase64 = '';
+      prev.innerHTML = '';
+      if (!input.files || !input.files[0]) {
+        prev.style.display = 'none';
+        return;
+      }
+      var file = input.files[0];
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var w = img.width, h = img.height;
+          var maxDim = 800;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+            else { w = Math.round(w * maxDim / h); h = maxDim; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          var compressed = canvas.toDataURL('image/jpeg', 0.7);
+          _selectedReviewPhotoBase64 = compressed;
+          prev.innerHTML = '<img src="' + compressed + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #cbd5e1;">';
+          prev.style.display = 'block';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function submitProductReview(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      var pid = currentProduct ? currentProduct.id : null;
+      if (!pid) {
+        showToast('لم يتم تحديد المنتج', 'error');
+        return;
+      }
+
+      var captchaInput = document.getElementById('plReviewCaptchaInput');
+      if (!captchaInput || parseInt(captchaInput.value.trim()) !== _reviewCaptchaAnswer) {
+        var msgEl = document.getElementById('plReviewModalMsg');
+        if (msgEl) {
+          msgEl.style.display = 'block';
+          msgEl.style.background = '#fee2e2';
+          msgEl.style.color = '#dc2626';
+          msgEl.textContent = '❌ ناتج التحقق الأمني غير صحيح، يرجى المحاولة مرة أخرى.';
+        }
+        genReviewCaptcha();
+        return;
+      }
+
+      var nameInput = document.getElementById('plReviewAuthorName');
+      var phoneInput = document.getElementById('plReviewAuthorPhone');
+      var contentInput = document.getElementById('plReviewContent');
+      var ratingInput = document.getElementById('plReviewRatingVal');
+      var submitBtn = document.getElementById('plSubmitReviewBtn');
+
+      var authorName = nameInput ? nameInput.value.trim() : '';
+      var authorPhone = phoneInput ? phoneInput.value.trim() : '';
+      var content = contentInput ? contentInput.value.trim() : '';
+      var rating = ratingInput ? parseInt(ratingInput.value) : 5;
+
+      if (!authorName || !content) {
+        showToast('يرجى ملء جميع الحقول المطلوبة', 'error');
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ جاري الإرسال...';
+      }
+
+      function doSendReview(imageUrl) {
+        var payload = {
+          action: 'add_review',
+          product_id: pid,
+          author_name: authorName,
+          content: content,
+          rating: rating,
+          phone: authorPhone,
+          image_url: imageUrl || ''
+        };
+        if (currentStoreSlug) payload.store = currentStoreSlug;
+
+        var formBody = [];
+        for (var k in payload) {
+          formBody.push(encodeURIComponent(k) + '=' + encodeURIComponent(payload[k] == null ? '' : String(payload[k])));
+        }
+
+        fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formBody.join('&')
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+          if (res && res.ok) {
+            var msgEl = document.getElementById('plReviewModalMsg');
+            if (msgEl) {
+              msgEl.style.display = 'block';
+              msgEl.style.background = '#dcfce7';
+              msgEl.style.color = '#15803d';
+              msgEl.textContent = '✅ ' + (res.message || 'شكراً لمشاركتنا تجربتك! سيتم نشر تقييمك بعد مراجعته من الإدارة.');
+            }
+            if (submitBtn) submitBtn.style.display = 'none';
+            setTimeout(function() {
+              closeAddReviewModal();
+            }, 3000);
+            showToast('تم إرسال تقييمك بنجاح!', 'success');
+          } else {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'إرسال التقييم'; }
+            var errMsg = (res && res.error) ? res.error : 'فشل إرسال التقييم';
+            var msgEl = document.getElementById('plReviewModalMsg');
+            if (msgEl) {
+              msgEl.style.display = 'block';
+              msgEl.style.background = '#fee2e2';
+              msgEl.style.color = '#dc2626';
+              msgEl.textContent = '❌ ' + errMsg;
+            }
+          }
+        })
+        .catch(function(err) {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'إرسال التقييم'; }
+          showToast('تعذر الاتصال بالخادم، يرجى المحاولة لاحقاً', 'error');
+        });
+      }
+
+      if (_selectedReviewPhotoBase64) {
+        var base64Data = _selectedReviewPhotoBase64.split(',')[1] || _selectedReviewPhotoBase64;
+        var uploadPayload = {
+          action: 'upload_image',
+          data: base64Data,
+          fileName: 'review_' + Date.now() + '.jpg',
+          mimeType: 'image/jpeg'
+        };
+        if (currentStoreSlug) uploadPayload.store = currentStoreSlug;
+
+        var uploadBody = [];
+        for (var uk in uploadPayload) {
+          uploadBody.push(encodeURIComponent(uk) + '=' + encodeURIComponent(uploadPayload[uk] == null ? '' : String(uploadPayload[uk])));
+        }
+
+        fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: uploadBody.join('&')
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(uRes) {
+          var imgUrl = (uRes && uRes.url) ? uRes.url : '';
+          doSendReview(imgUrl);
+        })
+        .catch(function() {
+          doSendReview('');
+        });
+      } else {
+        doSendReview('');
+      }
     }
 
     // --- Dynamic SEO Updater ---

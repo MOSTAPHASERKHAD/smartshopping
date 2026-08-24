@@ -214,8 +214,8 @@
       defaultOrder: 7,
       defaultVisible: true,
       defaultSettings: {
-        title: 'آراء عملائنا الكرام',
-        badge_text: 'تقييم 4.9/5 من أكثر من 500 مشترٍ',
+        title: 'آراء وتقييمات المشترين',
+        badge_text: 'آراء وتقييمات موثقة من المشترين',
         show_star_ratings: true,
         show_review_images: true
       }

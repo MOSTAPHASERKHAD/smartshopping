@@ -537,12 +537,36 @@
   };
 
   ThemeEngine.prototype._renderReviews = function (settings, ctx, id) {
-    var title = settings.title || 'آراء عملائنا الكرام';
-    var badge = settings.badge_text || 'تقييم 4.9/5 من أكثر من 500 مشترٍ';
-    var html = '<div class="pl-card-section pl-section" id="' + escHtml(id) + '">';
+    var title = settings.title || 'آراء وتقييمات المشترين';
+    var reviews = (ctx && Array.isArray(ctx.reviews)) ? ctx.reviews : [];
+    var html = '<div class="pl-card-section pl-section pl-reviews-section" id="' + escHtml(id) + '">';
     html += '<h2 class="pl-section-title"><span>💬</span><span>' + escHtml(title) + '</span></h2>';
-    html += '<div class="pl-reviews-header"><span class="badge">⭐ ' + escHtml(badge) + '</span></div>';
-    html += '<div class="pl-reviews-list" id="plReviewsList"><div class="pl-review-item"><div class="stars">⭐⭐⭐⭐⭐</div><p class="text">منتج ممتاز ومطابق للوصف تماماً والتوصيل سريع جداً بارك الله فيكم.</p><div class="author">أحمد — الجزائر العاصمة (مشتري مؤكد ✓)</div></div></div>';
+    if (reviews.length > 0) {
+      var sumRatings = 0;
+      reviews.forEach(function(r) { sumRatings += Number(r.rating || 5); });
+      var avgScore = (sumRatings / reviews.length).toFixed(1);
+      html += '<div class="pl-reviews-header"><span class="badge">⭐ ' + avgScore + ' / 5 (' + reviews.length + ' تقييم معتمد)</span></div>';
+      html += '<div class="pl-reviews-list" id="plReviewsList">';
+      reviews.forEach(function(r) {
+        var rRating = Math.min(5, Math.max(1, parseInt(r.rating || 5)));
+        var rName = (r.author_name && String(r.author_name).trim()) ? String(r.author_name).trim() : 'مشتري';
+        var rContent = (r.content && String(r.content).trim()) ? String(r.content).trim() : '';
+        var stars = '';
+        for (var i = 1; i <= 5; i++) { stars += (i <= rRating) ? '★' : '☆'; }
+        html += '<div class="pl-review-item">';
+        html += '<div class="stars">' + stars + '</div>';
+        if (rContent) html += '<p class="text">' + escHtml(rContent) + '</p>';
+        html += '<div class="author">' + escHtml(rName) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="pl-reviews-empty-state">';
+      html += '<div class="pl-reviews-empty-icon">⭐</div>';
+      html += '<h3 class="pl-reviews-empty-title">كن أول من يضع تقييمًا لهذا المنتج</h3>';
+      html += '<p class="pl-reviews-empty-desc">شاركنا تجربتك وساعد المشترين الآخرين في اتخاذ القرار.</p>';
+      html += '</div>';
+    }
     html += '</div>';
     return html;
   };
