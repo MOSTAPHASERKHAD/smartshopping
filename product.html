@@ -184,10 +184,10 @@
   </footer>
 
   <!-- Dynamic Theme Engine & Sections Scripts -->
-  <script src="themes/theme-schema.js?v=20260821_pro4"></script>
-  <script src="themes/default-themes.js?v=20260821_pro4"></script>
-  <script src="themes/theme-engine.js?v=20260821_pro4"></script>
-  <script src="assets/js/product-utils.js?v=20260821_pro4"></script>
+  <script src="themes/theme-schema.js?v=20260825_fix2"></script>
+  <script src="themes/default-themes.js?v=20260825_fix2"></script>
+  <script src="themes/theme-engine.js?v=20260825_fix2"></script>
+  <script src="assets/js/product-utils.js?v=20260825_fix2"></script>
   <script>
     // --- Global Configuration ---
     var API_URL = 'https://smart-shopping-api.mostaphaserkhad.workers.dev';
@@ -377,6 +377,7 @@
         if (formSec.settings.submit_btn_text) p.landing_config.submit_btn_text = formSec.settings.submit_btn_text;
         p.landing_config.form_settings = formSec.settings;
         p.landing_config.theme_pricing_tiers = {
+          show_quantity_selector: formSec.settings.show_quantity_selector !== false,
           show_pricing_tiers: formSec.settings.show_pricing_tiers !== false,
           tier2_discount_pct: formSec.settings.tier2_discount_pct,
           tier3_discount_pct: formSec.settings.tier3_discount_pct,
@@ -611,6 +612,11 @@
         if (tsSec && tsSec.settings) themeTierSettings = tsSec.settings;
       }
 
+      var formSettings = lpCfg.form_settings || {};
+      var showQtySelector = (formSettings.show_quantity_selector !== undefined)
+        ? (formSettings.show_quantity_selector !== false)
+        : ((themeTierSettings.show_quantity_selector !== undefined) ? (themeTierSettings.show_quantity_selector !== false) : true);
+
       var themeShowTiers = (themeTierSettings.show_pricing_tiers !== undefined) ? (themeTierSettings.show_pricing_tiers !== false) : true;
       var showPricingTiers;
       if (sec.pricing_tiers === false || sec.pricing_tiers === 'disabled') {
@@ -770,18 +776,23 @@
       html += '<form id="plOrderForm" onsubmit="handleOrderSubmit(event)">';
 
       // ── Quantity Breaks / Bundle Offers or Standard Quantity Selector ──
-      if (showPricingTiers && typeof renderQuantityBreaks === 'function') {
-        html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1, themeTierSettings);
+      if (showQtySelector) {
+        if (showPricingTiers && typeof renderQuantityBreaks === 'function') {
+          html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1, themeTierSettings);
+        } else {
+          var curQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
+          html += '<div class="pl-field-group" style="margin-bottom:16px">';
+          html += '<label for="plStandardQty" style="font-weight:700;display:block;margin-bottom:6px">الكمية المطلوبة:</label>';
+          html += '<div style="display:inline-flex;align-items:center;border:1px solid var(--pl-border,#e2e8f0);border-radius:8px;background:var(--pl-card-bg,#fff);overflow:hidden;width:fit-content">';
+          html += '<button type="button" onclick="changeStandardQuantity(-1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="تقليل الكمية">−</button>';
+          html += '<input type="number" id="plStandardQty" min="1" max="99" value="' + curQty + '" onchange="onStandardQuantityChange(this.value)" style="width:50px;text-align:center;border:none;font-weight:700;font-size:1rem;background:transparent;outline:none" readonly>';
+          html += '<button type="button" onclick="changeStandardQuantity(1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="زيادة الكمية">+</button>';
+          html += '</div>';
+          html += '</div>';
+        }
       } else {
-        var curQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
-        html += '<div class="pl-field-group" style="margin-bottom:16px">';
-        html += '<label for="plStandardQty" style="font-weight:700;display:block;margin-bottom:6px">الكمية المطلوبة:</label>';
-        html += '<div style="display:inline-flex;align-items:center;border:1px solid var(--pl-border,#e2e8f0);border-radius:8px;background:var(--pl-card-bg,#fff);overflow:hidden;width:fit-content">';
-        html += '<button type="button" onclick="changeStandardQuantity(-1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="تقليل الكمية">−</button>';
-        html += '<input type="number" id="plStandardQty" min="1" max="99" value="' + curQty + '" onchange="onStandardQuantityChange(this.value)" style="width:50px;text-align:center;border:none;font-weight:700;font-size:1rem;background:transparent;outline:none" readonly>';
-        html += '<button type="button" onclick="changeStandardQuantity(1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="زيادة الكمية">+</button>';
-        html += '</div>';
-        html += '</div>';
+        // When quantity selector is hidden by theme, lock quantity state to 1
+        window.selectedQuantityState = { qty: 1, tierPrice: p.price, discountPct: 0, freeShipping: false };
       }
 
       var formSettings = lpCfg.form_settings || {};
@@ -1553,6 +1564,11 @@
         if (tsSec && tsSec.settings) themeTierSettings = tsSec.settings;
       }
 
+      var formSettings = lpCfg.form_settings || {};
+      var showQtySelector = (formSettings.show_quantity_selector !== undefined)
+        ? (formSettings.show_quantity_selector !== false)
+        : ((themeTierSettings.show_quantity_selector !== undefined) ? (themeTierSettings.show_quantity_selector !== false) : true);
+
       var themeShowTiers = (themeTierSettings.show_pricing_tiers !== undefined) ? (themeTierSettings.show_pricing_tiers !== false) : true;
       var showPricingTiers;
       if (sec.pricing_tiers === false || sec.pricing_tiers === 'disabled') {
@@ -1563,7 +1579,8 @@
         showPricingTiers = themeShowTiers;
       }
 
-      var tierResult = (showPricingTiers && typeof calculateTierSubtotal === 'function')
+      var currentQty = showQtySelector ? (window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1) : 1;
+      var tierResult = (showQtySelector && showPricingTiers && typeof calculateTierSubtotal === 'function')
         ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings)
         : { subtotal: basePrice * currentQty, freeShipping: false, saveAmount: 0 };
 
@@ -1684,6 +1701,11 @@
         if (tsSec && tsSec.settings) themeTierSettings = tsSec.settings;
       }
 
+      var formSettings = lpCfg.form_settings || {};
+      var showQtySelector = (formSettings.show_quantity_selector !== undefined)
+        ? (formSettings.show_quantity_selector !== false)
+        : ((themeTierSettings.show_quantity_selector !== undefined) ? (themeTierSettings.show_quantity_selector !== false) : true);
+
       var themeShowTiers = (themeTierSettings.show_pricing_tiers !== undefined) ? (themeTierSettings.show_pricing_tiers !== false) : true;
       var showPricingTiers;
       if (sec.pricing_tiers === false || sec.pricing_tiers === 'disabled') {
@@ -1694,9 +1716,9 @@
         showPricingTiers = themeShowTiers;
       }
 
-      var currentQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
+      var currentQty = showQtySelector ? (window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1) : 1;
       var basePrice = Number(currentProduct.effectivePrice || currentProduct.price || 0);
-      var tierResult = (showPricingTiers && typeof calculateTierSubtotal === 'function')
+      var tierResult = (showQtySelector && showPricingTiers && typeof calculateTierSubtotal === 'function')
         ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings)
         : { subtotal: basePrice * currentQty, freeShipping: false };
 
@@ -2101,21 +2123,21 @@
         try {
           window.ThemeEngine.init();
         } catch(e) { console.warn('ThemeEngine init error:', e); }
-
-        window.addEventListener('message', function(e) {
-          if (e.data && (e.data.type === 'sk:theme-update' || e.data.type === 'theme-preview')) {
-            var d = e.data;
-            if (d.tokens && window.ThemeEngine) {
-              window.ThemeEngine.register({ id: d.themeId || 'preview', name: d.name || 'Preview', tokens: d.tokens }, { silent: true });
-              window.ThemeEngine.apply(d.themeId || 'preview', d.mode || window.ThemeEngine.mode);
-            }
-            if (d.sections && currentProduct) {
-              applyThemeSectionsToProduct(currentProduct, d.sections);
-              renderProductPage(currentProduct);
-            }
-          }
-        });
       }
+
+      window.addEventListener('message', function(e) {
+        if (e.data && (e.data.type === 'sk:theme-update' || e.data.type === 'theme-preview')) {
+          var d = e.data;
+          if (d.tokens && window.ThemeEngine) {
+            window.ThemeEngine.register({ id: d.themeId || 'preview', name: d.name || 'Preview', tokens: d.tokens }, { silent: true });
+            window.ThemeEngine.apply(d.themeId || 'preview', d.mode || window.ThemeEngine.mode);
+          }
+          if (d.sections && currentProduct) {
+            applyThemeSectionsToProduct(currentProduct, d.sections);
+            renderProductPage(currentProduct);
+          }
+        }
+      });
 
       loadSettings();
       loadProductPage();

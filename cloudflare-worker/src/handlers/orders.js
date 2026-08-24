@@ -191,7 +191,10 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
         if (storeThemeSections) {
           const tsSec = storeThemeSections['fast-order-form'] || storeThemeSections['order-form'];
           if (tsSec && tsSec.settings) {
-            if (tsSec.settings.show_pricing_tiers !== undefined) themeShowTiers = (tsSec.settings.show_pricing_tiers !== false);
+            if (tsSec.settings.show_quantity_selector === false) themeShowTiers = false;
+            if (tsSec.settings.show_pricing_tiers !== undefined) {
+              themeShowTiers = (tsSec.settings.show_pricing_tiers !== false && tsSec.settings.show_quantity_selector !== false);
+            }
             if (tsSec.settings.tier2_discount_pct != null && !isNaN(Number(tsSec.settings.tier2_discount_pct))) {
               tier2Pct = Math.max(0, Math.min(100, Number(tsSec.settings.tier2_discount_pct)));
             }
