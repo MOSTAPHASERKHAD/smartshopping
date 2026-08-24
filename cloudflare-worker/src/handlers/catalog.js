@@ -690,5 +690,12 @@ export function normalizeLandingConfig(input) {
   // whatsapp_text
   out.whatsapp_text = lpStr(raw.whatsapp_text, 800);
 
+  // cost_price (سعر التكلفة والشراء بالجملة لحساب الأرباح وحماية العروض)
+  if (raw.cost_price !== undefined && raw.cost_price !== null && raw.cost_price !== '' && !isNaN(Number(raw.cost_price))) {
+    out.cost_price = Math.max(0, parseFloat(raw.cost_price));
+  } else {
+    out.cost_price = null;
+  }
+
   return out;
 }

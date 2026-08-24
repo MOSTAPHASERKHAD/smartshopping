@@ -777,7 +777,7 @@
       <div class="form-row">
         <div class="form-group full"><label>اسم المنتج *</label><input id="p_name" required></div>
         <div class="form-group">
-          <label>السعر *</label>
+          <label>سعر البيع (ديتاي) *</label>
           <div class="input-group">
             <input type="number" id="p_price" required min="0" step="any" placeholder="1500">
             <span class="input-addon">دج</span>
@@ -787,6 +787,13 @@
           <label>السعر القديم (اختياري)</label>
           <div class="input-group">
             <input type="number" id="p_old_price" min="0" step="any" placeholder="1800">
+            <span class="input-addon">دج</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>سعر التكلفة / الشراء بالجملة (اختياري لحساب الأرباح والعروض)</label>
+          <div class="input-group">
+            <input type="number" id="p_cost_price" min="0" step="any" placeholder="1000">
             <span class="input-addon">دج</span>
           </div>
         </div>
@@ -2083,8 +2090,9 @@ function openProductModal(id) {
   var galleryFileInput = document.querySelector('#upload-box-gallery input[type="file"]');
   if (galleryFileInput) galleryFileInput.value = '';
   if (!id) {
-    ['p_name','p_price','p_old_price','p_image_url','p_category','p_sku','p_weight','p_description','p_description_long','p_gallery_url_input'].forEach(function(fid) {
-      document.getElementById(fid).value = '';
+    ['p_name','p_price','p_old_price','p_cost_price','p_image_url','p_category','p_sku','p_weight','p_description','p_description_long','p_gallery_url_input'].forEach(function(fid) {
+      var el = document.getElementById(fid);
+      if (el) el.value = '';
     });
     document.getElementById('p_stock').value = '0';
     document.getElementById('p_active').value = 'true';
@@ -2207,7 +2215,8 @@ function collectLpEditorConfig() {
       description: document.getElementById('lp_seo_desc').value,
       image_url:   document.getElementById('lp_seo_image').value
     },
-    whatsapp_text: document.getElementById('lp_whatsapp_text').value
+    whatsapp_text: document.getElementById('lp_whatsapp_text').value,
+    cost_price: (document.getElementById('p_cost_price') && document.getElementById('p_cost_price').value.trim() !== '') ? Number(document.getElementById('p_cost_price').value) : null
   });
 }
 
@@ -2242,6 +2251,9 @@ function loadLpEditorConfig(raw) {
     if (cfg.seo.image_url)   document.getElementById('lp_seo_image').value = cfg.seo.image_url;
   }
   if (cfg.whatsapp_text) document.getElementById('lp_whatsapp_text').value = cfg.whatsapp_text;
+  if (document.getElementById('p_cost_price') && cfg.cost_price != null) {
+    document.getElementById('p_cost_price').value = cfg.cost_price;
+  }
 }
 
 function openLpPreview() {
@@ -2259,6 +2271,11 @@ function editProduct(id) {
   document.getElementById('p_name').value = p.name || '';
   document.getElementById('p_price').value = p.price || '';
   document.getElementById('p_old_price').value = p.price_old || '';
+  var costVal = '';
+  if (p.landing_config && p.landing_config.cost_price != null) costVal = p.landing_config.cost_price;
+  else if (p.cost_price != null) costVal = p.cost_price;
+  if (document.getElementById('p_cost_price')) document.getElementById('p_cost_price').value = costVal;
+
   document.getElementById('p_image_url').value = p.image_url || '';
   document.getElementById('p_category').value = p.category || '';
   document.getElementById('p_sku').value = p.sku || '';
@@ -4623,10 +4640,87 @@ var currentAiState = {
 
 window.aiChatHistory = [];
 
+function loadAiChatHistoryFromStorage() {
+  try {
+    var saved = localStorage.getItem('smartkiosk_ai_chat_history_v1');
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        window.aiChatHistory = parsed;
+      }
+    }
+  } catch (_) {
+    window.aiChatHistory = [];
+  }
+}
+
+function saveAiChatHistoryToStorage() {
+  try {
+    localStorage.setItem('smartkiosk_ai_chat_history_v1', JSON.stringify(window.aiChatHistory.slice(-40)));
+  } catch (_) {}
+}
+
+function renderAiChatThread() {
+  var body = document.getElementById('aiCopilotBody');
+  if (!body) return;
+  loadAiChatHistoryFromStorage();
+  var msgsHtml = '';
+  if (window.aiChatHistory && window.aiChatHistory.length > 0) {
+    window.aiChatHistory.forEach(function(m) {
+      if (m.role === 'user') {
+        msgsHtml += `
+          <div class="ai-msg user">
+            <div class="ai-msg-bubble">${esc(m.text)}</div>
+          </div>
+        `;
+      } else {
+        msgsHtml += `
+          <div class="ai-msg assistant">
+            <div class="ai-msg-avatar">🤖</div>
+            <div class="ai-msg-bubble">
+              ${formatAiMarkdown(m.text)}
+            </div>
+          </div>
+        `;
+      }
+    });
+  } else {
+    msgsHtml = `
+      <div style="text-align:center;padding:28px 16px;color:#64748b">
+        <div style="font-size:2.2rem;margin-bottom:8px">🤖</div>
+        <div style="font-weight:800;color:#1e293b;margin-bottom:4px">مستشار التجارة وهوامش الأرباح الجزائري</div>
+        <div style="font-size:0.82rem;line-height:1.5">
+          جاهز لتحليل أسعار الجملة، حساب العروض بدون خسارة، ومتابعة الحملات والمخزون.
+        </div>
+      </div>
+    `;
+  }
+
+  body.innerHTML = `
+    <div class="ai-chat-thread" id="aiChatThread">
+      <div class="ai-chat-top-bar">
+        <span>💬 استشارة فورية مع خبير النمو وحماية الأرباح</span>
+        <button class="btn btn-outline btn-xs" onclick="resetAiChatSession()" style="font-size:0.75rem;padding:2px 8px">🔄 محادثة جديدة</button>
+      </div>
+      <div class="ai-chat-messages" id="aiChatMessages">
+        ${msgsHtml}
+      </div>
+    </div>
+  `;
+  body.scrollTop = body.scrollHeight;
+}
+
 function toggleAiCopilotDrawer() {
   var drawer = document.getElementById('aiCopilotDrawer');
   if (!drawer) return;
+  var willOpen = !drawer.classList.contains('open');
   drawer.classList.toggle('open');
+  if (willOpen) {
+    var body = document.getElementById('aiCopilotBody');
+    if (body && (!body.children || body.children.length === 0 || currentAiState.activeMode === 'chat')) {
+      renderAiChatThread();
+    }
+  }
 }
 
 function toggleAiCopilotSize() {
@@ -4641,21 +4735,10 @@ function toggleAiCopilotSize() {
 
 function resetAiChatSession() {
   window.aiChatHistory = [];
-  var body = document.getElementById('aiCopilotBody');
-  if (body) {
-    body.innerHTML = `
-      <div style="text-align:center;padding:36px 20px;color:#64748b">
-        <div style="font-size:2.5rem;margin-bottom:12px">🤖</div>
-        <h4 style="color:#1e293b;font-weight:800;margin-bottom:8px">مساعد التجارة ونمو المبيعات الجزائري</h4>
-        <p style="font-size:0.85rem;line-height:1.6;margin-bottom:16px">
-          تم بدء جلسة استشارية جديدة. اختر تحليلاً سريعاً أعلاه أو اسأل مستشارك الذكي أي سؤال مباشرة.
-        </p>
-        <button class="btn btn-accent" onclick="triggerAiMode('store_overview')" style="background:#4338ca;color:#fff;border-radius:20px;padding:8px 20px">
-          📊 بدء التحليل الشامل للمتجر
-        </button>
-      </div>
-    `;
-  }
+  try {
+    localStorage.removeItem('smartkiosk_ai_chat_history_v1');
+  } catch (_) {}
+  renderAiChatThread();
   toast('تم بدء جلسة محادثة جديدة 🔄');
 }
 
@@ -4842,15 +4925,7 @@ function runAiAnalysis(mode, userPrompt, orderId) {
   if (isChat) {
     var thread = document.getElementById('aiChatThread');
     if (!thread) {
-      body.innerHTML = `
-        <div class="ai-chat-thread" id="aiChatThread">
-          <div class="ai-chat-top-bar">
-            <span>💬 استشارة فورية مع خبير النمو والتسويق الجزائري</span>
-            <button class="btn btn-outline btn-xs" onclick="resetAiChatSession()" style="font-size:0.75rem;padding:2px 8px">🔄 محادثة جديدة</button>
-          </div>
-          <div class="ai-chat-messages" id="aiChatMessages"></div>
-        </div>
-      `;
+      renderAiChatThread();
     }
     var msgsContainer = document.getElementById('aiChatMessages');
     if (msgsContainer) {
@@ -4862,7 +4937,7 @@ function runAiAnalysis(mode, userPrompt, orderId) {
           <div class="ai-msg-avatar">🤖</div>
           <div class="ai-msg-bubble loading">
             <div class="spinner" style="width:16px;height:16px;border:2px solid #cbd5e1;border-top-color:#4338ca;border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block"></div>
-            <span>جاري التحليل وتقديم الاستشارة...</span>
+            <span>جاري دراسة الهوامش وتقديم الاستشارة...</span>
           </div>
         </div>
       `;
@@ -4880,11 +4955,12 @@ function runAiAnalysis(mode, userPrompt, orderId) {
     }
   }
 
+  loadAiChatHistoryFromStorage();
   var params = {
     mode: mode || 'store_overview',
     prompt: userPrompt || '',
     order_id: orderId || '',
-    history: isChat ? window.aiChatHistory.slice(-8) : []
+    history: isChat ? window.aiChatHistory.slice(-16) : []
   };
 
   apiPost('admin_ai_analysis', params, function(res) {
@@ -4941,6 +5017,7 @@ function runAiAnalysis(mode, userPrompt, orderId) {
 
       window.aiChatHistory.push({ role: 'user', text: userPrompt });
       window.aiChatHistory.push({ role: 'model', text: replyText });
+      saveAiChatHistoryToStorage();
 
       var timeNote = document.getElementById('aiTimestampNote');
       if (timeNote && res.timestamp) {
