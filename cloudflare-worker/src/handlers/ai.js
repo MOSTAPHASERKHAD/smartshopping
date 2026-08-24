@@ -351,6 +351,16 @@ export async function adminAiChat(env, params = {}, tenantId = DEFAULT_MASTER_TE
     orderSnapshot = await getOrderSnapshotForWhatsApp(env, tenantId, orderId);
   }
 
+  // في وضع مسودة WhatsApp: التحقق من وجود الطلبية وانتمائها للمتجر
+  if (mode === 'whatsapp_draft') {
+    if (!orderId) {
+      return { ok: false, error: 'يرجى تحديد رقم الطلبية لصياغة مسودة WhatsApp مخصصة' };
+    }
+    if (!orderSnapshot) {
+      return { ok: false, error: 'الطلبية المحددة غير موجودة أو تابعة لمتجر آخر' };
+    }
+  }
+
   // 3. بناء برومبت التحليل الهيكلي مع عزل بيانات الزبائن
   const systemInstruction = `
 أنت "SmartKiosk AI Business & Marketing Copilot" — مستشار ذكاء اصطناعي تجاري وتسويقي خبير في التجارة الإلكترونية الجزائرية ونظام الدفع عند الاستلام (COD).
@@ -418,7 +428,9 @@ export async function adminAiChat(env, params = {}, tenantId = DEFAULT_MASTER_TE
       userTaskPrompt = `ماذا أفعل اليوم؟ قدم خطة عمل يومية تنفيذية من 3 إلى 5 مهام ذات أولوية قصوى لزيادة المبيعات وتحسين نسبة التأكيد وحل المشاكل القائمة.`;
       break;
     case 'whatsapp_draft':
-      userTaskPrompt = `صِغ مسودة رسالة WhatsApp احترافية ومخصصة للعميل بناءً على بيانات الطلبية المحددة أدناه. اختر نبرة مهذبة ومناسبة للسوق الجزائري (تأكيد الطلب وتحديد موعد التوصيل).`;
+      userTaskPrompt = customPrompt
+        ? `صِغ مسودة رسالة WhatsApp مخصصة للعميل بناءً على السيناريو والتعليمات المحددة التالية: "${customPrompt}". تفاصيل الطلبية المحددة أدناه. التزم بنبرة مهذبة ومحترفة مناسبة للسوق الجزائري.`
+        : `صِغ مسودة رسالة WhatsApp احترافية ومخصصة للعميل بناءً على بيانات الطلبية المحددة أدناه. اختر نبرة مهذبة ومناسبة للسوق الجزائري (تأكيد الطلب وتحديد موعد التوصيل).`;
       break;
     case 'chat':
     default:
