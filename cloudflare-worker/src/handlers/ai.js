@@ -165,8 +165,8 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
 
   try {
     const prodStmt = isMaster
-      ? env.DB.prepare(`SELECT id, name, price, price_old, stock, active, landing_config_json FROM products WHERE (tenant_id = ? OR tenant_id IS NULL)`).bind(tenantId)
-      : env.DB.prepare(`SELECT id, name, price, price_old, stock, active, landing_config_json FROM products WHERE tenant_id = ?`).bind(tenantId);
+      ? env.DB.prepare(`SELECT id, name, price, price_old, stock, active, landing_config_json FROM products WHERE (tenant_id = ? OR tenant_id IS NULL) LIMIT 2000`).bind(tenantId)
+      : env.DB.prepare(`SELECT id, name, price, price_old, stock, active, landing_config_json FROM products WHERE tenant_id = ? LIMIT 2000`).bind(tenantId);
 
     const { results: pRows } = await prodStmt.all();
     const prods = pRows || [];
@@ -254,8 +254,8 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
   };
   try {
     const revStmt = isMaster
-      ? env.DB.prepare(`SELECT rating FROM reviews WHERE status = 'approved' AND (tenant_id = ? OR tenant_id IS NULL)`).bind(tenantId)
-      : env.DB.prepare(`SELECT rating FROM reviews WHERE status = 'approved' AND tenant_id = ?`).bind(tenantId);
+      ? env.DB.prepare(`SELECT rating FROM reviews WHERE status = 'approved' AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 2000`).bind(tenantId)
+      : env.DB.prepare(`SELECT rating FROM reviews WHERE status = 'approved' AND tenant_id = ? LIMIT 2000`).bind(tenantId);
     const { results: rRows } = await revStmt.all();
     const revs = rRows || [];
     reviewsSummary.total_approved_reviews = revs.length;

@@ -81,7 +81,8 @@ async function runTests() {
       price REAL NOT NULL,
       stock INTEGER DEFAULT 100,
       active INTEGER DEFAULT 1,
-      weight REAL DEFAULT 0.5
+      weight REAL DEFAULT 0.5,
+      landing_config_json TEXT
     );
 
     CREATE TABLE orders (

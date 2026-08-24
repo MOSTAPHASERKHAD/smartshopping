@@ -4248,7 +4248,9 @@ async function doLogin() {
 
   function onLoginSuccess(authObj) {
     btn.disabled = false; btn.textContent = 'تسجيل الدخول';
-    localStorage.setItem(AUTH_KEY, JSON.stringify(authObj));
+    try {
+      localStorage.setItem(AUTH_KEY, JSON.stringify(authObj));
+    } catch (_) {}
     showAdminPanel();
   }
 
