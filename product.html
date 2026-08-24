@@ -595,6 +595,7 @@
       var showFaq = !isCustom || (sec.faq !== false);
       var showTrust = !isCustom || (sec.trust !== false);
       var showCountdown = !isCustom || (sec.countdown !== false);
+      var showPricingTiers = !isCustom || (sec.pricing_tiers !== false);
       var showForm = true; // Always displayed
 
       var countdownCfg = lpCfg.countdown || {};
@@ -744,9 +745,19 @@
 
       html += '<form id="plOrderForm" onsubmit="handleOrderSubmit(event)">';
 
-      // ── Quantity Breaks / Bundle Offers ──
-      if (typeof renderQuantityBreaks === 'function') {
+      // ── Quantity Breaks / Bundle Offers or Standard Quantity Selector ──
+      if (showPricingTiers && typeof renderQuantityBreaks === 'function') {
         html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1);
+      } else {
+        var curQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
+        html += '<div class="pl-field-group" style="margin-bottom:16px">';
+        html += '<label for="plStandardQty" style="font-weight:700;display:block;margin-bottom:6px">الكمية المطلوبة:</label>';
+        html += '<div style="display:inline-flex;align-items:center;border:1px solid var(--pl-border,#e2e8f0);border-radius:8px;background:var(--pl-card-bg,#fff);overflow:hidden;width:fit-content">';
+        html += '<button type="button" onclick="changeStandardQuantity(-1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="تقليل الكمية">−</button>';
+        html += '<input type="number" id="plStandardQty" min="1" max="99" value="' + curQty + '" onchange="onStandardQuantityChange(this.value)" style="width:50px;text-align:center;border:none;font-weight:700;font-size:1rem;background:transparent;outline:none" readonly>';
+        html += '<button type="button" onclick="changeStandardQuantity(1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="زيادة الكمية">+</button>';
+        html += '</div>';
+        html += '</div>';
       }
 
       var formSettings = lpCfg.form_settings || {};
@@ -1430,6 +1441,26 @@
       updateShippingSummary();
     }
 
+    function changeStandardQuantity(delta) {
+      var input = document.getElementById('plStandardQty');
+      var current = input ? parseInt(input.value, 10) || 1 : 1;
+      var next = Math.max(1, Math.min(99, current + delta));
+      if (input) input.value = next;
+      onStandardQuantityChange(next);
+    }
+
+    function onStandardQuantityChange(val) {
+      var qty = Math.max(1, parseInt(val, 10) || 1);
+      var basePrice = Number(currentProduct ? (currentProduct.effectivePrice || currentProduct.price || 0) : 0);
+      window.selectedQuantityState = {
+        qty: qty,
+        price: basePrice * qty,
+        freeShipping: false
+      };
+      updateFreeShippingBadges();
+      updateShippingSummary();
+    }
+
     function onSelectQuantityTier(qty, tierPrice, freeShipping) {
       window.selectedQuantityState = {
         qty: Number(qty),
@@ -1486,10 +1517,13 @@
       var totalLabel = document.getElementById('plTotalSummaryPrice');
       var stickyPriceEl = document.getElementById('plStickyPriceVal');
 
-      var basePrice = Number(currentProduct.effectivePrice || currentProduct.price || 0);
-      var currentQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
+      var lpCfg = currentProduct.landing_config || {};
+      if (typeof lpCfg === 'string' && lpCfg.trim()) { try { lpCfg = JSON.parse(lpCfg); } catch(e) { lpCfg = {}; } }
+      var isCustom = (lpCfg.mode === 'custom');
+      var sec = lpCfg.sections || {};
+      var showPricingTiers = !isCustom || (sec.pricing_tiers !== false);
 
-      var tierResult = (typeof calculateTierSubtotal === 'function')
+      var tierResult = (showPricingTiers && typeof calculateTierSubtotal === 'function')
         ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers)
         : { subtotal: basePrice * currentQty, freeShipping: false, saveAmount: 0 };
 
@@ -1598,9 +1632,15 @@
       submitBtn.disabled = true;
       submitBtn.textContent = '⏳ جاري إرسال طلبك...';
 
+      var lpCfg = currentProduct.landing_config || {};
+      if (typeof lpCfg === 'string' && lpCfg.trim()) { try { lpCfg = JSON.parse(lpCfg); } catch(e) { lpCfg = {}; } }
+      var isCustom = (lpCfg.mode === 'custom');
+      var sec = lpCfg.sections || {};
+      var showPricingTiers = !isCustom || (sec.pricing_tiers !== false);
+
       var currentQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
       var basePrice = Number(currentProduct.effectivePrice || currentProduct.price || 0);
-      var tierResult = (typeof calculateTierSubtotal === 'function')
+      var tierResult = (showPricingTiers && typeof calculateTierSubtotal === 'function')
         ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers)
         : { subtotal: basePrice * currentQty, freeShipping: false };
 

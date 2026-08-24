@@ -133,10 +133,13 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
         const lp = typeof dbProduct.landing_config_json === 'string'
           ? JSON.parse(dbProduct.landing_config_json)
           : (dbProduct.landing_config_json || {});
-        if (Array.isArray(lp.pricing_tiers) && lp.pricing_tiers.length > 0) {
-          tiers = lp.pricing_tiers;
-        } else if (lp.sections && lp.sections.pricing_tiers && Array.isArray(lp.sections.pricing_tiers.tiers)) {
-          tiers = lp.sections.pricing_tiers.tiers;
+        const isTiersDisabled = (lp.sections && lp.sections.pricing_tiers === false);
+        if (!isTiersDisabled) {
+          if (Array.isArray(lp.pricing_tiers) && lp.pricing_tiers.length > 0) {
+            tiers = lp.pricing_tiers;
+          } else if (lp.sections && lp.sections.pricing_tiers && Array.isArray(lp.sections.pricing_tiers.tiers)) {
+            tiers = lp.sections.pricing_tiers.tiers;
+          }
         }
       } catch (_) {}
     }

@@ -924,6 +924,7 @@
               <div class="config-check-grid">
                 <label class="config-check"><input type="checkbox" id="lp_s_hero" checked> الواجهة الرئيسية (Hero)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_gallery" checked> معرض الصور (Gallery)</label>
+                <label class="config-check"><input type="checkbox" id="lp_s_pricing_tiers" checked> 🎁 عروض الكميات والتوفير (Quantity Bundles / Offers)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_form" checked disabled> 🛒 استمارة اطلب الآن (Form - #2 بعد الصور)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_trust" checked> شريط الثقة والتوصيل (Trust)</label>
                 <label class="config-check"><input type="checkbox" id="lp_s_details" checked> التفاصيل والوصف (Details)</label>
@@ -2344,8 +2345,9 @@ function syncLpAccentColor(input) {
 
 function resetLpEditor() {
   document.getElementById('lp_mode').value = 'auto';
-  ['hero','gallery','features','details','reviews','faq','trust','form'].forEach(function(k) {
-    document.getElementById('lp_s_' + k).checked = true;
+  ['hero','gallery','features','details','reviews','faq','trust','form','pricing_tiers'].forEach(function(k) {
+    var el = document.getElementById('lp_s_' + k);
+    if (el) el.checked = true;
   });
   document.getElementById('lp_hero_title').value = '';
   document.getElementById('lp_hero_subtitle').value = '';
@@ -2408,8 +2410,9 @@ function removeLpFaq(i) { lpFaqRows.splice(i, 1); renderLpFaq(); }
 // يبني كائن الإعدادات من حقول المحرر (يُرسل كنص JSON إلى admin_add/admin_edit)
 function collectLpEditorConfig() {
   var sections = {};
-  ['hero','gallery','features','details','reviews','faq','trust','form'].forEach(function(k) {
-    sections[k] = document.getElementById('lp_s_' + k).checked;
+  ['hero','gallery','features','details','reviews','faq','trust','form','pricing_tiers'].forEach(function(k) {
+    var el = document.getElementById('lp_s_' + k);
+    if (el) sections[k] = el.checked;
   });
   var features = lpFeatureRows.map(function(f, i) {
     return {
@@ -2453,9 +2456,14 @@ function loadLpEditorConfig(raw) {
   if (typeof raw === 'string' && raw.trim()) { try { cfg = JSON.parse(raw); } catch(e) {} }
   else if (raw && typeof raw === 'object') { cfg = raw; }
   document.getElementById('lp_mode').value = (cfg.mode === 'custom') ? 'custom' : 'auto';
-  ['hero','gallery','features','details','reviews','faq','trust','form'].forEach(function(k) {
+  ['hero','gallery','features','details','reviews','faq','trust','form','pricing_tiers'].forEach(function(k) {
     var el = document.getElementById('lp_s_' + k);
-    if (cfg.sections && typeof cfg.sections[k] === 'boolean') el.checked = cfg.sections[k];
+    if (!el) return;
+    if (cfg.sections && typeof cfg.sections[k] === 'boolean') {
+      el.checked = cfg.sections[k];
+    } else {
+      el.checked = true; // default enabled for backward compatibility
+    }
   });
   if (cfg.hero) {
     if (cfg.hero.headline)     document.getElementById('lp_hero_title').value = cfg.hero.headline;
