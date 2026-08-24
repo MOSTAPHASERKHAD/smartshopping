@@ -447,7 +447,9 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   if (action === 'admin_campaign_analytics') return getCampaignAnalytics(env, params, tenantId);
 
   // ── الذكاء الاصطناعي ──
-  if (action === 'admin_ai_chat')   return adminAiChat(env, params);
+  if (action === 'admin_ai_chat' || action === 'admin_ai_analysis') {
+    return adminAiChat(env, params, tenantId, authSession);
+  }
 
   // ── الإدارة المركزية والمنصة (Super Admin) ──
   if (action === 'admin_super_list_tenants')   return superListTenants(env, authSession);

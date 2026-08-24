@@ -4501,6 +4501,373 @@ function showAdminPanel() {
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════
+     🤖 SmartKiosk AI Business Copilot UI
+     ══════════════════════════════════════════════════════════════ -->
+
+<!-- Floating Trigger Button -->
+<button class="ai-copilot-fab" id="aiCopilotFab" onclick="toggleAiCopilotDrawer()" title="مساعد SmartKiosk الذكي">
+  <span class="ai-fab-icon">🤖</span>
+  <span class="ai-fab-label">مساعد الأعمال الذكي</span>
+  <span class="ai-fab-pulse"></span>
+</button>
+
+<!-- AI Copilot Drawer / Modal -->
+<div class="ai-copilot-drawer" id="aiCopilotDrawer">
+  <div class="ai-drawer-header">
+    <div class="ai-header-title">
+      <span style="font-size:1.3rem">🤖</span>
+      <div>
+        <h3>مساعد SmartKiosk الذكي</h3>
+        <span class="ai-badge">AI Business Copilot</span>
+      </div>
+    </div>
+    <div class="ai-header-tools">
+      <button class="ai-tool-btn" id="aiResizeBtn" onclick="toggleAiCopilotSize()" title="تكبير / تصغير النافذة">⤢</button>
+      <button class="ai-tool-btn" onclick="toggleAiCopilotDrawer()" title="إغلاق">✕</button>
+    </div>
+  </div>
+
+  <!-- Action Chips -->
+  <div class="ai-chips-bar" id="aiChipsBar">
+    <button class="ai-chip active" onclick="triggerAiMode('store_overview')">📊 تحليل شامل</button>
+    <button class="ai-chip" onclick="triggerAiMode('sales_analysis')">💰 المبيعات والأرباح</button>
+    <button class="ai-chip" onclick="triggerAiMode('product_performance')">📦 أداء المنتجات</button>
+    <button class="ai-chip" onclick="triggerAiMode('campaign_analysis')">📢 تحليل الحملات</button>
+    <button class="ai-chip" onclick="triggerAiMode('budget_recommendations')">⚠️ أين نخسر المال؟</button>
+    <button class="ai-chip" onclick="triggerAiMode('action_plan')">🎯 ماذا أفعل اليوم؟</button>
+    <button class="ai-chip" onclick="triggerAiMode('whatsapp_draft')">✍️ صياغة WhatsApp</button>
+  </div>
+
+  <!-- Main Body Content -->
+  <div class="ai-drawer-body" id="aiCopilotBody">
+    <div style="text-align:center;padding:40px 20px;color:#64748b">
+      <div style="font-size:2.5rem;margin-bottom:12px">🤖</div>
+      <h4 style="color:#1e293b;font-weight:800;margin-bottom:8px">مرحباً بك في مساعد الأعمال والتسويق الذكي</h4>
+      <p style="font-size:0.85rem;line-height:1.6;margin-bottom:16px">
+        اختر أحد التحليلات السريعة أعلاه أو اطرح سؤالك مباشرة للبدء في قراءة وتحليل بيانات متجرك الحقيقية.
+      </p>
+      <button class="btn btn-accent" onclick="triggerAiMode('store_overview')" style="background:#4338ca;color:#fff;border-radius:20px;padding:8px 20px">
+        📊 ابدأ بالتحليل الشامل للمتجر
+      </button>
+    </div>
+  </div>
+
+  <!-- Footer & Chat Input -->
+  <div class="ai-drawer-footer">
+    <form class="ai-input-row" onsubmit="handleAiChatSubmit(event)">
+      <input type="text" class="ai-input-field" id="aiPromptInput" placeholder="اسأل المساعد الذكي أي سؤال حول أداء المتجر والطلبات...">
+      <button type="submit" class="ai-send-btn" id="aiSendBtn">إرسال ↵</button>
+    </form>
+    <div class="ai-timestamp-note" id="aiTimestampNote">SmartKiosk AI Copilot • Real-time Data</div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// 🤖 SmartKiosk AI Business & Marketing Copilot Client Logic
+// ══════════════════════════════════════════════════════════════
+
+var currentAiState = {
+  activeMode: 'store_overview',
+  isLoading: false,
+  lastData: null,
+  currentDraftText: '',
+  currentDraftOrderId: ''
+};
+
+function toggleAiCopilotDrawer() {
+  var drawer = document.getElementById('aiCopilotDrawer');
+  if (!drawer) return;
+  drawer.classList.toggle('open');
+}
+
+function toggleAiCopilotSize() {
+  var drawer = document.getElementById('aiCopilotDrawer');
+  var btn = document.getElementById('aiResizeBtn');
+  if (!drawer) return;
+  drawer.classList.toggle('expanded');
+  if (btn) {
+    btn.textContent = drawer.classList.contains('expanded') ? '⤡' : '⤢';
+  }
+}
+
+function triggerAiMode(mode) {
+  currentAiState.activeMode = mode;
+  var chips = document.querySelectorAll('.ai-chip');
+  chips.forEach(function(c) {
+    if (c.getAttribute('onclick') && c.getAttribute('onclick').indexOf(mode) !== -1) {
+      c.classList.add('active');
+    } else {
+      c.classList.remove('active');
+    }
+  });
+
+  if (mode === 'whatsapp_draft') {
+    renderAiWhatsAppSelector();
+  } else {
+    runAiAnalysis(mode);
+  }
+}
+
+function renderAiWhatsAppSelector() {
+  var body = document.getElementById('aiCopilotBody');
+  if (!body) return;
+
+  var orders = window.allOrders || [];
+  var optionsHtml = '<option value="">-- اختر طلبية من المتجر --</option>';
+  orders.slice(0, 30).forEach(function(o) {
+    var total = o.total || o.subtotal || 0;
+    optionsHtml += '<option value="' + esc(o.order_id) + '">' + esc(o.order_id) + ' - ' + esc(o.name) + ' (' + esc(o.wilaya_ar || '') + ' - ' + total + ' دج)</option>';
+  });
+
+  body.innerHTML = `
+    <div class="ai-section-block">
+      <div class="ai-block-title">✍️ صياغة مسودة رسالة WhatsApp مخصصة</div>
+      <div class="ai-item-card insight" style="margin-bottom:12px">
+        اختر طلباً من القائمة لصياغة رسالة تأكيد أو متابعة احترافية مخصصة للزبون بناءً على بيانات الطلب والمنتجات وموقع التوصيل.
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="font-weight:700;font-size:0.82rem;margin-bottom:4px;display:block">اختر الطلبية *</label>
+        <select id="aiWaOrderSelect" class="form-control" style="width:100%;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px" onchange="onAiWaOrderSelected(this.value)">
+          ${optionsHtml}
+        </select>
+      </div>
+      <div id="aiWaDraftContainer"></div>
+    </div>
+  `;
+}
+
+function onAiWaOrderSelected(orderId) {
+  if (!orderId) return;
+  runAiAnalysis('whatsapp_draft', '', orderId);
+}
+
+function runAiAnalysis(mode, userPrompt, orderId) {
+  var body = document.getElementById('aiCopilotBody');
+  var sendBtn = document.getElementById('aiSendBtn');
+  var input = document.getElementById('aiPromptInput');
+
+  if (currentAiState.isLoading) return;
+  currentAiState.isLoading = true;
+  if (sendBtn) sendBtn.disabled = true;
+
+  if (body) {
+    body.innerHTML = `
+      <div style="text-align:center;padding:50px 20px;color:#4338ca">
+        <div class="spinner" style="margin:0 auto 16px;width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#4338ca;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+        <h4 style="font-weight:800;color:#1e293b;margin-bottom:6px">جاري جمع البيانات والتحليل الذكي...</h4>
+        <p style="font-size:0.82rem;color:#64748b">يتم قراءة سجلات المتجر والحملات وحساب المؤشرات الحقيقية بدقة</p>
+      </div>
+    `;
+  }
+
+  var params = {
+    mode: mode || 'store_overview',
+    prompt: userPrompt || '',
+    order_id: orderId || ''
+  };
+
+  apiPost('admin_ai_analysis', params, function(res) {
+    currentAiState.isLoading = false;
+    if (sendBtn) sendBtn.disabled = false;
+    if (input && userPrompt) input.value = '';
+
+    if (!res || !res.ok) {
+      var errMsg = (res && res.error) ? (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : String(res.error)) : 'تعذر تشغيل المساعد الذكي حالياً.';
+      if (body) {
+        body.innerHTML = `
+          <div class="ai-health-card critical" style="flex-direction:column;align-items:flex-start;gap:8px">
+            <div style="font-weight:800;display:flex;align-items:center;gap:6px">
+              <span>⚠️</span> <span>تنبيه المساعد الذكي</span>
+            </div>
+            <div style="font-size:0.84rem;line-height:1.5">${esc(errMsg)}</div>
+            <button class="btn btn-outline" onclick="runAiAnalysis('${mode}')" style="margin-top:6px;font-size:0.78rem">🔄 إعادة المحاولة</button>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    renderAiAnalysisResults(res.data, res.raw_metrics, res.timestamp, mode, orderId);
+  });
+}
+
+function renderAiAnalysisResults(data, rawMetrics, timestamp, mode, orderId) {
+  var body = document.getElementById('aiCopilotBody');
+  var timeNote = document.getElementById('aiTimestampNote');
+  if (!body) return;
+
+  if (timeNote && timestamp) {
+    timeNote.textContent = 'آخر تحديث: ' + new Date(timestamp).toLocaleTimeString('ar-DZ') + ' • بيانات حقيقية 100%';
+  }
+
+  if (!data) {
+    body.innerHTML = '<div class="ai-health-card insufficient_data">لا تتوفر بيانات كافية لتحليل هذا المؤشر.</div>';
+    return;
+  }
+
+  var html = '';
+
+  // 1. Health Status Banner
+  var health = data.health || 'good';
+  var healthLabels = {
+    good: '🟢 أداء ممتاز ومستقر',
+    warning: '🟡 تنبيه: مؤشرات تحتاج لمتابعة',
+    critical: '🔴 تحذير: هدر مالي أو انخفاض حاد',
+    insufficient_data: '⚪ بيانات قيد التجميع'
+  };
+  html += `
+    <div class="ai-health-card ${health}">
+      <span>${healthLabels[health] || healthLabels.good}</span>
+      <span style="font-size:0.75rem;font-weight:600;opacity:0.8">SmartKiosk Copilot</span>
+    </div>
+  `;
+
+  // 2. Summary Box
+  if (data.summary) {
+    html += `
+      <div class="ai-summary-box">
+        ${esc(data.summary)}
+      </div>
+    `;
+  }
+
+  // 3. Key Metrics
+  if (Array.isArray(data.key_metrics) && data.key_metrics.length > 0) {
+    html += '<div class="ai-metrics-grid">';
+    data.key_metrics.forEach(function(m) {
+      var statusCls = m.status === 'positive' ? 'positive' : (m.status === 'negative' ? 'negative' : 'neutral');
+      html += `
+        <div class="ai-metric-box">
+          <div class="ai-metric-label">${esc(m.label)}</div>
+          <div class="ai-metric-val ${statusCls}">${esc(m.value)}</div>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+
+  // 4. WhatsApp Draft Card (if present)
+  if (data.whatsapp_draft && data.whatsapp_draft.message) {
+    currentAiState.currentDraftText = data.whatsapp_draft.message;
+    currentAiState.currentDraftOrderId = orderId || '';
+
+    html += `
+      <div class="ai-wa-card">
+        <div class="ai-wa-banner">
+          <span>⚠️</span> <span>هذه مسودة مقترحة فقط — لم يتم إرسالها للزبون</span>
+        </div>
+        <div style="font-size:0.82rem;font-weight:700;color:#166534">
+          العميل: ${esc(data.whatsapp_draft.customer_name || 'الزبون')} • الغرض: ${esc(data.whatsapp_draft.target_case || 'تأكيد الطلب')}
+        </div>
+        <div class="ai-wa-text-box" id="aiWaDraftTextBox">${esc(data.whatsapp_draft.message)}</div>
+        <div class="ai-wa-actions">
+          <button class="ai-wa-btn copy" onclick="copyAiWhatsAppDraft()">📋 نسخ النص</button>
+          ${orderId ? `<button class="ai-wa-btn edit" onclick="openInCustomerWhatsAppSender('${esc(orderId)}')">✏️ فتح في نافذة الإرسال للزبون</button>` : ''}
+          <button class="ai-wa-btn retry" onclick="runAiAnalysis('whatsapp_draft', '', '${esc(orderId)}')">🔄 إعادة صياغة</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // 5. Insights
+  if (Array.isArray(data.insights) && data.insights.length > 0) {
+    html += '<div class="ai-section-block">';
+    html += '<div class="ai-block-title">💡 الملاحظات الذكية وفرص النمو</div>';
+    data.insights.forEach(function(ins) {
+      html += `<div class="ai-item-card insight">${esc(ins)}</div>`;
+    });
+    html += '</div>';
+  }
+
+  // 6. Problems & Risks
+  if (Array.isArray(data.problems) && data.problems.length > 0) {
+    html += '<div class="ai-section-block">';
+    html += '<div class="ai-block-title">⚠️ نقاط الضعف والمخاطر المرصودة</div>';
+    data.problems.forEach(function(prob) {
+      html += `<div class="ai-item-card problem">${esc(prob)}</div>`;
+    });
+    html += '</div>';
+  }
+
+  // 7. Actionable Recommendations
+  if (Array.isArray(data.recommendations) && data.recommendations.length > 0) {
+    html += '<div class="ai-section-block">';
+    html += '<div class="ai-block-title">🎯 التوصيات التنفيذية المقترحة</div>';
+    data.recommendations.forEach(function(rec) {
+      var p = (rec.priority || 'medium').toLowerCase();
+      var pBadge = p === 'high' ? '<span class="ai-priority-badge high">أولوية قصوى 🔴</span>' : (p === 'low' ? '<span class="ai-priority-badge low">أولوية منخفضة 🟢</span>' : '<span class="ai-priority-badge medium">أولوية متوسطة 🟡</span>');
+      var evHtml = '';
+      if (Array.isArray(rec.evidence)) {
+        rec.evidence.forEach(function(ev) {
+          evHtml += `<span class="ai-evidence-tag">📊 ${esc(ev)}</span>`;
+        });
+      }
+      html += `
+        <div class="ai-rec-card">
+          <div class="ai-rec-header">
+            <span class="ai-rec-title">${esc(rec.title)}</span>
+            ${pBadge}
+          </div>
+          <div class="ai-rec-reason">${esc(rec.reason)}</div>
+          ${evHtml ? `<div class="ai-rec-evidence">${evHtml}</div>` : ''}
+          ${rec.action ? `<div class="ai-rec-action"><span>⚡ الإجراء المقترح:</span> <span>${esc(rec.action)}</span></div>` : ''}
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+
+  body.innerHTML = html;
+}
+
+function handleAiChatSubmit(e) {
+  if (e) e.preventDefault();
+  var input = document.getElementById('aiPromptInput');
+  if (!input) return;
+  var val = input.value.trim();
+  if (!val) return;
+  runAiAnalysis('chat', val);
+}
+
+function copyAiWhatsAppDraft() {
+  if (!currentAiState.currentDraftText) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(currentAiState.currentDraftText).then(function() {
+      toast('تم نسخ مسودة الرسالة بنجاح 📋');
+    }).catch(function() {
+      fallbackCopy(currentAiState.currentDraftText);
+    });
+  } else {
+    fallbackCopy(currentAiState.currentDraftText);
+  }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    toast('تم نسخ مسودة الرسالة 📋');
+  } catch (_) {
+    toast('يرجى تحديد النص ونسخه يدوياً');
+  }
+  document.body.removeChild(ta);
+}
+
+function openInCustomerWhatsAppSender(orderId) {
+  if (!orderId) return;
+  if (typeof startCustomerWhatsAppDispatch === 'function') {
+    startCustomerWhatsAppDispatch(orderId);
+  } else {
+    toast('نافذة إرسال رسائل الزبائن غير متاحة حالياً');
+  }
+}
+</script>
+
 </div>
 </body>
 </html>

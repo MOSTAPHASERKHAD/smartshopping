@@ -204,8 +204,9 @@ export const ACTION_PERMISSIONS = {
   admin_delete_media:  PERMISSIONS.MEDIA_DELETE,
 
   // Marketing & AI
-  admin_capi_test: PERMISSIONS.MARKETING_TEST,
-  admin_ai_chat:   PERMISSIONS.AI_USE,
+  admin_capi_test:   PERMISSIONS.MARKETING_TEST,
+  admin_ai_chat:     PERMISSIONS.AI_USE,
+  admin_ai_analysis: PERMISSIONS.AI_USE,
 
   // User & Session Management
   admin_list_users:   PERMISSIONS.USERS_READ,
