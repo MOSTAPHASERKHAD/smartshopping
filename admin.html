@@ -4621,6 +4621,8 @@ var currentAiState = {
   currentDraftOrderId: ''
 };
 
+window.aiChatHistory = [];
+
 function toggleAiCopilotDrawer() {
   var drawer = document.getElementById('aiCopilotDrawer');
   if (!drawer) return;
@@ -4635,6 +4637,90 @@ function toggleAiCopilotSize() {
   if (btn) {
     btn.textContent = drawer.classList.contains('expanded') ? '⤡' : '⤢';
   }
+}
+
+function resetAiChatSession() {
+  window.aiChatHistory = [];
+  var body = document.getElementById('aiCopilotBody');
+  if (body) {
+    body.innerHTML = `
+      <div style="text-align:center;padding:36px 20px;color:#64748b">
+        <div style="font-size:2.5rem;margin-bottom:12px">🤖</div>
+        <h4 style="color:#1e293b;font-weight:800;margin-bottom:8px">مساعد التجارة ونمو المبيعات الجزائري</h4>
+        <p style="font-size:0.85rem;line-height:1.6;margin-bottom:16px">
+          تم بدء جلسة استشارية جديدة. اختر تحليلاً سريعاً أعلاه أو اسأل مستشارك الذكي أي سؤال مباشرة.
+        </p>
+        <button class="btn btn-accent" onclick="triggerAiMode('store_overview')" style="background:#4338ca;color:#fff;border-radius:20px;padding:8px 20px">
+          📊 بدء التحليل الشامل للمتجر
+        </button>
+      </div>
+    `;
+  }
+  toast('تم بدء جلسة محادثة جديدة 🔄');
+}
+
+function formatAiMarkdown(text) {
+  if (!text) return '';
+  var raw = String(text);
+  var s = esc(raw);
+
+  // Headings
+  s = s.replace(/^### (.*$)/gim, '<h4 class="ai-md-h4">$1</h4>');
+  s = s.replace(/^## (.*$)/gim, '<h3 class="ai-md-h3">$1</h3>');
+  s = s.replace(/^# (.*$)/gim, '<h2 class="ai-md-h2">$1</h2>');
+
+  // Bold & Italic
+  s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+
+  // Blockquotes (handles escaped &gt; and raw >)
+  s = s.replace(/^(?:&gt;|>)\s*(.*$)/gim, '<div class="ai-md-quote">$1</div>');
+
+  // Bullet Lists
+  s = s.replace(/^\s*[\-\*]\s+(.*$)/gim, '<div class="ai-md-li"><span>•</span> <span>$1</span></div>');
+
+  // Numbered Lists
+  s = s.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div class="ai-md-num-li"><span class="ai-md-num">$1.</span> <span>$2</span></div>');
+
+  // Inline Code
+  s = s.replace(/`([^`]+)`/g, '<code class="ai-md-code">$1</code>');
+
+  // Markdown Tables
+  var lines = s.split('\n');
+  var inTable = false;
+  var newLines = [];
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (line.startsWith('|') && line.endsWith('|')) {
+      if (line.indexOf('---') !== -1 || line.indexOf(':-') !== -1) {
+        continue;
+      }
+      var cells = line.split('|').slice(1, -1);
+      if (!inTable) {
+        inTable = true;
+        newLines.push('<div class="ai-table-wrap"><table class="ai-md-table">');
+        newLines.push('<thead><tr>' + cells.map(function(c) { return '<th>' + c.trim() + '</th>'; }).join('') + '</tr></thead><tbody>');
+      } else {
+        newLines.push('<tr>' + cells.map(function(c) { return '<td>' + c.trim() + '</td>'; }).join('') + '</tr>');
+      }
+    } else {
+      if (inTable) {
+        inTable = false;
+        newLines.push('</tbody></table></div>');
+      }
+      newLines.push(lines[i]);
+    }
+  }
+  if (inTable) {
+    newLines.push('</tbody></table></div>');
+  }
+
+  var joined = newLines.join('\n');
+  joined = joined.replace(/\n\n+/g, '<div style="margin:8px 0"></div>');
+  joined = joined.replace(/\n/g, '<br>');
+
+  return joined;
 }
 
 function triggerAiMode(mode) {
@@ -4671,7 +4757,7 @@ function renderAiWhatsAppSelector() {
     <div class="ai-section-block">
       <div class="ai-block-title">✍️ صياغة مسودة رسالة WhatsApp مخصصة</div>
       <div class="ai-item-card insight" style="margin-bottom:12px">
-        اختر طلباً حقيقياً من القائمة وحدد السيناريو لصياغة رسالة احترافية مخصصة للزبون بناءً على بيانات الطلب الفردية.
+        اختر طلباً حقيقياً من القائمة وحدد السيناريو لصياغة رسالة احترافية ومطمئنة للزبون باللهجة البيضاء المناسبة للسوق الجزائري.
       </div>
       <div class="form-group" style="margin-bottom:10px">
         <label style="font-weight:700;font-size:0.82rem;margin-bottom:4px;display:block">1. اختر الطلبية *</label>
@@ -4716,7 +4802,7 @@ function triggerAiWhatsAppDraft() {
 
   var scenVal = scenSelect ? scenSelect.value : 'confirm';
   var scenarioMap = {
-    confirm: 'تأكيد الطلب وتفاصيل التوصيل والمبلغ الإجمالي',
+    confirm: 'تأكيد الطلب وتفاصيل التوصيل والمبلغ الإجمالي وحق المعاينة',
     no_response: 'الزبون لم يرد على الاتصال، متابعة مهذبة لتأكيد الرغبة في استلام الطلب',
     reminder: 'تذكير لطيف بالطلب المعلق والتأكد من صحة العنوان',
     shipping: 'إشعار الزبون بأن الطلبية تم تجهيزها وشحنها مع شركة التوصيل'
@@ -4751,20 +4837,54 @@ function runAiAnalysis(mode, userPrompt, orderId) {
   currentAiState.isLoading = true;
   if (sendBtn) sendBtn.disabled = true;
 
-  if (body) {
-    body.innerHTML = `
-      <div style="text-align:center;padding:50px 20px;color:#4338ca">
-        <div class="spinner" style="margin:0 auto 16px;width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#4338ca;border-radius:50%;animation:spin 0.8s linear infinite"></div>
-        <h4 style="font-weight:800;color:#1e293b;margin-bottom:6px">جاري جمع البيانات والتحليل الذكي...</h4>
-        <p style="font-size:0.82rem;color:#64748b">يتم قراءة سجلات المتجر والحملات وحساب المؤشرات الحقيقية بدقة</p>
-      </div>
-    `;
+  var isChat = (mode === 'chat');
+
+  if (isChat) {
+    var thread = document.getElementById('aiChatThread');
+    if (!thread) {
+      body.innerHTML = `
+        <div class="ai-chat-thread" id="aiChatThread">
+          <div class="ai-chat-top-bar">
+            <span>💬 استشارة فورية مع خبير النمو والتسويق الجزائري</span>
+            <button class="btn btn-outline btn-xs" onclick="resetAiChatSession()" style="font-size:0.75rem;padding:2px 8px">🔄 محادثة جديدة</button>
+          </div>
+          <div class="ai-chat-messages" id="aiChatMessages"></div>
+        </div>
+      `;
+    }
+    var msgsContainer = document.getElementById('aiChatMessages');
+    if (msgsContainer) {
+      msgsContainer.innerHTML += `
+        <div class="ai-msg user">
+          <div class="ai-msg-bubble">${esc(userPrompt)}</div>
+        </div>
+        <div class="ai-msg assistant" id="aiTypingIndicator">
+          <div class="ai-msg-avatar">🤖</div>
+          <div class="ai-msg-bubble loading">
+            <div class="spinner" style="width:16px;height:16px;border:2px solid #cbd5e1;border-top-color:#4338ca;border-radius:50%;animation:spin 0.8s linear infinite;display:inline-block"></div>
+            <span>جاري التحليل وتقديم الاستشارة...</span>
+          </div>
+        </div>
+      `;
+      body.scrollTop = body.scrollHeight;
+    }
+  } else {
+    if (body) {
+      body.innerHTML = `
+        <div style="text-align:center;padding:50px 20px;color:#4338ca">
+          <div class="spinner" style="margin:0 auto 16px;width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#4338ca;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+          <h4 style="font-weight:800;color:#1e293b;margin-bottom:6px">جاري جمع البيانات والتحليل الشامل...</h4>
+          <p style="font-size:0.82rem;color:#64748b">يتم قراءة سجلات المتجر وسيكولوجية الطلبات وحساب المؤشرات الحقيقية</p>
+        </div>
+      `;
+    }
   }
 
   var params = {
     mode: mode || 'store_overview',
     prompt: userPrompt || '',
-    order_id: orderId || ''
+    order_id: orderId || '',
+    history: isChat ? window.aiChatHistory.slice(-8) : []
   };
 
   apiPost('admin_ai_analysis', params, function(res) {
@@ -4774,21 +4894,61 @@ function runAiAnalysis(mode, userPrompt, orderId) {
 
     if (!res || !res.ok) {
       var errMsg = (res && res.error) ? (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : String(res.error)) : 'تعذر تشغيل المساعد الذكي حالياً.';
-      if (body) {
-        body.innerHTML = `
-          <div class="ai-health-card critical" style="flex-direction:column;align-items:flex-start;gap:8px">
-            <div style="font-weight:800;display:flex;align-items:center;gap:6px">
-              <span>⚠️</span> <span>تنبيه المساعد الذكي</span>
+      if (isChat) {
+        var typing = document.getElementById('aiTypingIndicator');
+        if (typing) typing.remove();
+        var msgs = document.getElementById('aiChatMessages');
+        if (msgs) {
+          msgs.innerHTML += `
+            <div class="ai-health-card critical" style="margin-top:8px">
+              ⚠️ ${esc(errMsg)}
             </div>
-            <div style="font-size:0.84rem;line-height:1.5">${esc(errMsg)}</div>
-            <button class="btn btn-outline" onclick="runAiAnalysis('${mode}')" style="margin-top:6px;font-size:0.78rem">🔄 إعادة المحاولة</button>
-          </div>
-        `;
+          `;
+        }
+      } else {
+        if (body) {
+          body.innerHTML = `
+            <div class="ai-health-card critical" style="flex-direction:column;align-items:flex-start;gap:8px">
+              <div style="font-weight:800;display:flex;align-items:center;gap:6px">
+                <span>⚠️</span> <span>تنبيه المساعد الذكي</span>
+              </div>
+              <div style="font-size:0.84rem;line-height:1.5">${esc(errMsg)}</div>
+              <button class="btn btn-outline" onclick="runAiAnalysis('${mode}')" style="margin-top:6px;font-size:0.78rem">🔄 إعادة المحاولة</button>
+            </div>
+          `;
+        }
       }
       return;
     }
 
-    renderAiAnalysisResults(res.data, res.raw_metrics, res.timestamp, mode, orderId);
+    if (isChat) {
+      var typingEl = document.getElementById('aiTypingIndicator');
+      if (typingEl) typingEl.remove();
+
+      var replyText = res.text || (res.data && res.data.summary) || 'تم التحليل بنجاح.';
+      var msgsBox = document.getElementById('aiChatMessages');
+      if (msgsBox) {
+        msgsBox.innerHTML += `
+          <div class="ai-msg assistant">
+            <div class="ai-msg-avatar">🤖</div>
+            <div class="ai-msg-bubble">
+              ${formatAiMarkdown(replyText)}
+            </div>
+          </div>
+        `;
+        body.scrollTop = body.scrollHeight;
+      }
+
+      window.aiChatHistory.push({ role: 'user', text: userPrompt });
+      window.aiChatHistory.push({ role: 'model', text: replyText });
+
+      var timeNote = document.getElementById('aiTimestampNote');
+      if (timeNote && res.timestamp) {
+        timeNote.textContent = 'آخر رد: ' + new Date(res.timestamp).toLocaleTimeString('ar-DZ') + ' • نموذج ' + (res.model_used || 'Gemini');
+      }
+    } else {
+      renderAiAnalysisResults(res.data, res.raw_metrics, res.timestamp, mode, orderId);
+    }
   });
 }
 
@@ -4827,7 +4987,7 @@ function renderAiAnalysisResults(data, rawMetrics, timestamp, mode, orderId) {
   if (data.summary) {
     html += `
       <div class="ai-summary-box">
-        ${esc(data.summary)}
+        ${formatAiMarkdown(data.summary)}
       </div>
     `;
   }
@@ -4875,7 +5035,7 @@ function renderAiAnalysisResults(data, rawMetrics, timestamp, mode, orderId) {
     html += '<div class="ai-section-block">';
     html += '<div class="ai-block-title">💡 الملاحظات الذكية وفرص النمو</div>';
     data.insights.forEach(function(ins) {
-      html += `<div class="ai-item-card insight">${esc(ins)}</div>`;
+      html += `<div class="ai-item-card insight">${formatAiMarkdown(ins)}</div>`;
     });
     html += '</div>';
   }
@@ -4885,7 +5045,7 @@ function renderAiAnalysisResults(data, rawMetrics, timestamp, mode, orderId) {
     html += '<div class="ai-section-block">';
     html += '<div class="ai-block-title">⚠️ نقاط الضعف والمخاطر المرصودة</div>';
     data.problems.forEach(function(prob) {
-      html += `<div class="ai-item-card problem">${esc(prob)}</div>`;
+      html += `<div class="ai-item-card problem">${formatAiMarkdown(prob)}</div>`;
     });
     html += '</div>';
   }
@@ -4909,9 +5069,9 @@ function renderAiAnalysisResults(data, rawMetrics, timestamp, mode, orderId) {
             <span class="ai-rec-title">${esc(rec.title)}</span>
             ${pBadge}
           </div>
-          <div class="ai-rec-reason">${esc(rec.reason)}</div>
+          <div class="ai-rec-reason">${formatAiMarkdown(rec.reason)}</div>
           ${evHtml ? `<div class="ai-rec-evidence">${evHtml}</div>` : ''}
-          ${rec.action ? `<div class="ai-rec-action"><span>⚡ الإجراء المقترح:</span> <span>${esc(rec.action)}</span></div>` : ''}
+          ${rec.action ? `<div class="ai-rec-action"><span>⚡ الإجراء المقترح:</span> <span>${formatAiMarkdown(rec.action)}</span></div>` : ''}
         </div>
       `;
     });
