@@ -1711,58 +1711,104 @@ function exportOrdersCSV() {
 }
 
 // ===== SELECT & DELETE ORDERS =====
-function toggleSelectAll(cb) {
-  document.querySelectorAll('.order-check').forEach(function(c) { c.checked = cb.checked; });
+var selectedOrderIds = new Set();
+
+function onOrderCheckChanged(input, event) {
+  if (event) event.stopPropagation();
+  var orderId = input.value;
+  if (input.checked) {
+    selectedOrderIds.add(orderId);
+  } else {
+    selectedOrderIds.delete(orderId);
+  }
   updateSelectedOrdersState();
 }
 
-function updateSelectedOrdersState() {
+function toggleOrderRowCheck(event, orderId) {
+  var target = event.target;
+  if (!target) return;
+  // Ignore clicks inside interactive elements to prevent conflicts
+  if (target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.tagName === 'A' || target.tagName === 'SELECT' || target.closest('button') || target.closest('a') || target.closest('select') || target.closest('input')) {
+    return;
+  }
+  if (selectedOrderIds.has(orderId)) {
+    selectedOrderIds.delete(orderId);
+  } else {
+    selectedOrderIds.add(orderId);
+  }
+  var cb = document.querySelector('.order-check[value="' + orderId + '"]');
+  if (cb) {
+    cb.checked = selectedOrderIds.has(orderId);
+  }
+  updateSelectedOrdersState();
+}
+
+function toggleSelectAll(cb) {
+  var visibleChecks = document.querySelectorAll('.order-check');
+  visibleChecks.forEach(function(c) {
+    c.checked = cb.checked;
+    if (cb.checked) {
+      selectedOrderIds.add(c.value);
+    } else {
+      selectedOrderIds.delete(c.value);
+    }
+  });
+  updateSelectedOrdersState();
+}
+
+function getSelectedOrderIds() {
+  if (selectedOrderIds && selectedOrderIds.size > 0) {
+    return Array.from(selectedOrderIds);
+  }
   var checked = document.querySelectorAll('.order-check:checked');
+  return Array.from(checked).map(function(c) { return c.value; });
+}
+
+function getSelectedOrdersList() {
+  var ids = getSelectedOrderIds();
+  if (!ids.length) return [];
+  var idSet = new Set(ids);
+  return allOrders.filter(function(o) { return idSet.has(o.order_id); });
+}
+
+function updateSelectedOrdersState() {
+  var visibleChecks = document.querySelectorAll('.order-check');
+  var visibleCheckedCount = 0;
+  visibleChecks.forEach(function(c) {
+    if (selectedOrderIds.has(c.value)) {
+      c.checked = true;
+      visibleCheckedCount++;
+    } else {
+      c.checked = false;
+    }
+  });
+
+  var totalCount = selectedOrderIds.size;
   var btnBulkPrint = document.getElementById('btnBulkPrint');
   var btnBulkSendStaff = document.getElementById('btnBulkSendStaff');
   var btnBulkSendCustomers = document.getElementById('btnBulkSendCustomers');
   var countBadge = document.getElementById('selectedOrdersCount');
   var countBadgeStaff = document.getElementById('selectedOrdersCountStaff');
   var countBadgeCustomers = document.getElementById('selectedOrdersCountCustomers');
-  var count = checked.length;
-  if (countBadge) countBadge.textContent = count;
-  if (countBadgeStaff) countBadgeStaff.textContent = count;
-  if (countBadgeCustomers) countBadgeCustomers.textContent = count;
-  if (btnBulkPrint) {
-    btnBulkPrint.disabled = (count === 0);
-    if (count > 0) {
-      btnBulkPrint.style.opacity = '1';
-      btnBulkPrint.style.cursor = 'pointer';
-    } else {
-      btnBulkPrint.style.opacity = '0.5';
-      btnBulkPrint.style.cursor = 'not-allowed';
+
+  if (countBadge) countBadge.textContent = totalCount;
+  if (countBadgeStaff) countBadgeStaff.textContent = totalCount;
+  if (countBadgeCustomers) countBadgeCustomers.textContent = totalCount;
+
+  var hasSelected = (totalCount > 0);
+  [btnBulkPrint, btnBulkSendStaff, btnBulkSendCustomers].forEach(function(btn) {
+    if (btn) {
+      btn.disabled = !hasSelected;
+      btn.style.opacity = hasSelected ? '1' : '0.5';
+      btn.style.cursor = hasSelected ? 'pointer' : 'not-allowed';
     }
-  }
-  if (btnBulkSendStaff) {
-    btnBulkSendStaff.disabled = (count === 0);
-    if (count > 0) {
-      btnBulkSendStaff.style.opacity = '1';
-      btnBulkSendStaff.style.cursor = 'pointer';
-    } else {
-      btnBulkSendStaff.style.opacity = '0.5';
-      btnBulkSendStaff.style.cursor = 'not-allowed';
-    }
-  }
-  if (btnBulkSendCustomers) {
-    btnBulkSendCustomers.disabled = (count === 0);
-    if (count > 0) {
-      btnBulkSendCustomers.style.opacity = '1';
-      btnBulkSendCustomers.style.cursor = 'pointer';
-    } else {
-      btnBulkSendCustomers.style.opacity = '0.5';
-      btnBulkSendCustomers.style.cursor = 'not-allowed';
-    }
-  }
+  });
+
   var selectAll = document.getElementById('selectAllOrders');
-  var total = document.querySelectorAll('.order-check').length;
+  var totalVisible = visibleChecks.length;
   if (selectAll) {
-    selectAll.checked = (total > 0 && count === total);
-    selectAll.indeterminate = (count > 0 && count < total);
+    selectAll.checked = (totalVisible > 0 && visibleCheckedCount === totalVisible);
+    selectAll.indeterminate = (visibleCheckedCount > 0 && visibleCheckedCount < totalVisible);
   }
 }
 
@@ -1772,22 +1818,27 @@ function deleteOrder(row, name) {
   apiPost('admin_delete_order', { order_id: row }, function(res) {
     if (res && res.error) { toast('خطأ: ' + res.error); return; }
     toast('تم الحذف بنجاح');
+    if (selectedOrderIds) selectedOrderIds.delete(row);
     setTimeout(loadOrders, 1500);
   });
 }
 
 function deleteSelectedOrders() {
-  var checked = document.querySelectorAll('.order-check:checked');
-  if (!checked.length) { toast('لم يتم تحديد أي طلب'); return; }
-  if (!confirm('هل تريد حذف ' + checked.length + ' طلب؟')) return;
-  var orderIds = [];
-  checked.forEach(function(c) { orderIds.push(c.value); });
+  var orderIds = getSelectedOrderIds();
+  if (!orderIds.length) { toast('لم يتم تحديد أي طلب'); return; }
+  if (!confirm('هل تريد حذف ' + orderIds.length + ' طلب؟')) return;
   var done = 0, failed = 0;
   orderIds.forEach(function(orderId) {
     apiPost('admin_delete_order', { order_id: orderId }, function(res) {
-      if (res && res.ok) done++; else failed++;
+      if (res && res.ok) {
+        done++;
+        selectedOrderIds.delete(orderId);
+      } else {
+        failed++;
+      }
       if (done + failed === orderIds.length) {
         toast('تم حذف ' + done + ' طلب' + (failed ? ' — فشل ' + failed : ''));
+        updateSelectedOrdersState();
         setTimeout(loadOrders, 2000);
       }
     });
@@ -2370,23 +2421,24 @@ function renderOrders() {
     try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
     var itemsText = items.map(function(it) { return esc(it.name || it.title || '') + ' x' + it.qty; }).join(', ');
     var oid = esc(o.order_id || '');
-    return '<tr>' +
-      '<td style="width:36px;text-align:center"><input type="checkbox" class="order-check" value="' + oid + '" onchange="updateSelectedOrdersState()"></td>' +
+    var isChecked = selectedOrderIds.has(o.order_id) ? ' checked' : '';
+    return '<tr onclick="toggleOrderRowCheck(event, \'' + oid + '\')" style="cursor:pointer">' +
+      '<td style="width:36px;text-align:center" onclick="event.stopPropagation()"><input type="checkbox" class="order-check" value="' + oid + '"' + isChecked + ' onchange="onOrderCheckChanged(this, event)"></td>' +
       '<td><strong style="color:var(--accent);font-family:monospace;font-size:0.82rem">' + esc(o.order_id) + '</strong></td>' +
       '<td style="white-space:nowrap;color:var(--text3);font-size:0.78rem">' + esc((o.created_at || '').substring(0, 10)) + '</td>' +
       '<td><div style="font-weight:600">' + esc(o.name) + '</div>' + (itemsText ? '<div style="font-size:0.72rem;color:var(--text3)">' + itemsText + '</div>' : '') + '</td>' +
-      '<td><a href="https://wa.me/' + esc(o.phone || '') + '" target="_blank" style="color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-family:monospace;white-space:nowrap">📱 ' + esc(o.phone || '') + '</a></td>' +
+      '<td><a href="https://wa.me/' + esc(o.phone || '') + '" target="_blank" style="color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-family:monospace;white-space:nowrap" onclick="event.stopPropagation()">📱 ' + esc(o.phone || '') + '</a></td>' +
       '<td>' + esc(o.wilaya_ar || o.wilaya || '-') + '</td>' +
       '<td>' + (o.delivery_type === 'Office' ? adminT('delivery_office') : adminT('delivery_home')) + '</td>' +
       '<td style="font-weight:700;white-space:nowrap">' + Number(o.subtotal || 0).toLocaleString() + ' DZD</td>' +
-      '<td><select onchange="updateOrderStatus(\'' + oid + '\',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:var(--bg);color:var(--text);font-weight:600">' +
+      '<td onclick="event.stopPropagation()"><select onchange="updateOrderStatus(\'' + oid + '\',this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:var(--bg);color:var(--text);font-weight:600">' +
         '<option value="pending"' + (o.status === 'pending' ? ' selected' : '') + '>' + adminT('st_pending') + '</option>' +
         '<option value="confirmed"' + (o.status === 'confirmed' ? ' selected' : '') + '>' + adminT('st_confirmed') + '</option>' +
         '<option value="shipped"' + (o.status === 'shipped' ? ' selected' : '') + '>' + adminT('st_shipped') + '</option>' +
         '<option value="delivered"' + (o.status === 'delivered' ? ' selected' : '') + '>' + adminT('st_delivered') + '</option>' +
         '<option value="cancelled"' + (o.status === 'cancelled' ? ' selected' : '') + '>' + adminT('st_cancelled') + '</option>' +
       '</select></td>' +
-      '<td><div style="display:inline-flex;gap:4px;white-space:nowrap">' +
+      '<td onclick="event.stopPropagation()"><div style="display:inline-flex;gap:4px;white-space:nowrap">' +
         '<button class="btn btn-info btn-xs" onclick="viewOrder(\'' + oid + '\')">' + adminT('btn_details') + '</button> ' +
         '<button class="btn btn-success btn-xs" onclick="sendOrderToStaff(\'' + oid + '\')" title="إرسال الطلب لمسؤول التأكيد عبر واتساب" style="background:#059669;border-color:#059669">📲 إرسال للعامل</button> ' +
         '<a href="https://wa.me/' + esc(o.phone || '') + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-success btn-xs">' + adminT('btn_whatsapp') + '</a> ' +
@@ -2496,17 +2548,9 @@ function generateOrderLabelHtml(o) {
 }
 
 function printBulkOrders() {
-  var checked = document.querySelectorAll('.order-check:checked');
-  if (!checked.length) {
-    toast('يرجى تحديد طلب واحد على الأقل للطباعة');
-    return;
-  }
-
-  var orderIds = Array.from(checked).map(function(c) { return c.value; });
-  var selectedOrders = allOrders.filter(function(o) { return orderIds.indexOf(o.order_id) > -1; });
-
+  var selectedOrders = getSelectedOrdersList();
   if (!selectedOrders.length) {
-    toast('لم يتم العثور على بيانات الطلبات المحددة');
+    toast('يرجى تحديد طلب واحد على الأقل للطباعة');
     return;
   }
 
@@ -2738,7 +2782,7 @@ function openStaffSelectModal(dispatchData, staffList) {
   var promptEl = document.getElementById('staffSelectPrompt');
   if (promptEl) {
     if (dispatchData.type === 'bulk') {
-      promptEl.textContent = 'اختر العامل لإرسال ' + dispatchData.selectedOrders.length + ' طلبيات إليه عبر واتساب:';
+      promptEl.textContent = 'اختر العامل لإرسال ' + dispatchData.orders.length + ' طلبيات إليه عبر واتساب:';
     } else {
       promptEl.textContent = 'اختر العامل الذي تريد إرسال الطلبية إليه عبر واتساب:';
     }
@@ -2786,7 +2830,7 @@ function confirmStaffDispatch() {
   if (dispatch.type === 'single') {
     executeSingleStaffDispatch(dispatch.orderId, staffPhone);
   } else if (dispatch.type === 'bulk') {
-    executeBulkStaffDispatch(dispatch.selectedOrders, staffPhone);
+    executeBulkStaffDispatch(dispatch.orders, staffPhone);
   }
 }
 
@@ -2924,15 +2968,9 @@ function sendOrderToStaff(orderId) {
 }
 
 function sendBulkOrdersToStaff() {
-  var checked = document.querySelectorAll('.order-check:checked');
-  if (!checked.length) {
-    toast('يرجى تحديد طلبية واحدة على الأقل');
-    return;
-  }
-  var orderIds = Array.from(checked).map(function(c) { return c.value; });
-  var selectedOrders = allOrders.filter(function(o) { return orderIds.indexOf(o.order_id) > -1; });
+  var selectedOrders = getSelectedOrdersList();
   if (!selectedOrders.length) {
-    toast('لم يتم العثور على بيانات الطلبات المحددة');
+    toast('يرجى تحديد طلبية واحدة على الأقل');
     return;
   }
   ensureSettingsLoaded(function() {
@@ -3028,13 +3066,11 @@ function startCustomerWhatsAppDispatch(singleOrderId, initialMessage) {
     var single = allOrders.find(function(x) { return x.order_id === singleOrderId; });
     if (single) selectedOrders = [single];
   } else {
-    var checked = document.querySelectorAll('.order-check:checked');
-    if (!checked.length) {
+    selectedOrders = getSelectedOrdersList();
+    if (!selectedOrders.length) {
       toast('يرجى تحديد طلبية واحدة على الأقل');
       return;
     }
-    var orderIds = Array.from(checked).map(function(c) { return c.value; });
-    selectedOrders = allOrders.filter(function(o) { return orderIds.indexOf(o.order_id) > -1; });
   }
 
   if (!selectedOrders.length) {
