@@ -11,6 +11,7 @@
  */
 
 import { canExecuteAction, ROLES } from './rbac.js';
+import { normalizePhone } from './sanitize.js';
 
 // ── ثوابت الجلسة والمصادقة ──
 export const SESSION_TTL_MS  = 24 * 60 * 60 * 1000; // 24 ساعة
@@ -668,7 +669,8 @@ export async function adminGate(action, token, db) {
 export async function orderSpamGuard(db, phone) {
   if (!phone) return true;
 
-  const key = `spam_order_${phone.replace(/[^0-9]/g, '')}`;
+  const cleanPhone = normalizePhone(phone) || String(phone).replace(/[^0-9]/g, '');
+  const key = `spam_order_${cleanPhone}`;
   const row = await db.prepare(
     `SELECT value FROM settings WHERE key = ? LIMIT 1`
   ).bind(key).first();
@@ -684,6 +686,69 @@ export async function orderSpamGuard(db, phone) {
   ).bind(key, String(now)).run();
 
   return true;
+}
+
+/**
+ * حارس spam التقييمات (Review Spam Guard)
+ * يمنع إغراق تقييمات المنتج من نفس الهاتف أو الـ IP خلال نافذة 60 ثانية
+ * مع عزل المستأجر والمنتج (Tenant & Product Scoped)
+ * @param {D1Database} db
+ * @param {object} opts { tenantId, productId, phone, ip }
+ * @returns {Promise<{ allowed: boolean, error?: string }>}
+ */
+export async function reviewSpamGuard(db, { tenantId = DEFAULT_MASTER_TENANT_ID, productId, phone, ip } = {}) {
+  const now = Date.now();
+  const isMaster = (tenantId === DEFAULT_MASTER_TENANT_ID);
+
+  // 1. فحص الهاتف إن وُجد مع التطبيع القياسي (حجز ذري مدته 60 ثانية)
+  const cleanPhone = phone ? (normalizePhone(phone) || String(phone).replace(/[^0-9]/g, '')) : '';
+  if (cleanPhone) {
+    const phoneKey = `spam_rev_p_${tenantId}_${productId}_${cleanPhone}`;
+    const savePhoneStmt = isMaster
+      ? db.prepare(`
+          INSERT INTO settings (tenant_id, key, value, updated_at)
+          VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+          ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+          WHERE (CAST(settings.value AS INTEGER) + 60000) < ?
+        `).bind(tenantId, phoneKey, String(now), now)
+      : db.prepare(`
+          INSERT INTO settings (tenant_id, key, value, updated_at)
+          VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+          ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+          WHERE (CAST(settings.value AS INTEGER) + 60000) < ?
+        `).bind(tenantId, phoneKey, String(now), now);
+
+    const res = await savePhoneStmt.run();
+    if (!res.meta || res.meta.changes === 0) {
+      return { allowed: false, error: 'لقد أرسلت تقييماً لهذا المنتج مؤخراً، يرجى الانتظار قليلاً' };
+    }
+  }
+
+  // 2. فحص الـ IP إن وُجد (حجز ذري مدته 15 ثانية لنفس المنتج)
+  const safeIp = ip ? String(ip).replace(/[^a-zA-Z0-9:._-]/g, '').substring(0, 50) : '';
+  if (safeIp && safeIp !== 'unknown') {
+    const ipKey = `spam_rev_ip_${tenantId}_${productId}_${safeIp}`;
+    const saveIpStmt = isMaster
+      ? db.prepare(`
+          INSERT INTO settings (tenant_id, key, value, updated_at)
+          VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+          ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+          WHERE (CAST(settings.value AS INTEGER) + 15000) < ?
+        `).bind(tenantId, ipKey, String(now), now)
+      : db.prepare(`
+          INSERT INTO settings (tenant_id, key, value, updated_at)
+          VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+          ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+          WHERE (CAST(settings.value AS INTEGER) + 15000) < ?
+        `).bind(tenantId, ipKey, String(now), now);
+
+    const res = await saveIpStmt.run();
+    if (!res.meta || res.meta.changes === 0) {
+      return { allowed: false, error: 'يرجى الانتظار بضع ثوانٍ قبل إرسال تقييم جديد' };
+    }
+  }
+
+  return { allowed: true };
 }
 
 /**

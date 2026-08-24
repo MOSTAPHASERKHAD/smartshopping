@@ -12,7 +12,13 @@
  * - الصفحات (Admin)
  */
 
-import { sanitize, sanitizeNumber, normalizePhone } from '../utils/sanitize.js';
+import {
+  sanitize,
+  sanitizeNumber,
+  normalizePhone,
+  NUMERIC_SETTINGS_SCHEMA,
+  validateNumericSetting
+} from '../utils/sanitize.js';
 import {
   sha256,
   verifyAdminPassword,
@@ -82,7 +88,14 @@ export async function adminUpdateSettings(env, params, tenantId = DEFAULT_MASTER
     const cleanKey   = sanitize(key, 100);
     let   cleanValue;
 
-    if (JSON_VALUE_KEYS.has(cleanKey)) {
+    if (NUMERIC_SETTINGS_SCHEMA[cleanKey]) {
+      // ── Numeric settings path: strict validation & canonical formatting ──
+      const numRes = validateNumericSetting(cleanKey, value);
+      if (!numRes.valid) {
+        return { ok: false, error: numRes.error };
+      }
+      cleanValue = numRes.value;
+    } else if (JSON_VALUE_KEYS.has(cleanKey)) {
       // ── JSON path: parse → validate schema → re-stringify ──
       let parsed;
       try {

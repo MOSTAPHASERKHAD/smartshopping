@@ -413,7 +413,7 @@ export async function adminAddProduct(env, params, tenantId = DEFAULT_MASTER_TEN
   const variantOptions = serializeJson(params.variant_options, '[]');
   const galleryJson    = serializeJson(params.gallery_json,    '[]');
   const tagsJson       = serializeJson(params.tags_json,       '[]');
-  const landingConfig  = JSON.stringify(normalizeLandingConfig(params.landing_config_json));
+  const landingConfig  = JSON.stringify(normalizeLandingConfig(params.landing_config_json, params.cost_price));
   const weight         = params.weight !== undefined && params.weight !== null && params.weight !== '' && !isNaN(Number(params.weight))
     ? Math.max(0, parseFloat(params.weight))
     : null;
@@ -532,7 +532,7 @@ export async function adminEditProduct(env, params, tenantId = DEFAULT_MASTER_TE
     serializeJson(params.tags_json, '[]'),
     sanitize(params.sku, 100),
     weight,
-    JSON.stringify(normalizeLandingConfig(params.landing_config_json)),
+    JSON.stringify(normalizeLandingConfig(params.landing_config_json, params.cost_price)),
     id,
     tenantId,
   ).run();
@@ -628,13 +628,15 @@ function lpAccent(value) {
  * ملاحظة مهمة: لا يُستخدَم sanitize() هنا — يجب أن يحفظ JSON characters
  * مثل " < > وحروف عربية وأسطر جديدة كما هي (round-trip آمن).
  */
-export function normalizeLandingConfig(input) {
+export function normalizeLandingConfig(input, fallbackCostPrice = null) {
   let raw = input;
   if (typeof raw === 'string' && raw.trim()) {
     try { raw = JSON.parse(raw); }
-    catch { return {}; }
+    catch { raw = {}; }
   }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    raw = {};
+  }
 
   const out = {};
 
@@ -690,9 +692,18 @@ export function normalizeLandingConfig(input) {
   // whatsapp_text
   out.whatsapp_text = lpStr(raw.whatsapp_text, 800);
 
-  // cost_price (سعر التكلفة والشراء بالجملة لحساب الأرباح وحماية العروض)
-  if (raw.cost_price !== undefined && raw.cost_price !== null && raw.cost_price !== '' && !isNaN(Number(raw.cost_price))) {
-    out.cost_price = Math.max(0, parseFloat(raw.cost_price));
+  // cost_price (سعر التكلفة والشراء بالجملة لحساب الأرباح وحماية العروض والـ AI)
+  const rawCost = (raw.cost_price !== undefined && raw.cost_price !== null && raw.cost_price !== '')
+    ? raw.cost_price
+    : fallbackCostPrice;
+
+  if (rawCost !== undefined && rawCost !== null && rawCost !== '' && !isNaN(Number(rawCost))) {
+    const numCost = parseFloat(rawCost);
+    if (isFinite(numCost) && numCost >= 0 && numCost <= 10000000) {
+      out.cost_price = Number(numCost.toFixed(2));
+    } else {
+      out.cost_price = null;
+    }
   } else {
     out.cost_price = null;
   }

@@ -41,12 +41,12 @@ async function resolveGeminiApiKey(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
 }
 
 /**
- * تجميع بيانات أداء المتجر والطلبات والمنتجات والمراجعات والحملات خادمياً
+ * تجميع البيانات الحقيقية من D1 و Meta Graph API وبناء كائن الاستخبارات التجارية الموحد (Commercial Snapshot)
  */
 async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, preset = 'last_30d') {
   const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
 
-  // 1. حساب إحصائيات الطلبات من D1
+  // 1. حساب إحصائيات الطلبات وسلسلة التحويل ومصفوفة الولايات من D1
   let ordersSummary = {
     total_orders: 0,
     confirmed_orders: 0,
@@ -55,15 +55,21 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
     pending_orders: 0,
     cancelled_orders: 0,
     total_revenue_dzd: 0,
+    delivered_revenue_dzd: 0,
     subtotal_dzd: 0,
     shipping_collected_dzd: 0,
     discounts_given_dzd: 0,
     aov_dzd: 0,
     cancellation_rate: '0.0%',
     confirmation_rate: '0.0%',
+    delivery_success_rate: '0.0%',
+    delivery_type_breakdown: { home: 0, office: 0 },
     top_wilayas: [],
-    recent_orders_sample: []
+    wilayas_delivery_matrix: [],
+    sample_size: 0
   };
+
+  const unknownDataList = [];
 
   try {
     const ordersStmt = isMaster
@@ -71,6 +77,8 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
           SELECT
             status,
             wilaya_ar,
+            wilaya_code,
+            delivery_type,
             COUNT(*) AS count,
             SUM(COALESCE(subtotal, 0) - COALESCE(discount, 0) + COALESCE(shipping_cost, 0)) AS revenue,
             SUM(COALESCE(subtotal, 0)) AS subtotal,
@@ -78,12 +86,14 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
             SUM(COALESCE(discount, 0)) AS discount
           FROM orders
           WHERE (tenant_id = ? OR tenant_id IS NULL)
-          GROUP BY status, wilaya_ar
+          GROUP BY status, wilaya_ar, wilaya_code, delivery_type
         `).bind(tenantId)
       : env.DB.prepare(`
           SELECT
             status,
             wilaya_ar,
+            wilaya_code,
+            delivery_type,
             COUNT(*) AS count,
             SUM(COALESCE(subtotal, 0) - COALESCE(discount, 0) + COALESCE(shipping_cost, 0)) AS revenue,
             SUM(COALESCE(subtotal, 0)) AS subtotal,
@@ -91,7 +101,7 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
             SUM(COALESCE(discount, 0)) AS discount
           FROM orders
           WHERE tenant_id = ?
-          GROUP BY status, wilaya_ar
+          GROUP BY status, wilaya_ar, wilaya_code, delivery_type
         `).bind(tenantId);
 
     const { results: oRows } = await ordersStmt.all();
@@ -108,16 +118,28 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
       const disc = Number(r.discount || 0);
       const status = (r.status || 'pending').toLowerCase();
       const wilaya = r.wilaya_ar || 'غير محدد';
+      const wCode = r.wilaya_code || '';
+      const delType = (r.delivery_type || 'home').toLowerCase();
 
       ordersSummary.total_orders += count;
+      ordersSummary.sample_size += count;
+
+      if (delType === 'home' || delType === 'domicile') {
+        ordersSummary.delivery_type_breakdown.home += count;
+      } else {
+        ordersSummary.delivery_type_breakdown.office += count;
+      }
 
       if (status === 'confirmed') ordersSummary.confirmed_orders += count;
-      else if (status === 'delivered') ordersSummary.delivered_orders += count;
+      else if (status === 'delivered') {
+        ordersSummary.delivered_orders += count;
+        ordersSummary.delivered_revenue_dzd += rev;
+      }
       else if (status === 'shipped') ordersSummary.shipped_orders += count;
-      else if (status === 'cancelled') ordersSummary.cancelled_orders += count;
+      else if (status === 'cancelled' || status === 'returned' || status === 'rto') ordersSummary.cancelled_orders += count;
       else ordersSummary.pending_orders += count;
 
-      if (status !== 'cancelled') {
+      if (status !== 'cancelled' && status !== 'returned' && status !== 'rto') {
         ordersSummary.total_revenue_dzd += rev;
         ordersSummary.subtotal_dzd += sub;
         ordersSummary.shipping_collected_dzd += ship;
@@ -126,42 +148,87 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
       }
 
       if (!wilayaMap.has(wilaya)) {
-        wilayaMap.set(wilaya, { wilaya: wilaya, orders: 0, revenue: 0 });
+        wilayaMap.set(wilaya, {
+          wilaya: wilaya,
+          code: wCode,
+          orders: 0,
+          confirmed: 0,
+          delivered: 0,
+          cancelled: 0,
+          revenue: 0,
+          total_shipping: 0
+        });
       }
       const wNode = wilayaMap.get(wilaya);
       wNode.orders += count;
-      if (status !== 'cancelled') wNode.revenue += rev;
+      wNode.total_shipping += ship;
+      if (status === 'delivered') wNode.delivered += count;
+      if (status === 'confirmed' || status === 'shipped' || status === 'delivered') wNode.confirmed += count;
+      if (status === 'cancelled' || status === 'returned' || status === 'rto') wNode.cancelled += count;
+      if (status !== 'cancelled' && status !== 'returned' && status !== 'rto') wNode.revenue += rev;
     });
 
     if (ordersSummary.total_orders > 0) {
       ordersSummary.cancellation_rate = ((ordersSummary.cancelled_orders / ordersSummary.total_orders) * 100).toFixed(1) + '%';
       const confirmedTotal = ordersSummary.confirmed_orders + ordersSummary.shipped_orders + ordersSummary.delivered_orders;
       ordersSummary.confirmation_rate = ((confirmedTotal / ordersSummary.total_orders) * 100).toFixed(1) + '%';
+
+      const finishedOrders = ordersSummary.delivered_orders + ordersSummary.cancelled_orders;
+      if (finishedOrders > 0) {
+        ordersSummary.delivery_success_rate = ((ordersSummary.delivered_orders / finishedOrders) * 100).toFixed(1) + '%';
+      } else {
+        ordersSummary.delivery_success_rate = 'N/A (لا توجد طلبات منتهية بعد)';
+      }
     }
 
     if (validRevenueOrdersCount > 0) {
       ordersSummary.aov_dzd = Math.round(ordersSummary.total_revenue_dzd / validRevenueOrdersCount);
     }
 
-    ordersSummary.top_wilayas = Array.from(wilayaMap.values())
+    const allWilayas = Array.from(wilayaMap.values()).map(w => {
+      const fin = w.delivered + w.cancelled;
+      const delivRate = fin > 0 ? ((w.delivered / fin) * 100).toFixed(1) + '%' : 'N/A';
+      const confRate = w.orders > 0 ? ((w.confirmed / w.orders) * 100).toFixed(1) + '%' : '0.0%';
+      const avgShip = w.orders > 0 ? Math.round(w.total_shipping / w.orders) : 0;
+      return {
+        wilaya: w.wilaya,
+        code: w.code,
+        orders: w.orders,
+        confirmed: w.confirmed,
+        delivered: w.delivered,
+        cancelled: w.cancelled,
+        confirmation_rate: confRate,
+        delivery_success_rate: delivRate,
+        revenue_dzd: w.revenue,
+        avg_shipping_dzd: avgShip
+      };
+    });
+
+    ordersSummary.top_wilayas = allWilayas
       .sort((a, b) => b.orders - a.orders)
-      .slice(0, 5);
+      .slice(0, 6);
+
+    ordersSummary.wilayas_delivery_matrix = allWilayas
+      .sort((a, b) => b.orders - a.orders);
 
   } catch (err) {
     console.warn('[AI Orders Aggregation Warning]', err?.message);
   }
 
-  // 2. حساب إحصائيات المنتجات والمبيعات والتكلفة بالجملة (COGS)
+  // 2. حساب إحصائيات المنتجات والتكلفة بالجملة والتسعير الآمن (COGS & Unit Economics)
   let productsSummary = {
     total_products: 0,
     active_products: 0,
     out_of_stock_products: 0,
     total_inventory_retail_valuation_dzd: 0,
     total_inventory_wholesale_valuation_dzd: 0,
+    cogs_coverage_pct: '0.0%',
     catalog_items: [],
     top_selling_items: [],
     low_stock_alerts: []
   };
+
+  let totalProductsWithCogs = 0;
 
   try {
     const prodStmt = isMaster
@@ -184,6 +251,12 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
         }
       } catch (_) {}
 
+      if (costPrice != null) {
+        totalProductsWithCogs++;
+      } else {
+        unknownDataList.push(`سعر الجملة (COGS) للمنتج "${p.name}" غير مسجل`);
+      }
+
       if (stock <= 0) {
         productsSummary.out_of_stock_products++;
       } else if (stock <= 5) {
@@ -200,6 +273,24 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
       const grossMargin = (costPrice != null) ? (retailPrice - costPrice) : null;
       const marginPercent = (costPrice != null && retailPrice > 0) ? (((retailPrice - costPrice) / retailPrice) * 100).toFixed(1) + '%' : null;
 
+      // الحسابات المالية الدقيقة المبنية حصراً على البيانات الحقيقية بدون أرقام افتراضية (Zero Magic Numbers)
+      const minSafePrice = costPrice != null ? costPrice : null;
+      const maxSafeDiscount = (costPrice != null && grossMargin != null && grossMargin > 0) ? grossMargin : null;
+
+      // تصنيف ربحية المنتج المعتمد حصراً على الهامش الفعلي وحجم البيانات
+      let classification = 'INSUFFICIENT_DATA';
+      if (costPrice == null) {
+        classification = 'INSUFFICIENT_DATA';
+      } else if (grossMargin <= 0) {
+        classification = 'LOSING_MONEY';
+      } else if (marginPercent != null && parseFloat(marginPercent) < 15) {
+        classification = 'MARGIN_PRESSURE';
+      } else if (marginPercent != null && parseFloat(marginPercent) >= 40) {
+        classification = 'HIGHLY_PROFITABLE';
+      } else {
+        classification = 'PROFITABLE';
+      }
+
       productsSummary.catalog_items.push({
         id: p.id,
         name: p.name,
@@ -208,14 +299,21 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
         stock: stock,
         active: Boolean(p.active),
         gross_margin_dzd: grossMargin,
-        gross_margin_percent: marginPercent
+        gross_margin_percent: marginPercent,
+        estimated_min_safe_price_dzd: minSafePrice,
+        estimated_max_safe_discount_dzd: maxSafeDiscount,
+        classification: classification
       });
     });
 
+    if (productsSummary.total_products > 0) {
+      productsSummary.cogs_coverage_pct = ((totalProductsWithCogs / productsSummary.total_products) * 100).toFixed(1) + '%';
+    }
+
     // جلب عينة من مبيعات المنتجات من items_json
     const itemsStmt = isMaster
-      ? env.DB.prepare(`SELECT items_json FROM orders WHERE (tenant_id = ? OR tenant_id IS NULL) AND status != 'cancelled' ORDER BY id DESC LIMIT 200`).bind(tenantId)
-      : env.DB.prepare(`SELECT items_json FROM orders WHERE tenant_id = ? AND status != 'cancelled' ORDER BY id DESC LIMIT 200`).bind(tenantId);
+      ? env.DB.prepare(`SELECT items_json FROM orders WHERE (tenant_id = ? OR tenant_id IS NULL) AND status NOT IN ('cancelled', 'returned', 'rto') ORDER BY id DESC LIMIT 200`).bind(tenantId)
+      : env.DB.prepare(`SELECT items_json FROM orders WHERE tenant_id = ? AND status NOT IN ('cancelled', 'returned', 'rto') ORDER BY id DESC LIMIT 200`).bind(tenantId);
 
     const { results: iRows } = await itemsStmt.all();
     const itemSalesMap = new Map();
@@ -266,7 +364,7 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
     }
   } catch (_) {}
 
-  // 4. تحليلات الحملات الإعلانية ومزامنة Meta Graph API
+  // 4. تحليلات الحملات الإعلانية ومزامنة Meta Graph API مع الربط التجاري
   let marketingSummary = {
     meta_connected: false,
     ad_spend_dzd: 0,
@@ -275,6 +373,7 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
     overall_ctr: '0.00%',
     overall_cr: '0.00%',
     campaigns: [],
+    creatives_analysis: [],
     notice: 'بيانات الحملات الإعلانية غير مربوطة حالياً.'
   };
 
@@ -288,18 +387,50 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
       marketingSummary.overall_cpa_dzd = Number(d.summary?.overall_cpa_dzd || 0);
       marketingSummary.overall_ctr = String(d.summary?.overall_ctr || '0.00%');
       marketingSummary.overall_cr = String(d.summary?.overall_cr || '0.00%');
-      marketingSummary.campaigns = (d.campaigns || []).slice(0, 6).map(c => ({
-        name: c.name,
-        spend_dzd: c.spend_dzd,
-        purchases: c.purchases,
-        revenue_dzd: c.revenue_dzd,
-        cpa_dzd: c.cpa_dzd,
-        roas: c.roas,
-        status: c.status_badge
-      }));
+
+      const creativeList = [];
+
+      marketingSummary.campaigns = (d.campaigns || []).slice(0, 10).map(c => {
+        (c.adsets || []).forEach(s => {
+          (s.ads || []).forEach(a => {
+            creativeList.push({
+              campaign_name: c.name,
+              adset_name: s.name,
+              creative_name: a.name,
+              spend_dzd: a.spend_dzd,
+              impressions: a.impressions,
+              clicks: a.clicks,
+              ctr: a.ctr,
+              purchases: a.purchases,
+              confirmed_orders: a.confirmed_orders,
+              revenue_dzd: a.revenue_dzd,
+              cpa_dzd: a.cpa_dzd,
+              roas: a.roas,
+              estimated_profit_dzd: a.estimated_profit_dzd
+            });
+          });
+        });
+
+        return {
+          name: c.name,
+          spend_dzd: c.spend_dzd,
+          impressions: c.impressions,
+          clicks: c.clicks,
+          ctr: c.ctr,
+          purchases: c.purchases,
+          confirmed_orders: c.confirmed_orders,
+          revenue_dzd: c.revenue_dzd,
+          cpa_dzd: c.cpa_dzd,
+          roas: c.roas,
+          estimated_profit_dzd: c.estimated_profit_dzd,
+          status: c.status_badge
+        };
+      });
+
+      marketingSummary.creatives_analysis = creativeList.slice(0, 15);
 
       if (d.meta_connected) {
-        marketingSummary.notice = 'بيانات Meta Ads متصلة ومحدثة.';
+        marketingSummary.notice = 'بيانات Meta Ads متصلة ومحدثة مع تتبع الإسناد الفعلي.';
       } else if (d.meta_error) {
         marketingSummary.notice = `حساب Meta غير متصل: ${d.meta_error}`;
       }
@@ -308,11 +439,92 @@ async function aggregateStoreData(env, tenantId = DEFAULT_MASTER_TENANT_ID, pres
     console.warn('[AI Marketing Aggregation Warning]', err?.message);
   }
 
+  // 5. الحسابات المالية الدقيقة لـ CFO (CFO Financial Engine & True Net Delivered Profit)
+  let totalDeliveredCogs = 0;
+  let hasMissingCogsForDelivered = false;
+
+  // جلب الطلبات المستلمة لحساب تكلفة COGS الفعلية
+  try {
+    const delOrdersStmt = isMaster
+      ? env.DB.prepare(`SELECT items_json FROM orders WHERE (tenant_id = ? OR tenant_id IS NULL) AND status = 'delivered'`).bind(tenantId)
+      : env.DB.prepare(`SELECT items_json FROM orders WHERE tenant_id = ? AND status = 'delivered'`).bind(tenantId);
+    const { results: delRows } = await delOrdersStmt.all();
+
+    const cogsLookup = new Map();
+    productsSummary.catalog_items.forEach(ci => {
+      if (ci.wholesale_cost_dzd != null) cogsLookup.set(ci.name.trim().toLowerCase(), ci.wholesale_cost_dzd);
+    });
+
+    (delRows || []).forEach(dr => {
+      try {
+        const items = JSON.parse(dr.items_json || '[]');
+        if (Array.isArray(items)) {
+          items.forEach(it => {
+            const name = (it.title || it.name || '').trim().toLowerCase();
+            const qty = Number(it.qty || 1);
+            if (cogsLookup.has(name)) {
+              totalDeliveredCogs += (cogsLookup.get(name) * qty);
+            } else {
+              hasMissingCogsForDelivered = true;
+            }
+          });
+        }
+      } catch (_) {}
+    });
+  } catch (_) {}
+
+  const adSpend = marketingSummary.ad_spend_dzd || 0;
+  const deliveredRev = ordersSummary.delivered_revenue_dzd;
+  const netDeliveredProfit = (deliveredRev > 0 || adSpend > 0)
+    ? (deliveredRev - totalDeliveredCogs - adSpend)
+    : 0;
+
+  const deliveredCAC = (adSpend > 0 && ordersSummary.delivered_orders > 0)
+    ? Math.round(adSpend / ordersSummary.delivered_orders)
+    : (adSpend === 0 ? 0 : null);
+
+  const financialSnapshot = {
+    gross_revenue_dzd: ordersSummary.total_revenue_dzd,
+    delivered_revenue_dzd: deliveredRev,
+    subtotal_dzd: ordersSummary.subtotal_dzd,
+    shipping_collected_dzd: ordersSummary.shipping_collected_dzd,
+    discounts_given_dzd: ordersSummary.discounts_given_dzd,
+    total_delivered_cogs_dzd: totalDeliveredCogs,
+    ad_spend_dzd: adSpend,
+    net_delivered_profit_dzd: netDeliveredProfit,
+    delivered_cac_dzd: deliveredCAC,
+    has_partial_cogs: hasMissingCogsForDelivered,
+    meta_connected: marketingSummary.meta_connected
+  };
+
+  // 6. محرك الأولويات الآلي (Automated Priority Engine)
+  const priorityList = [];
+  if (adSpend > 0 && ordersSummary.delivered_orders === 0 && ordersSummary.total_orders > 0) {
+    priorityList.push({ level: 'P0', title: 'خطر مالي مباشر: إنفاق إعلاني بدون طلبيات مستلمة حتى الآن', reason: 'نزيف مالي يتطلب فحص جودة الحملات وسرعة التأكيد' });
+  }
+  if (productsSummary.low_stock_alerts.length > 0) {
+    priorityList.push({ level: 'P1', title: `تنبيه مخزون منخفض لـ ${productsSummary.low_stock_alerts.length} منتجات`, reason: 'خطر نفاد المخزون وتوقف المبيعات' });
+  }
+  if (totalProductsWithCogs < productsSummary.total_products) {
+    priorityList.push({ level: 'P2', title: 'بيانات تسعير ناقصة: أسعار الجملة (COGS) غير مكتملة', reason: 'ضرورة إدخال أسعار الجملة لحساب صافي الربح بدقة 100%' });
+  }
+
+  // تجميع الكائن التجاري الموحد (Commercial Snapshot)
   return {
+    period: preset,
     orders: ordersSummary,
     products: productsSummary,
     reviews: reviewsSummary,
-    marketing: marketingSummary
+    marketing: marketingSummary,
+    financials: financialSnapshot,
+    priorities: priorityList,
+    unknowns: unknownDataList,
+    data_quality: {
+      sample_size_orders: ordersSummary.total_orders,
+      cogs_coverage_pct: productsSummary.cogs_coverage_pct,
+      meta_sync_active: marketingSummary.meta_connected,
+      confidence_rating: ordersSummary.total_orders >= 30 ? 'High' : (ordersSummary.total_orders >= 10 ? 'Moderate' : 'Low (عينة صغيرة)')
+    }
   };
 }
 
@@ -360,7 +572,7 @@ async function getOrderSnapshotForWhatsApp(env, tenantId = DEFAULT_MASTER_TENANT
 }
 
 /**
- * [ADMIN] المعالج الرئيسي للذكاء الاصطناعي التجاري والتسويقي
+ * [ADMIN] المعالج الرئيسي للذكاء الاصطناعي التجاري والتسويقي (Commercial & Marketing Commander)
  */
 export async function adminAiChat(env, params = {}, tenantId = DEFAULT_MASTER_TENANT_ID, authSession = null) {
   const mode = sanitize(params.mode, 50) || 'store_overview';
@@ -394,38 +606,201 @@ export async function adminAiChat(env, params = {}, tenantId = DEFAULT_MASTER_TE
     }
   }
 
-  // 3. بناء برومبت المستشار الخبير في التجارة وسيكولوجية المستهلك الجزائري
+  // 3. بناء برومبت القائد التجاري والمالي والتسويقي (Chief Commercial, Financial & Performance Marketing Officer)
   const systemInstruction = `
-أنت "SmartKiosk AI Business & Growth Copilot" — المستشار والخبير الاستراتيجي والمالي الأول (Senior Growth, Margin Architect & E-commerce Operations Consultant) لمتجر التجارة الإلكترونية الجزائري القائم على نظام الدفع عند الاستلام (COD - Cash On Delivery).
+أنت "SmartKiosk Chief Commercial, Financial & Performance Marketing Manager" — المدير المالي ورئيس التسويق الرقمي والقائد التجاري لمنصة التجارة الإلكترونية الجزائرية SmartKiosk (COD).
 
-أنت تجمع بين:
-1. التحليل المالي وحماية الأرباح (Profit Margin & Break-Even Protection):
-   • لديك قائمة المنتجات مع أسعار البيع بالديتاي (Retail Price)، والمخزون الحقيقي (Stock)، وأسعار الشراء والتكلفة بالجملة (Wholesale Cost Price) لكل منتج محدد.
-   • مهمتك الجوهرية: حماية التاجر من الوقوع في الخسارة!
-   • عند اقتراح أو تقييم أي عرض تسويقي (باقة منتجين، خصم كمي، أو توصيل مجاني):
-     احسب نقطة التعادل وصافي الربح بعد خصم:
-     [سعر البيع المقترح] - ([سعر الجملة] × الكمية) - [تكلفة التوصيل المجاني إن وُجدت، تقريباً 500-800 دج] - [تكلفة الإعلان المتوقعة لكل طلبية مسلّمة Delivered CPA] - [نسبة مخاطر الراجع وعدم الاستلام].
-   • إذا كان العرض يسبب خسارة أو هامش ربح غير آمن، حذّر التاجر فوراً واقترح عليه السعر الأمثل الذي يضمن ربحه الصافي.
+==================================================
+🎯 1. الفلسفة والقاعدة الذهبية لـ SMARTKIOSK
+==================================================
+1. لا تعتبر:
+   - كثرة الطلبات = نجاح
+   - كثرة الرسائل أو النقرات = نجاح
+   - CTR مرتفع = نجاح
+   - CPC منخفض = نجاح
+   - ROAS مرتفع = نجاح
+   - Revenue مرتفع = نجاح
+2. النجاح الحقيقي الأوحد هو: **NET DELIVERED PROFIT** (الربح الصافي الفعلي الناتج عن الطلبات التي تم تسليمها واستلام ثمنها بعد خصم كافة التكاليف الحقيقية).
+3. لا تتخذ قراراً تجارياً أو إعلانياً مهماً بناءً على Metric واحدة معزولة.
 
-2. الخبرة الميدانية العميقة بسيكولوجية المستهلك الجزائري:
-   • الحذر والتردد: التأكيد على حق المعاينة قبل الدفع والضمان لرفع نسبة الاستلام.
-   • سرعة التأكيد الهاتفي: الاتصال خلال 15-30 دقيقة يرفع نسبة التسليم بنسبة 30%.
-   • جغرافيا الولايات: تفضيل ولايات المركز لسرعة التوصيل، والتوصيل للمكتب (Stop Desk) لولايات الجنوب لتقليل تكلفة الشحن.
-   • التسعير النفسي الجزائري: أسعار مثل 2900 دج، 3900 دج، 4800 دج، أو "اشترِ 2 والتوصيل مجاني".
+==================================================
+🛡️ 2. منع اختراع المعلومات ومنظومة الوسوم المعرفية الـ 7 (Epistemic Tags)
+==================================================
+قاعدة صارمة غير قابلة للتفاوض: ممنوع اختراع أي رقم، سعر جملة، تكلفة شحن، تكلفة إرجاع، بيانات Meta، أو أرقام غير موجودة في البيانات.
+إذا كانت المعلومة غير موجودة أو حجم العينة صغيراً جداً، صرح بوضوح: "🔴 UNKNOWN — حجم العينة غير كافٍ / لا توجد بيانات" ولا تصدر قراراً جازماً بلا أدلة.
 
-3. الذاكرة المستمرة وعدم النسيان:
-   • أنت في جلسة استشارية مستمرة مع التاجر، تذكر النقاشات والمنتجات والأرقام السابقة في المحادثة وواصل الاستشارة دون نسيان السياق السابق.
+استخدم الوسوم الـ 7 في كافة تحليلاتك لتوضيح طبيعة ومصدر كل رقم واستنتاج:
+• 🟢 FACT: بيانات حقيقية مسجلة ومثبتة في قاعدة بيانات المتجر (طلبات، مخزون، أسعار، أحداث، مزامنة Meta).
+• 🔵 CALCULATED: رقم تم حسابه رياضياً من بيانات المتجر الحقيقية (مثل Gross Margin، Delivery Rate %).
+• 🟣 HISTORICAL BASELINE: خط أساس تاريخي ديناميكي مستخرج من سجلات المتجر لنفس المنتج/الحملة/الولاية خلال فترات سابقة.
+• 🟡 INFERENCE: استنتاج تحليلي مدعوم بالأرقام وسلوك المتجر وتغير الأداء.
+• 🟠 HYPOTHESIS: فرضية تسويقية وتجارية تحتاج إلى اختبار وتجربة عملية قبل تعميمها.
+• 🌐 EXTERNAL BENCHMARK: معيار خارجي عام موثق (يُصنف صراحة كمعيار خارجي ومفصول تماماً عن بيانات المتجر).
+• 🔴 UNKNOWN: معلومة غير مسجلة أو حجم العينة غير كافٍ (Insufficient Sample Size).
+
+==================================================
+💰 3. الإدارة المالية الشاملة والتمييز بين سعر الجملة والتجزئة (Wholesale vs Retail & Unit Economics)
+==================================================
+• معادلة صافي الربح الحقيقي للطلبية المسلمة (Deterministic Net Delivered Profit):
+  Net Delivered Profit = [Delivered Revenue الإيراد المستلم] - [Delivered COGS تكلفة الجملة للمستلم] - [Verified Ad Spend الإنفاق الإعلاني الموثق] - [Absorbed Shipping الشحن الممتص] - [Verified Confirmation Cost تكلفة التأكيد إن وُجدت] - [Verified Return Cost تكلفة الراجع إن وُجدت].
+  إذا كانت أي تكلفة غير مسجلة في بيانات المتجر، اعرضها فوراً كـ 🔴 UNKNOWN ولا تخترع رقماً افتراضياً.
+• إذا كان سعر الجملة (Wholesale Cost) غير مسجل: لا تخترع رقماً، بل اعرضه كـ 🔴 UNKNOWN واطلب من التاجر إدخاله لحساب الربحية بدقة.
+• حدد دائماً: Known Costs، Unknown Costs، و Estimated Net Profit Range.
+
+==================================================
+🛡️ 4. طبقة الحماية من الخسارة وتصنيف ربحية المنتجات (Loss Prevention Barrier & 6-Tier Product Matrix)
+==================================================
+صنف كل منتج بناءً على الأرقام:
+• 🟢 HIGHLY PROFITABLE (ربح صافٍ ممتاز وهامش واسع يسمح بالتوسع الإعلاني).
+• 🟢 PROFITABLE (مربح ومستقر بأرقام متزنة).
+• 🟡 MARGIN UNDER PRESSURE (الهامش تحت الضغط بسبب ارتفاع CAC أو مصاريف الشحن).
+• 🟠 HIGH RISK (مخاطرة عالية — نسبة إلغاء مرتفعة أو هامش ضيق جداً).
+• 🔴 LOSING MONEY (يستنزف الميزانية ويسبب خسارة صريحة بعد خصم الشحن والإعلانات).
+• ⚪ INSUFFICIENT DATA (بيانات غير كافية لتقييم الربحية بدقة).
+
+إذا كان أي عرض أو توسع سيؤدي لخسارة مالية، ارفع فوراً تحذير الخط الأحمر:
+"🔴 تحذير الخسارة (Loss Prevention Barrier): هذا العرض غير مربح بهذه الأرقام ويؤدي لتآكل رأس المال."
+
+==================================================
+📢 5. مسار تشخيص السلسلة الإعلانية وقيادة الحملات (Campaign Commander & Full Funnel Diagnostics)
+==================================================
+مسار التحليل الإلزامي:
+Campaign → Ad Set → Creative → Landing Page → Product → Checkout → Order → Confirmation → Shipping → Delivery → Net Profit.
+
+⚠️ مبدأ المعايير الديناميكية وتطور الأداء (Dynamic Baseline vs Hardcoded Rules):
+• ممنوع استخدام حدود ثابتة عامة (لا تقل أبداً: CTR < 1.5% سيئ أو Confirmation < 60% سيئ كقاعدة مطلقة!).
+• الأولوية دائماً لخط الأساس التاريخي (🟣 HISTORICAL BASELINE) لكل منتج وحملة وولاية على حدة.
+• اذكر دائماً: حجم العينة (Sample Size)، النافذة الزمنية (Time Window)، ومستوى الثقة الإحصائية (Confidence).
+• صنّف اتجاه الأداء بدقة:
+  [ Improving 🟢 | Stable 🟡 | Declining 🟠 | Volatile ⚠️ | Insufficient Data 🔴 ]
+
+مسار التشخيص المعتمد على المقارنة الديناميكية:
+• إذا كان الـ CTR الحالي أقل بنسبة ملحوظة من خط الأساس التاريخي (🟣 HISTORICAL BASELINE) مع عينة ظهور كافية → إشارة لتراجع جاذبية الـ Creative أو تشبع الجمهور (Creative Fatigue).
+• إذا كان الـ CTR مستقراً ولكن تحويل صفحة الهبوط يتراجع مقارنة بخط الأساس → إشارة لخلل في العرض (Offer)، وضوح السعر، أو تجربة الاستخدام.
+• إذا كان معدل التأكيد (Confirmation Rate) أقل من خط الأساس التاريخي للمنتج/الحملة → إشارة لضعف جودة الجمهور أو بطء الاتصال الهاتفي.
+• إذا كان معدل التسليم (Delivery Rate) أقل من خط الأساس التاريخي للولاية المعنية أو نوع الشحن → إشارة لمشاكل في التوصيل أو تراجع التزام الزبائن.
+• ⚠️ القاعدة الذهبية: لا توقف حملة لمجرد تراجع مؤشر وسيط (مثل CTR) طالما أن Net Delivered Profit ما زال يحقق أرباحاً صافية مجدية!
+
+==================================================
+💵 6. قائد إدارة الميزانية والتوسع الآمن (Budget Commander & Scale Management)
+==================================================
+• عند إعطائك ميزانية (مثل 10,000 دج): احسب CAC الأقصى المسموح به، عدد الطلبيات المستلمة المطلوبة للتعادل، وحدد 3 سيناريوهات:
+  1. السيناريو المحافظ (Conservative)
+  2. السيناريو المتوقع (Expected)
+  3. السيناريو المتفائل (Optimistic)
+• لا تقترح زيادة الميزانية (Scale) بمجرد ارتفاع ROAS أو عدد الطلبات! بل افحص: استقرار CPA، معدل التسليم مقارنة بالـ Baseline التاريخي، وصافي ربح موجب ومثبت لكل طلبية إضافية (Incremental Net Delivered Profit > 0) مع عينة إحصائية كافية.
+• 🔴 حد الخطر (Stop-Loss): حدد بدقة الرقم الذي إذا وصل إليه الـ CPA أو معدل الإلغاء يجب إيقاف الحملة فوراً.
+
+==================================================
+🎁 7. مستشار التسعير ومهندس العروض التجارية (AI Pricing Advisor & Offer Builder Scenarios)
+==================================================
+احسب واقترح لكل منتج: Minimum Safe Price، Recommended Retail Price، Promotion Price، و Maximum Safe Discount.
+وقارن دائماً بين سيناريوهات العروض بالأرقام:
+• Scenario A: سعر البيع + الشحن على العميل.
+• Scenario B: سعر البيع + شحن مجاني (يتحمله المتجر).
+• Scenario C: باقة قطعتين (Bundle) + شحن مجاني (رفع AOV وتوزيع CAC على قطعتين).
+• Scenario D: سعر البيع + هدية مجانية + شحن مجاني.
+احسب لكل سيناريو: السعر الإجمالي، تكلفة الجملة، مصاريف الشحن، الربح الإجمالي، والـ Max CAC الآمن.
+
+==================================================
+🧪 8. تحويل التوصيات إلى تجارب نمو (Growth Experiments Framework)
+==================================================
+صِغ كل فكرة بصيغة تجربة علمية قابلة للقياس:
+{ الفرضية HYPOTHESIS، التجربة TEST، المتغير VARIABLE، الميزانية BUDGET، المدة DURATION، المؤشر الأساسي PRIMARY KPI، شرط الإيقاف STOP-LOSS، والنتيجة المتوقعة EXPECTED OUTCOME }.
+
+==================================================
+🇩🇿 9. الفهم الميداني للسوق الجزائري (COD Realities)
+==================================================
+• الدفع عند الاستلام COD يتطلب: تأكيداً هاتفياً سريعاً، حق المعاينة عند الباب، وتوفير خيار الاستلام من المكتب (Stop Desk) لولايات الجنوب لتقليل مصاريف الشحن.
+• عامل أي نمط كفرضية قابلة للقياس والتحقق من بيانات المتجر الفعلية.
+
+==================================================
+==================================================
+🎯 10. محرك الأولويات الصارم (Priority Engine P0-P3)
+==================================================
+عند وجود عدة مشاكل أو قرارات، رتبها وفق سلم الأولويات التالي:
+• 🔴 P0 — خطر مالي مباشر: نزيف مالي، عروض خاسرة، أو إعلانات تستنزف الميزانية بصفر تسليم.
+• 🟠 P1 — يؤثر على الربحية الحالية: بطء التأكيد الهاتفي، نقص المخزون السريع، أو تراجع هوامش الشحن.
+• 🟢 P2 — فرصة نمو وتوسع: منتج ذو هامش ممتاز ونسبة تسليم مستقرة يستحق زيادة الميزانية.
+• ⚪ P3 — تحسين ثانوي: تجارب إضافية على النصوص أو تعديلات طفيفة.
+
+واذكر للتاجر دائماً:
+"إذا كان بإمكانك تنفيذ شيء واحد فقط اليوم، فهذا هو الشيء الذي يجب أن تفعله: [P0/P1 الأكثر إلحاحاً]."
+
+==================================================
+📋 11. الهيكل الإلزامي للقرارات والتوصيات النهائية (11-Part Actionable Decision)
+==================================================
+عند تقديم توصية استراتيجية أو قرار حملة، التزم بالهيكل التالي:
+🎯 DECISION / القرار: (حدد بوضوح أحد الإجراءات: SCALE | MAINTAIN | OPTIMIZE | TEST | REDUCE | STOP)
+💰 FINANCIAL IMPACT / الأثر المالي: (صافي الربح المستلم المتوقع Net Delivered Profit والهامش الإجمالي)
+📊 FACTS & BASELINES / الحقائق وخط الأساس: (مع وسوم 🟢 FACT و 🟣 HISTORICAL BASELINE وحجم العينة والنافذة الزمنية)
+🧮 CALCULATIONS / الحسابات: (مع وسوم 🔵 CALCULATED لاقتصاديات الوحدة: COGS، CAC، الشحن، مخاطر الراجع)
+🧠 DIAGNOSIS / التشخيص التجاري: (مع وسوم 🟡 INFERENCE لمكان التسرب في مسار التحويل Funnel Leak)
+📈 ACTION / الإجراء التنفيذي: (خطوات عملية واضحة مرتبة بالأولوية P0-P3)
+🧪 EXPERIMENT / خطة الاختبار: (مع وسوم 🟠 HYPOTHESIS {الفرضية، المتغير، الميزانية، المؤشر، شرط الإيقاف})
+🔴 STOP-LOSS / حد الخطر: (سقف الخسارة أو تكلفة الإعلان التي نوقف عندها فوراً)
+⚠️ RISK / المخاطر: (النقاط الواجب مراقبتها: التدفق النقدي، المخزون، تشبع الجمهور)
+🧠 CONFIDENCE & SAMPLE / نسبة الثقة وحجم العينة: (النسبة المئوية بناءً على حجم وتاريخ البيانات)
+❓ UNKNOWN DATA / البيانات الناقصة: (مع وسوم 🔴 UNKNOWN للبيانات المطلوب من التاجر جمعها أو إدخالها)
+
+عندما يسأل التاجر "ماذا أفعل الآن؟":
+ابدأ فوراً بقسم:
+🔥 ACTION NOW:
+1. افعل: ...
+2. أوقف: ...
+3. اختبر: ...
+4. خصص ميزانية: ...
+5. راقب: ...
+6. Stop-Loss (حد الخطر): ...
+ثم استعرض التحليل المالي والمقارنة بخط الأساس التاريخي.
 `.trim();
 
   const isChatMode = (mode === 'chat');
 
   let userTaskPrompt = '';
   switch (mode) {
+    case 'daily_brief':
+      userTaskPrompt = `قم بدور "غرفة القيادة اليومية (Daily Commercial Brief)": أجب عن: 1. ما الذي حدث اليوم؟ 2. ما الذي يربح وما الذي يخسر مالياً؟ 3. ما أخطر مشكلة P0/P1؟ 4. ما الإجراء الفوري الواجب تنفيذه اليوم؟ مع تقييم التدفق المالي وحماية رأس المال.`;
+      break;
+    case 'weekly_review':
+      userTaskPrompt = `قم بدور "المراجعة الأسبوعية للأعمال (Weekly Business Review)": قارن الأسبوع الحالي بخط الأساس التاريخي (🟣 HISTORICAL BASELINE): الإيرادات، صافي الربح المستلم، Delivered CAC، نسبة التسليم، أفضل/أسوأ المنتجات والحملات والولايات، وما يجب تغييره الأسبوع القادم.`;
+      break;
+    case 'monthly_review':
+      userTaskPrompt = `قم بدور "المراجعة الشهرية الشاملة واستراتيجية النمو (Monthly Strategic Review)": حلل محفظة المنتجات، كفاءة رأس المال والميزانية الإعلانية، هوامش الربح الحقيقية، المخاطر الهيكلية، وخطة الشهر القادم لتحقيق نمو مستدام ومربح.`;
+      break;
+    case 'financial_commander':
+      userTaskPrompt = `قم بدور "المدير المالي (Chief Financial Officer - CFO)": حلل اقتصاديات الوحدة (Unit Economics) للمتجر: Gross Margin، تكاليف الشحن الممتصة، Delivered CAC، صافي الربح المستلم الفعلي (Net Delivered Profit)، ونقطة التعادل (Break-even). وافصل بدقة بين الحقائق 🟢 FACT والحسابات 🔵 CALCULATED والمجهول 🔴 UNKNOWN.`;
+      break;
+    case 'campaign_commander':
+      userTaskPrompt = `قم بدور "قائد الحملات الإعلانية والتسويقية (AI Campaign Commander)": حلل الحملات والمجموعات والإعلانات الإبداعية (Creatives) ومؤشرات CTR و CPA و ROAS والتحويلات. حدد ماذا نوقف، ماذا نوسع، وما الإعلانات التي تستنزف الميزانية، واربط الأداء بصافي الربح المستلم. قدم القرار وفق الهيكل التجاري الإلزامي.`;
+      break;
+    case 'pricing_advisor':
+      userTaskPrompt = `قم بدور "مستشار التسعير وحماية الأرباح (AI Pricing Advisor)": حلل قائمة المنتجات وأسعار التكلفة بالجملة (cost_price) والتجزئة. احسب Minimum Safe Price، Recommended Retail Price، Promotion Price، و Maximum Safe Discount لكل منتج، وحدد الخطوط الحمراء لمنع الخسارة مع الشرح الرياضي.`;
+      break;
+    case 'offer_builder':
+      userTaskPrompt = `قم بدور "مهندس العروض التجارية (AI Offer Builder)": ابنِ وقارن بين سيناريوهات العروض (العرض أ: السعر الأساسي، العرض ب: التوصيل المجاني، العرض ج: باقة قطعتين Bundle، العرض د: هدية + شحن مجاني). احسب الهوامش، تكلفة الإعلان المقبولة (Max CAC)، ونقطة التعادل وسمِّ العرض الفائز تجارياً مع توضيح المخاطر.`;
+      break;
+    case 'budget_commander':
+      userTaskPrompt = `قم بدور "قائد إدارة الميزانية وحماية رأس المال (Budget Commander)": التاجر يسألك عن توزيع ميزانية إعلانية (مثلاً 10,000 أو 20,000 دج). ابنِ 3 سيناريوهات: المحافظ (Conservative)، المتوقع (Base)، والمتفائل (Optimistic). حدد ميزانية التوسع، ميزانية الاختبار، الاحتياطي، وسقف الخسارة (Stop-Loss).`;
+      break;
+    case 'product_profitability':
+      userTaskPrompt = `قم بدور "مدير محفظة المنتجات والربحية (Product Portfolio Manager)": صنّف المنتجات وفق مصفوفة الربحية الـ 6 (HIGHLY PROFITABLE، PROFITABLE، MARGIN PRESSURE، HIGH RISK، LOSING MONEY، INSUFFICIENT DATA). حدد المنتجات الجديرة بالتوسع، والمنتجات الخاسرة الواجب إيقافها، والمنتجات الناقصة البيانات.`;
+      break;
+    case 'delivery_intelligence':
+      userTaskPrompt = `قم بدور "محلل استخبارات التوصيل والولايات (Delivery & Wilayas Intelligence)": حلل مصفوفة الولايات الـ 58 والتسليم للمنزل مقابل المكتب (Stop Desk). حدد الولايات الأعلى ربحية وتسليماً، والولايات عالية المخاطر أو ذات تكلفة الإرجاع المرتفعة، واقترح استراتيجيات شحن تقلل الهدر المالي.`;
+      break;
+    case 'inventory_risk':
+      userTaskPrompt = `قم بدور "مدير حماية المخزون ورأس المال (Inventory & Stock Risk Manager)": اربط وتيرة المبيعات (Sales Velocity) بالمخزون المتبقي ومعدل الإنفاق الإعلاني. أطلق تحذيرات للمنتجات ذات المخزون المنخفض قبل التوسع الإعلاني لمنع نفاد المخزون وهدر الميزانية.`;
+      break;
+    case 'experiment_manager':
+    case 'growth_experiments':
+      userTaskPrompt = `قم بدور "مدير التجارب التسويقية والنمو العلمي (Experiment & Growth Manager)": صِغ تجارب نمو منضبطة تشمل: {الفرضية HYPOTHESIS، المتغير VARIABLE، التحكم CONTROL، الميزانية BUDGET، المدة DURATION، المؤشر الأساسي PRIMARY KPI، شرط الإيقاف STOP-LOSS، والنتيجة المتوقعة}. وحدد آلية التعلم (KEEP | SCALE | MODIFY | KILL).`;
+      break;
     case 'store_overview':
-      userTaskPrompt = `قم بتحليل شامل لأداء المتجر العام: المبيعات، الطلبيات، نسبة التأكيد والإلغاء، المخزون، وأهم 3 توصيات استراتيجية لزيادة المبيعات وتحسين نسبة الاستلام والأرباح.`;
+      userTaskPrompt = `قم بتحليل شامل لأداء المتجر العام: المبيعات، الطلبيات، نسبة التأكيد والإلغاء، مصفوفة الولايات، المخزون، وأهم 3 قرارات استراتيجية لزيادة المبيعات وتحسين نسبة الاستلام والأرباح الصافية.`;
       break;
     case 'sales_analysis':
-      userTaskPrompt = `قم بتحليل تفصيلي للمبيعات والإيرادات: متوسط قيمة الطلب (AOV)، نسبة الإلغاء، الولايات الأكثر طلباً، وتحديد هوامش الربح ونقاط القوة والضعف.`;
+      userTaskPrompt = `قم بتحليل تفصيلي للمبيعات والإيرادات: متوسط قيمة الطلب (AOV)، نسبة الإلغاء، الولايات الأكثر ربحية وتسليماً، وتحديد هوامش الربح الحقيقية ونقاط الهدر.`;
       break;
     case 'product_performance':
       userTaskPrompt = `قم بتحليل أداء المنتجات: المنتجات الأكثر مبيعاً، المنتجات الراكدة، تنبيهات المخزون المنخفض، وأسعار الشراء بالجملة وهوامش الربح لكل منتج واقتراح باقات وعروض رابحة.`;
@@ -437,7 +812,7 @@ export async function adminAiChat(env, params = {}, tenantId = DEFAULT_MASTER_TE
       userTaskPrompt = `قم بتحليل الهدر المالي: أين يخسر المتجر المال؟ (مثل الولايات ذات نسب الإلغاء العالية، المنتجات المنخفضة المخزون، أو الحملات ذات الـ CPA المرتفع) واقترح إعادة توزيع أفضل للميزانية بدون خسارة.`;
       break;
     case 'action_plan':
-      userTaskPrompt = `ماذا أفعل اليوم؟ قدم خطة عمل يومية تنفيذية من 3 إلى 5 مهام ذات أولوية قصوى لزيادة المبيعات وتحسين نسبة التأكيد وحل المشاكل القائمة.`;
+      userTaskPrompt = `ماذا أفعل اليوم؟ قدم خطة عمل يومية تنفيذية من 3 إلى 5 مهام تجارية ذات أولوية قصوى لزيادة المبيعات وتحسين نسبة التأكيد وحل المشاكل القائمة.`;
       break;
     case 'whatsapp_draft':
       userTaskPrompt = customPrompt
@@ -446,7 +821,7 @@ export async function adminAiChat(env, params = {}, tenantId = DEFAULT_MASTER_TE
       break;
     case 'chat':
     default:
-      userTaskPrompt = customPrompt || `حلل الوضع العام للمتجر وقدم أهم الملاحظات والاستشارات.`;
+      userTaskPrompt = customPrompt || `حلل الوضع التجاري للمتجر وقدم أهم التوصيات والقرارات المالية.`;
       break;
   }
 
@@ -484,15 +859,18 @@ export async function adminAiChat(env, params = {}, tenantId = DEFAULT_MASTER_TE
       ]
     });
   } else {
-    // في أوضاع التقارير المهيكلة: فرض صيغة JSON وافية
+    // في أوضاع التقارير المهيكلة: فرض صيغة JSON وافية ومعيارية لنظام التشغيل التجاري
     const jsonInstructions = `
 الإجابة حصراً بصيغة JSON وفق البنية المحددة بدقة دون أي اختصار مخل:
 {
+  "decision": "SCALE | MAINTAIN | OPTIMIZE | TEST | REDUCE | STOP | INSUFFICIENT_DATA",
+  "top_priority_today": "أهم إجراء فردي يجب تنفيذه اليوم فوراً لحماية الأرباح ورأس المال...",
+  "financial_impact": "الأثر المالي الصافي على Net Delivered Profit...",
   "summary": "موجز تحليلي واستراتيجي صريح ومفصل...",
   "health": "good | warning | critical | insufficient_data",
   "key_metrics": [
     { "label": "إجمالي الإيرادات", "value": "125,000 دج", "status": "positive" },
-    { "label": "نسبة التأكيد", "value": "78%", "status": "neutral" }
+    { "label": "صافي الربح المستلم", "value": "35,000 دج", "status": "positive" }
   ],
   "insights": [
     "ملاحظة وتحليل 1...",
@@ -510,6 +888,15 @@ export async function adminAiChat(env, params = {}, tenantId = DEFAULT_MASTER_TE
       "action": "الإجراء المقترح تنفيذه من الأدمن"
     }
   ],
+  "experiment": {
+    "hypothesis": "الفرضية التسويقية...",
+    "test": "التجربة العملية...",
+    "variable": "المتغير المراد اختباره...",
+    "budget": "الميزانية المخصصة...",
+    "duration": "المدة المقترحة...",
+    "primary_kpi": "المؤشر الأساسي...",
+    "stop_loss": "حد الإيقاف الفوري لمنع الخسارة..."
+  },
   "whatsapp_draft": {
     "target_case": "تأكيد الطلب | تذكير | متابعة شحن",
     "customer_name": "اسم العميل",

@@ -1,5 +1,5 @@
 import { sanitize } from '../utils/sanitize.js';
-import { generateToken, sha256 } from '../utils/auth.js';
+import { generateToken, sha256, DEFAULT_MASTER_TENANT_ID } from '../utils/auth.js';
 
 /**
  * دالة مساعدة لعمل هاش للبيانات الشخصية قبل إرسالها للفيسبوك
@@ -52,26 +52,38 @@ export function formatFbc(fbcVal, creationTime) {
 }
 
 /**
- * الإرسال الفعلي لحدث إلى Facebook CAPI
+ * الإرسال الفعلي لحدث إلى Facebook CAPI مع العزل الصارم للمستأجر (Tenant Context Scoped)
  * هذه الدالة ستُنفَّذ في الخلفية عبر ctx.waitUntil()
  */
-export async function sendCapiEvent(env, eventName, eventData, userData = {}, requestObj) {
+export async function sendCapiEvent(env, eventName, eventData, userData = {}, requestObj, tenantId = DEFAULT_MASTER_TENANT_ID) {
   try {
-    // 1. تحقق مما إذا كان CAPI مفعلاً
-    const { results } = await env.DB.prepare(`
-      SELECT key, value FROM settings WHERE key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id', 'fb_test_event_code', 'test_event_code')
-    `).all();
+    // 1. استعلام الإعدادات المعزولة للمستأجر
+    const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+    const stmt = isMaster
+      ? env.DB.prepare(`
+          SELECT key, value FROM settings
+          WHERE (tenant_id = ? OR tenant_id IS NULL)
+            AND key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id', 'fb_test_event_code', 'test_event_code')
+        `).bind(tenantId)
+      : env.DB.prepare(`
+          SELECT key, value FROM settings
+          WHERE tenant_id = ?
+            AND key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id', 'fb_test_event_code', 'test_event_code')
+        `).bind(tenantId);
+
+    const { results } = await stmt.all();
 
     const settings = {};
-    results.forEach(r => settings[r.key] = r.value);
+    (results || []).forEach(r => settings[r.key] = r.value);
 
     const pixelId = settings.fb_pixel_id || settings.pixel_id;
 
     if (settings.capi_enabled !== 'true' || !settings.fb_capi_token || !pixelId) {
       console.log('[CAPI Diagnostic Check]', {
+        tenant_id: tenantId,
         capi_enabled: settings.capi_enabled,
-        has_token: !!settings.fb_capi_token,
-        has_pixel_id: !!pixelId,
+        has_token: !settings.fb_capi_token,
+        has_pixel_id: !pixelId,
         aborted: true
       });
       return; // غير مفعل أو غير مكتمل الإعدادات
@@ -189,14 +201,25 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
 /**
  * [ADMIN] فحص اتصال CAPI وإرسال حدث اختباري
  */
-export async function adminCapiTest(env, params, request) {
+export async function adminCapiTest(env, params, request, tenantId = DEFAULT_MASTER_TENANT_ID) {
   try {
-    const { results } = await env.DB.prepare(`
-      SELECT key, value FROM settings WHERE key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id')
-    `).all();
+    const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+    const stmt = isMaster
+      ? env.DB.prepare(`
+          SELECT key, value FROM settings
+          WHERE (tenant_id = ? OR tenant_id IS NULL)
+            AND key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id')
+        `).bind(tenantId)
+      : env.DB.prepare(`
+          SELECT key, value FROM settings
+          WHERE tenant_id = ?
+            AND key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id')
+        `).bind(tenantId);
+
+    const { results } = await stmt.all();
 
     const settings = {};
-    results.forEach(r => settings[r.key] = r.value);
+    (results || []).forEach(r => settings[r.key] = r.value);
 
     const pixelId = settings.fb_pixel_id || settings.pixel_id;
 

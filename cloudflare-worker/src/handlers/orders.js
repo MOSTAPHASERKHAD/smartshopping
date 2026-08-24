@@ -179,6 +179,8 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
   // ── معالجة الكوبون (على السعر الحقيقي داخل متجر التاجر) ──
   let finalDiscount = 0;
+  let appliedCouponId = null;
+
   if (couponCode) {
     const couponStmt = isMaster
       ? env.DB.prepare(`SELECT id, discount_type, discount_value, min_order, max_uses, used_count, expires_at FROM coupons WHERE code = ? AND active = 1 AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(couponCode, tenantId)
@@ -195,13 +197,9 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
       finalDiscount = couponRow.discount_type === 'percent'
         ? realSubtotal * (couponRow.discount_value / 100)
         : couponRow.discount_value;
-
-      // زَد العداد بعد قبول الطلب
-      const updateCouponStmt = isMaster
-        ? env.DB.prepare(`UPDATE coupons SET used_count = used_count + 1 WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`).bind(couponRow.id, tenantId)
-        : env.DB.prepare(`UPDATE coupons SET used_count = used_count + 1 WHERE id = ? AND tenant_id = ?`).bind(couponRow.id, tenantId);
-
-      await updateCouponStmt.run();
+      appliedCouponId = couponRow.id;
+    } else if (couponRow && couponRow.max_uses > 0 && couponRow.used_count >= couponRow.max_uses) {
+      return { ok: false, error: 'تم استنفاد هذا الكوبون بالكامل' };
     }
   }
 
@@ -236,6 +234,32 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
   const shippingNote = isFreeShipping ? (hasTierFreeShipping ? 'شحن مجاني (عرض ترويجي)' : 'توصيل مجاني') : shippingCalc.shippingNote;
   const deliveryCompany = shippingCalc.deliveryCompany || 'yalidine';
 
+  // ── حجز الكوبون ذرياً قبل كتابة الطلب (Atomic Concurrency Protection) ──
+  if (appliedCouponId) {
+    const updateCouponStmt = isMaster
+      ? env.DB.prepare(`
+          UPDATE coupons
+          SET used_count = used_count + 1
+          WHERE id = ?
+            AND active = 1
+            AND (max_uses = 0 OR used_count < max_uses)
+            AND (tenant_id = ? OR tenant_id IS NULL)
+        `).bind(appliedCouponId, tenantId)
+      : env.DB.prepare(`
+          UPDATE coupons
+          SET used_count = used_count + 1
+          WHERE id = ?
+            AND active = 1
+            AND (max_uses = 0 OR used_count < max_uses)
+            AND tenant_id = ?
+        `).bind(appliedCouponId, tenantId);
+
+    const couponUpdateRes = await updateCouponStmt.run();
+    if (!couponUpdateRes.meta || couponUpdateRes.meta.changes === 0) {
+      return { ok: false, error: 'تم استنفاد هذا الكوبون بالكامل' };
+    }
+  }
+
   // ── إنشاء معرّف الطلب ──
   const orderId   = generateOrderId();
   const createdAt = formatAlgeriaTime();
@@ -264,26 +288,39 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
       deliveryCompany, '',
     ).run();
   } catch (dbErr) {
-    // التوافقية العكسية في حال عدم تطبيق الميجريشن 0003 بعد
-    await env.DB.prepare(`
-      INSERT INTO orders (
-        tenant_id, order_id, created_at, name, phone,
-        wilaya_code, wilaya_ar, wilaya_en, municipality, delivery_type,
-        items_json, subtotal, shipping_cost, shipping_note, discount, coupon_code,
-        status, notes,
-        utm_source, utm_medium, utm_campaign, customer_id,
-        delivery_company, tracking_code
-      ) VALUES (
-        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
-      )
-    `).bind(
-      tenantId, orderId, createdAt, name, phone,
-      wilayaCode, wilayaAr, wilayaEn, municipality, deliveryType,
-      secureItemsJson, realSubtotal, shippingCost, shippingNote, finalDiscount, couponCode,
-      'pending', note,
-      utmSource, utmMedium, utmCampaign, customerId,
-      deliveryCompany, '',
-    ).run();
+    try {
+      // التوافقية العكسية في حال عدم تطبيق الميجريشن 0003 بعد
+      await env.DB.prepare(`
+        INSERT INTO orders (
+          tenant_id, order_id, created_at, name, phone,
+          wilaya_code, wilaya_ar, wilaya_en, municipality, delivery_type,
+          items_json, subtotal, shipping_cost, shipping_note, discount, coupon_code,
+          status, notes,
+          utm_source, utm_medium, utm_campaign, customer_id,
+          delivery_company, tracking_code
+        ) VALUES (
+          ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+        )
+      `).bind(
+        tenantId, orderId, createdAt, name, phone,
+        wilayaCode, wilayaAr, wilayaEn, municipality, deliveryType,
+        secureItemsJson, realSubtotal, shippingCost, shippingNote, finalDiscount, couponCode,
+        'pending', note,
+        utmSource, utmMedium, utmCampaign, customerId,
+        deliveryCompany, '',
+      ).run();
+    } catch (finalDbErr) {
+      // التراجع عن زيادة الكوبون في حال الفشل التام لكتابة الطلب في قاعدة البيانات
+      if (appliedCouponId) {
+        try {
+          const rollbackCouponStmt = isMaster
+            ? env.DB.prepare(`UPDATE coupons SET used_count = CASE WHEN used_count > 0 THEN used_count - 1 ELSE 0 END WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)`).bind(appliedCouponId, tenantId)
+            : env.DB.prepare(`UPDATE coupons SET used_count = CASE WHEN used_count > 0 THEN used_count - 1 ELSE 0 END WHERE id = ? AND tenant_id = ?`).bind(appliedCouponId, tenantId);
+          await rollbackCouponStmt.run();
+        } catch (_) {}
+      }
+      throw finalDbErr;
+    }
   }
 
   // ── إرسال حدث CAPI وتسجيل التحليلات في الخلفية (Non-blocking) ──
@@ -313,22 +350,22 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
           event_source_url: eventSourceUrl || undefined
         },
         { phone, email, fbc, fbp },
-        request
+        request,
+        tenantId
       )
     );
 
-    // ── إرسال إيميل تأكيد الطلب للعميل (إن وُجد) ──
+    // ── إرسال إيميل تأكيد الطلب للعميل (إن وُجد) مع التتبع والموثوقية ──
     if (isValidEmail(email)) {
       const formattedItems = secureItems.map(i => `${i.name} (x${i.qty})`).join('، ');
       ctx.waitUntil(
-        EmailProvider.sendOrderConfirmationEmail({
+        sendReliableOrderConfirmation(env, tenantId, {
           to: email,
           orderId: orderId,
           customerName: name,
           items: formattedItems,
           total: realSubtotal - finalDiscount + shippingCost,
           shippingNote: shippingNote || (shippingCost > 0 ? `${shippingCost} دج` : 'مجاني'),
-          env: env
         }).catch(err => {
           console.error('[EMAIL] Order confirmation failed', { order_id: orderId, error: err?.message });
         })
@@ -357,7 +394,97 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 }
 
 /**
- * إرسال إشعارات الطلب الجديد للموظفين / المشرفين عبر البريد الإلكتروني (Resend)
+ * إرسال إيميل تأكيد الطلب للعميل مع الحجز الذري ومنع التكرار (Order Confirmation)
+ */
+export async function sendReliableOrderConfirmation(env, tenantId, { to, orderId, customerName, items, total, shippingNote }) {
+  if (!isValidEmail(to) || !orderId) return { delivered: false, skipped: true };
+
+  const notifType = 'order_confirmation';
+  const idempotencyKey = `${tenantId}:${orderId}:${notifType}`;
+
+  try {
+    // 1. الحجز الذري لمنع التكرار (Atomic Reservation)
+    let canSend = true;
+    try {
+      const reserveStmt = env.DB.prepare(`
+        INSERT INTO notification_logs (
+          tenant_id, order_id, notification_type, idempotency_key, recipient, status, attempts, created_at, updated_at
+        ) VALUES (
+          ?, ?, ?, ?, ?, 'sending', 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+        )
+        ON CONFLICT(idempotency_key) DO UPDATE
+        SET status = 'sending',
+            attempts = notification_logs.attempts + 1,
+            updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+        WHERE notification_logs.status IN ('queued', 'retrying', 'failed')
+      `).bind(tenantId, orderId, notifType, idempotencyKey, to);
+
+      const reserveRes = await reserveStmt.run();
+      if (!reserveRes.meta || reserveRes.meta.changes === 0) {
+        canSend = false;
+        return { delivered: false, skipped: true, reason: 'ALREADY_SENT_OR_IN_FLIGHT' };
+      }
+    } catch (dbErr) {
+      console.error('[Notification Confirmation DB Error]', { order_id: orderId, error: dbErr?.message });
+    }
+
+    if (!canSend) return { delivered: false, skipped: true };
+
+    // 2. إرسال البريد عبر EmailProvider
+    const sendRes = await EmailProvider.sendOrderConfirmationEmail({
+      to,
+      orderId,
+      customerName,
+      items,
+      total,
+      shippingNote,
+      env
+    }).catch(err => {
+      console.error('[Email Error] Order confirmation transport exception:', { code: 'DISPATCH_ERROR' });
+      return { delivered: false, status: 'DISPATCH_ERROR' };
+    });
+
+    // 3. تحديث حالة السجل
+    try {
+      if (sendRes?.delivered) {
+        await env.DB.prepare(`
+          UPDATE notification_logs
+          SET status = 'sent',
+              provider = ?,
+              provider_msg_id = ?,
+              last_error = NULL,
+              updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          WHERE idempotency_key = ?
+        `).bind(sendRes.provider || 'resend', sendRes.id || null, idempotencyKey).run();
+
+        return { delivered: true, status: 'sent', id: sendRes.id };
+      } else {
+        const isTemporary = (sendRes?.status === 'DISPATCH_ERROR' || sendRes?.status === 'PROVIDER_ERROR');
+        const nextStatus = isTemporary ? 'retrying' : 'failed';
+        const errorMsg = sendRes?.code || sendRes?.status || 'DISPATCH_FAILED';
+
+        await env.DB.prepare(`
+          UPDATE notification_logs
+          SET status = ?,
+              last_error = ?,
+              updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          WHERE idempotency_key = ?
+        `).bind(nextStatus, errorMsg, idempotencyKey).run();
+
+        return { delivered: false, status: nextStatus, error: errorMsg };
+      }
+    } catch (dbUpdateErr) {
+      console.error('[Notification Confirmation Update DB Error]', { error: dbUpdateErr?.message });
+      return { delivered: !!sendRes?.delivered, status: sendRes?.delivered ? 'sent' : 'failed' };
+    }
+  } catch (err) {
+    console.error('[sendReliableOrderConfirmation Exception]', { order_id: orderId, error: err?.message });
+    return { delivered: false, status: 'failed', error: err?.message };
+  }
+}
+
+/**
+ * إرسال إشعارات الطلب الجديد للموظفين / المشرفين عبر البريد الإلكتروني (Resend) مع الحجز الذري
  */
 export async function dispatchOrderNotifications(env, tenantId, orderData, secureItems = [], filterType = 'all') {
   const result = {
@@ -377,7 +504,7 @@ export async function dispatchOrderNotifications(env, tenantId, orderData, secur
     const storeName = cfg.store_name || 'Smart Shopping';
     const formattedItems = secureItems.map(i => `${i.name} (x${i.qty})`).join('، ');
 
-    // 1. إشعارات البريد الإلكتروني (Resend)
+    // 1. إشعارات البريد الإلكتروني للمسؤول (Admin New Order Email) مع الحماية من التكرار
     const emailEnabled = cfg.notification_email_enabled === 'true' || cfg.notification_email_enabled === '1';
     if ((filterType === 'all' || filterType === 'email') && emailEnabled && cfg.notification_emails) {
       const emailList = cfg.notification_emails
@@ -386,27 +513,90 @@ export async function dispatchOrderNotifications(env, tenantId, orderData, secur
         .filter(e => e && e.includes('@') && e.includes('.'));
 
       if (emailList.length > 0) {
-        result.email.attempted = true;
-        const emailRes = await EmailProvider.sendNewOrderAdminNotification({
-          toList: emailList,
-          orderId: orderData.orderId,
-          customerName: orderData.name,
-          phone: orderData.phone,
-          wilaya: orderData.wilayaAr || orderData.wilayaEn || '',
-          municipality: orderData.municipality || '',
-          deliveryType: orderData.deliveryType || 'home',
-          items: formattedItems,
-          total: orderData.total,
-          shippingCost: orderData.shippingCost,
-          storeName: storeName,
-          env: env,
-        }).catch(err => {
-          console.error('[Email Error] Background email dispatch failed:', { code: 'DISPATCH_ERROR' });
-          return { delivered: false, status: 'DISPATCH_ERROR' };
-        });
-        result.email.delivered = !!emailRes?.delivered;
-        if (emailRes?.id) result.email.id = emailRes.id;
-        if (emailRes?.status) result.email.status = emailRes.status;
+        const notifType = 'new_order_admin';
+        const idempotencyKey = `${tenantId}:${orderData.orderId}:${notifType}`;
+        const recipientStr = emailList.join(', ');
+
+        // الحجز الذري لمنع التكرار (Atomic Reservation)
+        let canSend = true;
+        try {
+          const reserveStmt = env.DB.prepare(`
+            INSERT INTO notification_logs (
+              tenant_id, order_id, notification_type, idempotency_key, recipient, status, attempts, created_at, updated_at
+            ) VALUES (
+              ?, ?, ?, ?, ?, 'sending', 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+            )
+            ON CONFLICT(idempotency_key) DO UPDATE
+            SET status = 'sending',
+                attempts = notification_logs.attempts + 1,
+                updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+            WHERE notification_logs.status IN ('queued', 'retrying', 'failed')
+          `).bind(tenantId, orderData.orderId, notifType, idempotencyKey, recipientStr);
+
+          const reserveRes = await reserveStmt.run();
+          if (!reserveRes.meta || reserveRes.meta.changes === 0) {
+            canSend = false;
+            result.email.attempted = false;
+            result.email.skipped = true;
+            result.email.reason = 'ALREADY_SENT_OR_IN_FLIGHT';
+          }
+        } catch (dbErr) {
+          console.error('[Notification DB Error]', { order_id: orderData.orderId, error: dbErr?.message });
+        }
+
+        if (canSend) {
+          result.email.attempted = true;
+          const emailRes = await EmailProvider.sendNewOrderAdminNotification({
+            toList: emailList,
+            orderId: orderData.orderId,
+            customerName: orderData.name,
+            phone: orderData.phone,
+            wilaya: orderData.wilayaAr || orderData.wilayaEn || '',
+            municipality: orderData.municipality || '',
+            deliveryType: orderData.deliveryType || 'home',
+            items: formattedItems,
+            total: orderData.total,
+            shippingCost: orderData.shippingCost,
+            storeName: storeName,
+            env: env,
+          }).catch(err => {
+            console.error('[Email Error] Background email dispatch failed:', { code: 'DISPATCH_ERROR' });
+            return { delivered: false, status: 'DISPATCH_ERROR' };
+          });
+
+          result.email.delivered = !!emailRes?.delivered;
+          if (emailRes?.id) result.email.id = emailRes.id;
+          if (emailRes?.status) result.email.status = emailRes.status;
+
+          // تحديث السجل بعد المحاولة
+          try {
+            if (emailRes?.delivered) {
+              await env.DB.prepare(`
+                UPDATE notification_logs
+                SET status = 'sent',
+                    provider = ?,
+                    provider_msg_id = ?,
+                    last_error = NULL,
+                    updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+                WHERE idempotency_key = ?
+              `).bind(emailRes.provider || 'resend', emailRes.id || null, idempotencyKey).run();
+            } else {
+              const isTemporary = (emailRes?.status === 'DISPATCH_ERROR' || emailRes?.status === 'PROVIDER_ERROR');
+              const nextStatus = isTemporary ? 'retrying' : 'failed';
+              const errorMsg = emailRes?.code || emailRes?.status || 'DISPATCH_FAILED';
+
+              await env.DB.prepare(`
+                UPDATE notification_logs
+                SET status = ?,
+                    last_error = ?,
+                    updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+                WHERE idempotency_key = ?
+              `).bind(nextStatus, errorMsg, idempotencyKey).run();
+            }
+          } catch (dbUpdateErr) {
+            console.error('[Notification DB Update Error]', { error: dbUpdateErr?.message });
+          }
+        }
       }
     }
 
@@ -581,8 +771,8 @@ export async function adminUpdateOrder(env, params, tenantId = DEFAULT_MASTER_TE
 
   const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
   const checkStmt = isMaster
-    ? env.DB.prepare(`SELECT id, status FROM orders WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(orderId, tenantId)
-    : env.DB.prepare(`SELECT id, status FROM orders WHERE order_id = ? AND tenant_id = ? LIMIT 1`).bind(orderId, tenantId);
+    ? env.DB.prepare(`SELECT id, status, stock_decremented FROM orders WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(orderId, tenantId)
+    : env.DB.prepare(`SELECT id, status, stock_decremented FROM orders WHERE order_id = ? AND tenant_id = ? LIMIT 1`).bind(orderId, tenantId);
 
   const existing = await checkStmt.first();
 
@@ -593,16 +783,15 @@ export async function adminUpdateOrder(env, params, tenantId = DEFAULT_MASTER_TE
 
   const VALID_STATUSES = new Set(['pending','confirmed','shipped','delivered','cancelled']);
 
-  const wantsDelivery = params.status !== undefined &&
-    sanitize(params.status, 20) === 'delivered';
+  const newStatus = params.status !== undefined ? sanitize(params.status, 20) : null;
+  if (newStatus && !VALID_STATUSES.has(newStatus)) return { ok: false, error: 'حالة غير صالحة' };
 
-  if (params.status !== undefined) {
-    const s = sanitize(params.status, 20);
-    if (!VALID_STATUSES.has(s)) return { ok: false, error: 'حالة غير صالحة' };
-    if (!wantsDelivery) {
-      updates.push('status = ?');
-      bindings.push(s);
-    }
+  const wantsDelivery = (newStatus === 'delivered');
+  const wantsRestore = (newStatus === 'cancelled' && existing.status === 'delivered' && Number(existing.stock_decremented) === 1);
+
+  if (newStatus && !wantsDelivery && !wantsRestore) {
+    updates.push('status = ?');
+    bindings.push(newStatus);
   }
   if (params.shipping_note !== undefined) {
     updates.push('shipping_note = ?');
@@ -625,7 +814,7 @@ export async function adminUpdateOrder(env, params, tenantId = DEFAULT_MASTER_TE
     bindings.push(sanitize(params.tracking_code, 200));
   }
 
-  if (!updates.length && !wantsDelivery) return { ok: false, error: 'لم يُرسَل أي تعديل' };
+  if (!updates.length && !wantsDelivery && !wantsRestore) return { ok: false, error: 'لم يُرسَل أي تعديل' };
 
   if (updates.length) {
     bindings.push(orderId, tenantId);
@@ -635,9 +824,14 @@ export async function adminUpdateOrder(env, params, tenantId = DEFAULT_MASTER_TE
     await updateOrderStmt.bind(...bindings).run();
   }
 
-  // PATHWAY DELIVERED: المسار الوحيد المؤدي إلى إنقاص المخزون.
+  // PATHWAY DELIVERED: إنقاص المخزون
   if (wantsDelivery) {
     return processDeliveredOrderStock(env, orderId, tenantId);
+  }
+
+  // PATHWAY CANCELLED FROM DELIVERED: استرجاع المخزون الذري
+  if (wantsRestore) {
+    return processRestoredOrderStock(env, orderId, tenantId);
   }
 
   return { ok: true };
@@ -784,6 +978,112 @@ export async function processDeliveredOrderStock(env, orderId, tenantId = DEFAUL
   }
 
   return { ok: true, stock_processed_at: claimToken };
+}
+
+/**
+ * [INTERNAL — RESTORE ON CANCELLATION] استرجاع المخزون الذري عند إلغاء طلب مسلَّم سابقاً مع عزل التاجر
+ */
+export async function processRestoredOrderStock(env, orderId, tenantId = DEFAULT_MASTER_TENANT_ID) {
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  const stmt = isMaster
+    ? env.DB.prepare(`SELECT order_id, status, stock_decremented, items_json FROM orders WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(orderId, tenantId)
+    : env.DB.prepare(`SELECT order_id, status, stock_decremented, items_json FROM orders WHERE order_id = ? AND tenant_id = ? LIMIT 1`).bind(orderId, tenantId);
+
+  const order = await stmt.first();
+  if (!order) return { ok: false, error: 'الطلب غير موجود' };
+
+  // Guard: إذا لم يكن الطلب مسلماً أو لم يتم إنقاص مخزونه، فلا حاجة للاسترجاع (Idempotency)
+  if (order.status !== 'delivered' || Number(order.stock_decremented) !== 1) {
+    return { ok: true, alreadyProcessed: true };
+  }
+
+  let items = [];
+  try { items = JSON.parse(order.items_json); } catch { items = []; }
+  if (!Array.isArray(items) || !items.length) {
+    const updateStmt = isMaster
+      ? env.DB.prepare(`UPDATE orders SET status = 'cancelled', stock_decremented = 0 WHERE order_id = ? AND (tenant_id = ? OR tenant_id IS NULL)`).bind(orderId, tenantId)
+      : env.DB.prepare(`UPDATE orders SET status = 'cancelled', stock_decremented = 0 WHERE order_id = ? AND tenant_id = ?`).bind(orderId, tenantId);
+    await updateStmt.run();
+    return { ok: true, stock_restored: false };
+  }
+
+  const productIds = items
+    .map(i => Number(i.id))
+    .filter(id => Number.isFinite(id) && id > 0);
+
+  if (!productIds.length) {
+    return { ok: false, error: 'بيانات الطلب غير صالحة' };
+  }
+
+  const placeholders = productIds.map(() => '?').join(',');
+  const { results: productRows } = await env.DB.prepare(
+    `SELECT id, stock FROM products WHERE id IN (${placeholders})`
+  ).bind(...productIds).all();
+  const stockMap = new Map((productRows || []).map(p => [p.id, p.stock]));
+
+  const restorations = [];
+  for (const item of items) {
+    const pId = Number(item.id);
+    const qty = Math.max(1, Math.floor(Number(item.qty) || 1));
+    if (!Number.isFinite(pId) || pId <= 0) continue;
+    const currentStock = Number(stockMap.get(pId));
+    // إذا كان المخزون غير محدود (-1)، لا تتم زيادته ليبقى غير محدود
+    if (currentStock === -1) continue;
+    restorations.push({ id: pId, qty });
+  }
+
+  const restoreToken = crypto.randomUUID();
+
+  // 0) CLAIM — Atomic gate: الانتقال إلى cancelled وإلغاء علامة الخصم (stock_decremented = 0)
+  const stmts = [
+    isMaster
+      ? env.DB.prepare(`
+          UPDATE orders
+          SET status = 'cancelled',
+              stock_decremented = 0,
+              stock_processed_at = ?
+          WHERE order_id = ?
+            AND stock_decremented = 1
+            AND status = 'delivered'
+            AND (tenant_id = ? OR tenant_id IS NULL)
+        `).bind(restoreToken, orderId, tenantId)
+      : env.DB.prepare(`
+          UPDATE orders
+          SET status = 'cancelled',
+              stock_decremented = 0,
+              stock_processed_at = ?
+          WHERE order_id = ?
+            AND stock_decremented = 1
+            AND status = 'delivered'
+            AND tenant_id = ?
+        `).bind(restoreToken, orderId, tenantId)
+  ];
+
+  // 1) INCREMENTS — زيادة كمية المخزون فقط في حال الفوز بالـ claim token
+  for (const r of restorations) {
+    stmts.push(env.DB.prepare(`
+      UPDATE products
+      SET stock = stock + ?
+      WHERE id = ?
+        AND (
+          SELECT stock_processed_at
+          FROM orders
+          WHERE order_id = ?
+        ) = ?
+    `).bind(r.qty, r.id, orderId, restoreToken));
+  }
+
+  const results = await env.DB.batch(stmts);
+  const claim = results[0];
+  if ((claim?.meta?.changes ?? 0) === 0) {
+    return { ok: true, alreadyProcessed: true };
+  }
+
+  if (env.CACHE) {
+    try { await env.CACHE.delete(`tenant:${tenantId}:catalog_v1`); } catch { /* cache best-effort */ }
+  }
+
+  return { ok: true, stock_restored: true, stock_processed_at: restoreToken };
 }
 
 // ─────────────────────────────────────────────

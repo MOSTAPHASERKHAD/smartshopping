@@ -23,7 +23,7 @@
  */
 
 import { buildCorsHeaders, jsonResponse } from './utils/response.js';
-import { adminGate, validateSession, resolveTenant, recordAuditLog, DEFAULT_MASTER_TENANT_ID } from './utils/auth.js';
+import { adminGate, validateSession, resolveTenant, recordAuditLog, reviewSpamGuard, DEFAULT_MASTER_TENANT_ID } from './utils/auth.js';
 import { canExecuteAction, ROLES } from './utils/rbac.js';
 import { sanitize, sanitizePhone } from './utils/sanitize.js';
 
@@ -331,7 +331,7 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   // ── الشهادات والتقييمات ──
   if (action === 'testimonials')    return getTestimonials(env, tenantId);
   if (action === 'get_reviews' || action === 'reviews') return getReviews(env, params, tenantId);
-  if (action === 'add_review')      return addPublicReview(env, params, tenantId);
+  if (action === 'add_review')      return addPublicReview(env, params, request, tenantId);
 
   // ── الصفحات المخصصة ──
   if (action === 'get_pages' || action === 'pages') return getPages(env, tenantId);
@@ -443,7 +443,7 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   if (action === 'admin_list_audit_logs') return adminListAuditLogs(env, params, tenantId);
 
   // ── التسويق والتحليلات ──
-  if (action === 'admin_capi_test') return adminCapiTest(env, params, request);
+  if (action === 'admin_capi_test') return adminCapiTest(env, params, request, tenantId);
   if (action === 'admin_campaign_analytics') return getCampaignAnalytics(env, params, tenantId);
 
   // ── الذكاء الاصطناعي ──
@@ -468,9 +468,9 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
 // ════════════════════════════════════════════
 
 /**
- * [PUBLIC] إضافة تقييم على منتج من زبون مع عزل التاجر
+ * [PUBLIC] إضافة تقييم على منتج من زبون مع حماية السبام وعزل التاجر
  */
-async function addPublicReview(env, params, tenantId = DEFAULT_MASTER_TENANT_ID) {
+async function addPublicReview(env, params, request = null, tenantId = DEFAULT_MASTER_TENANT_ID) {
   const productId  = parseInt(params.product_id || 0);
   const authorName = sanitize(params.author_name, 200);
   const content    = sanitize(params.content, 2000);
@@ -481,6 +481,19 @@ async function addPublicReview(env, params, tenantId = DEFAULT_MASTER_TENANT_ID)
   if (!productId)  return { ok: false, error: 'معرّف المنتج مطلوب' };
   if (!authorName) return { ok: false, error: 'الاسم مطلوب' };
   if (!content)    return { ok: false, error: 'نص التقييم مطلوب' };
+
+  // ── حارس السبام للتقييمات (IP + Phone Rate Limiting) ──
+  const clientIp = request?.headers?.get?.('CF-Connecting-IP') || request?.headers?.get?.('X-Forwarded-For') || '';
+  const guard = await reviewSpamGuard(env.DB, {
+    tenantId,
+    productId,
+    phone,
+    ip: clientIp
+  });
+
+  if (!guard.allowed) {
+    return { ok: false, error: guard.error || 'يرجى الانتظار قليلاً قبل إرسال تقييم آخر' };
+  }
 
   const product = await env.DB.prepare(
     `SELECT id FROM products WHERE id = ? AND active = 1 AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`

@@ -52,6 +52,135 @@ export function normalizePhone(rawPhone) {
 }
 
 /**
+ * قائمة الإعدادات الرقمية ومخطط التحقق الصارم من صحتها (Numeric Settings Schema)
+ */
+export const NUMERIC_SETTINGS_SCHEMA = {
+  // أرقام صحيحة غير سالبة (أسعار الشحن والمبالغ بالدينار والحدود)
+  shipping_home: {
+    type: 'integer',
+    min: 0,
+    max: 500000,
+    name: 'سعر التوصيل للمنزل'
+  },
+  shipping_office: {
+    type: 'integer',
+    min: 0,
+    max: 500000,
+    name: 'سعر التوصيل للمكتب'
+  },
+  shipping_remote: {
+    type: 'integer',
+    min: 0,
+    max: 500000,
+    name: 'سعر التوصيل للمناطق البعيدة'
+  },
+  minimum_order_amount: {
+    type: 'integer',
+    min: 0,
+    max: 10000000,
+    name: 'الحد الأدنى للطلب'
+  },
+  free_delivery_min: {
+    type: 'integer',
+    min: 0,
+    max: 10000000,
+    name: 'الحد الأدنى للتوصيل المجاني'
+  },
+  free_shipping_min: {
+    type: 'integer',
+    min: 0,
+    max: 10000000,
+    name: 'الحد الأدنى للشحن المجاني'
+  },
+  session_ttl_hours: {
+    type: 'integer',
+    min: 1,
+    max: 720,
+    name: 'مدة صلاحية الجلسة'
+  },
+  rate_limit_admin: {
+    type: 'integer',
+    min: 1,
+    max: 10000,
+    name: 'الحد الأقصى لطلبات الإدارة'
+  },
+
+  // أرقام عشرية ونسب مئوية
+  usd_to_dzd_rate: {
+    type: 'decimal',
+    min: 1,
+    max: 10000,
+    name: 'سعر صرف الدولار'
+  },
+  estimated_product_cost_pct: {
+    type: 'decimal',
+    min: 0,
+    max: 100,
+    name: 'نسبة تكلفة البضاعة'
+  }
+};
+
+/**
+ * التحقق من صحة القيمة الرقمية للإعدادات وتطبيعها للصيغة المعيارية
+ * @param {string} key
+ * @param {any} rawValue
+ * @returns {{ valid: boolean, value?: string, error?: string }}
+ */
+export function validateNumericSetting(key, rawValue) {
+  const schema = NUMERIC_SETTINGS_SCHEMA[key];
+  if (!schema) {
+    return { valid: true, value: String(rawValue ?? '') };
+  }
+
+  if (rawValue === null || rawValue === undefined || String(rawValue).trim() === '') {
+    return { valid: false, error: `قيمة ${schema.name || key} لا يمكن أن تكون فارغة` };
+  }
+
+  const str = String(rawValue).trim();
+
+  // فحص القيم الخاصة كعلامات لا نهائية (Sentinels مثل -1) إذا كانت معرفة
+  if (schema.allowSentinel && schema.allowSentinel.includes(Number(str))) {
+    return { valid: true, value: String(Number(str)) };
+  }
+
+  if (schema.type === 'integer') {
+    if (!/^-?\d+$/.test(str)) {
+      return { valid: false, error: `قيمة ${schema.name || key} يجب أن تكون رقماً صحيحاً صالحاً` };
+    }
+    const num = Number(str);
+    if (!Number.isSafeInteger(num)) {
+      return { valid: false, error: `قيمة ${schema.name || key} تتجاوز النطاق الرقمي المسموح` };
+    }
+    if (schema.min !== undefined && num < schema.min) {
+      return { valid: false, error: `قيمة ${schema.name || key} لا يمكن أن تقل عن ${schema.min}` };
+    }
+    if (schema.max !== undefined && num > schema.max) {
+      return { valid: false, error: `قيمة ${schema.name || key} لا يمكن أن تزيد عن ${schema.max}` };
+    }
+    return { valid: true, value: String(num) };
+  }
+
+  if (schema.type === 'decimal') {
+    if (!/^-?\d+(\.\d+)?$/.test(str)) {
+      return { valid: false, error: `قيمة ${schema.name || key} يجب أن تكون رقماً صالحاً` };
+    }
+    const num = Number(str);
+    if (isNaN(num) || !Number.isFinite(num)) {
+      return { valid: false, error: `قيمة ${schema.name || key} غير صالحة` };
+    }
+    if (schema.min !== undefined && num < schema.min) {
+      return { valid: false, error: `قيمة ${schema.name || key} لا يمكن أن تقل عن ${schema.min}` };
+    }
+    if (schema.max !== undefined && num > schema.max) {
+      return { valid: false, error: `قيمة ${schema.name || key} لا يمكن أن تزيد عن ${schema.max}` };
+    }
+    return { valid: true, value: String(num) };
+  }
+
+  return { valid: true, value: str };
+}
+
+/**
  * تنظيف رقم مالي: أرقام ونقطة عشرية فقط
  * @param {any} value
  * @returns {number}

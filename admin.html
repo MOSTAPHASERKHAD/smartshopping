@@ -399,7 +399,7 @@
             <option value="yesterday" data-i18n="date_yesterday">أمس</option>
             <option value="last_7d" data-i18n="date_last_7d">آخر 7 أيام</option>
           </select>
-          <select id="orderStatusFilter" onchange="renderOrders()">
+          <select id="orderStatusFilter" onchange="loadOrders(1)">
             <option value="" data-i18n="all_statuses">جميع الحالات</option>
             <option value="pending" data-i18n="st_pending">قيد الانتظار</option>
             <option value="confirmed" data-i18n="st_confirmed">تم التأكيد</option>
@@ -420,6 +420,14 @@
           <th data-i18n="th_status">الحالة</th>
           <th data-i18n="th_actions" style="width:160px">إجراءات</th>
         </tr></thead><tbody id="orders-list"></tbody></table></div>
+        <div class="orders-pagination" id="ordersPagination" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap;gap:10px">
+          <div class="pagination-info" id="ordersPaginationInfo" style="font-size:0.85rem;color:var(--text2)"></div>
+          <div class="pagination-buttons" style="display:flex;gap:6px;align-items:center">
+            <button class="btn btn-outline btn-xs" id="btnPrevOrdersPage" onclick="changeOrdersPage(-1)" disabled>السابق</button>
+            <span id="ordersPageNumbers" style="display:flex;gap:4px;align-items:center"></span>
+            <button class="btn btn-outline btn-xs" id="btnNextOrdersPage" onclick="changeOrdersPage(1)" disabled>التالي</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -791,7 +799,7 @@
           </div>
         </div>
         <div class="form-group">
-          <label>سعر التكلفة / الشراء بالجملة (اختياري لحساب الأرباح والعروض)</label>
+          <label>💰 سعر الجملة / سعر التكلفة <small style="color:var(--text3);font-weight:normal">(لحساب الأرباح وحماية العروض والـ AI)</small></label>
           <div class="input-group">
             <input type="number" id="p_cost_price" min="0" step="any" placeholder="1000">
             <span class="input-addon">دج</span>
@@ -1159,9 +1167,37 @@
       </div>
     </form>
   </div>
+<!-- Admin Re-Auth Modal (FIX-07 Session Expiry Protection) -->
+<div class="modal-overlay" id="adminReauthModal" style="display:none;z-index:99999;backdrop-filter:blur(4px);background:rgba(0,0,0,0.65)">
+<div class="modal" style="max-width:420px;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5)">
+  <div class="modal-header" style="background:var(--card);border-bottom:1px solid var(--border)">
+    <h3 style="display:flex;align-items:center;gap:8px;margin:0;font-size:16px;color:var(--text)">
+      <span>🔒</span>
+      <span>انتهت صلاحية الجلسة — تأكيد الهوية</span>
+    </h3>
+  </div>
+  <div class="modal-body" style="padding:20px">
+    <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px;line-height:1.6">
+      انتهت جلسة تسجيل الدخول لحماية أمان الحساب. يرجى إدخال كلمة المرور لمتابعة العمل <strong>دون فقدان أي بيانات أو تعديلات غير محفوظة</strong>.
+    </p>
+    <form id="adminReauthForm" onsubmit="submitAdminReauth(event)">
+      <div class="form-group full" style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;display:block">البريد الإلكتروني / المستخدم</label>
+        <input type="text" id="reauthUser" required style="width:100%;box-sizing:border-box" autocomplete="username">
+      </div>
+      <div class="form-group full" style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;display:block">كلمة المرور</label>
+        <input type="password" id="reauthPass" required style="width:100%;box-sizing:border-box" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div id="reauthError" style="display:none;color:#ef4444;background:rgba(239,68,68,0.1);padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:14px;border:1px solid rgba(239,68,68,0.2)"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn btn-outline" onclick="cancelAdminReauth()" style="font-size:13px">تسجيل الخروج</button>
+        <button type="submit" id="reauthSubmitBtn" class="btn btn-accent" style="font-size:13px">تجديد الجلسة والمتابعة</button>
+      </div>
+    </form>
+  </div>
 </div>
 </div>
-
 
 <script>
 // --- ROLLBACK PRESERVATION (GAS) ---
@@ -1214,8 +1250,8 @@ function apiGet(action, params, callback, retries) {
       called = true;
       if (timer) clearTimeout(timer);
       var errMsg = (data && data.error) ? (typeof data.error === 'object' ? (data.error.message || data.error.code || JSON.stringify(data.error)) : String(data.error)) : '';
-      if (errMsg && /غير مصرح|انتهت الجلسة|UNAUTHORIZED|SESSION_EXPIRED/i.test(errMsg) && action !== 'verify_admin') {
-        doLogout();
+      if (errMsg && /غير مصرح|انتهت الجلسة|UNAUTHORIZED|SESSION_EXPIRED/i.test(errMsg) && action !== 'verify_admin' && action !== 'auth_login') {
+        handleSessionExpired(action, params, callback);
         return;
       }
       callback(data);
@@ -1228,6 +1264,169 @@ function apiGet(action, params, callback, retries) {
     });
   }
   tryCall();
+}
+
+// ── FIX-07: Centralized Session Expiry & Re-Authentication Handler ──
+var isReauthModalOpen = false;
+var pendingReauthQueue = [];
+
+function handleSessionExpired(action, params, callback) {
+  var isMutation = action && (action.startsWith('admin_save_') || action.startsWith('admin_update_') || action.startsWith('admin_delete_') || action.startsWith('admin_create_') || action.startsWith('admin_set_') || action === 'admin_delete_media');
+  pendingReauthQueue.push({ action: action, params: params, callback: callback, isMutation: isMutation });
+
+  if (isReauthModalOpen) return;
+  isReauthModalOpen = true;
+
+  var modal = document.getElementById('adminReauthModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    var userField = document.getElementById('reauthUser');
+    var passField = document.getElementById('reauthPass');
+    var errEl = document.getElementById('reauthError');
+    if (errEl) errEl.style.display = 'none';
+    if (passField) passField.value = '';
+
+    try {
+      var auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
+      if (userField && (auth.user || auth.email)) {
+        userField.value = auth.user || auth.email || '';
+      }
+    } catch (_) {}
+    if (passField) setTimeout(function() { try { passField.focus(); } catch(_) {} }, 100);
+  }
+}
+
+async function submitAdminReauth(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  var user = (document.getElementById('reauthUser') ? document.getElementById('reauthUser').value : '').trim();
+  var pass = document.getElementById('reauthPass') ? document.getElementById('reauthPass').value : '';
+  var errEl = document.getElementById('reauthError');
+  var btn = document.getElementById('reauthSubmitBtn');
+
+  if (!user || !pass) {
+    if (errEl) {
+      errEl.textContent = 'يرجى إدخال اسم المستخدم وكلمة المرور';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'جاري التحقق...'; }
+  if (errEl) errEl.style.display = 'none';
+
+  function onReauthSuccess(authObj) {
+    if (btn) { btn.disabled = false; btn.textContent = 'تجديد الجلسة والمتابعة'; }
+    try {
+      localStorage.setItem(AUTH_KEY, JSON.stringify(authObj));
+    } catch (_) {}
+
+    var modal = document.getElementById('adminReauthModal');
+    if (modal) modal.style.display = 'none';
+    isReauthModalOpen = false;
+
+    var labelEl = document.getElementById('adminUserLabel');
+    if (labelEl) {
+      var roleName = authObj.role === 'OWNER' ? 'المالك' : (authObj.role || 'Admin');
+      var storeTitle = (authObj.tenant && authObj.tenant.name) ? ' · ' + authObj.tenant.name : '';
+      labelEl.textContent = (authObj.name || authObj.user || 'Admin') + ' (' + roleName + ')' + storeTitle;
+    }
+
+    toast('✅ تم تجديد الجلسة بنجاح، يمكنك متابعة العمل.', true);
+
+    var queue = pendingReauthQueue.slice();
+    pendingReauthQueue = [];
+    queue.forEach(function(req) {
+      if (req.action && req.callback) {
+        if (req.isMutation) {
+          req.callback({ ok: false, session_restored: true, message: 'تم تجديد الجلسة، يرجى إعادة الضغط على حفظ لتأكيد التغييرات' });
+        } else {
+          apiGet(req.action, req.params, req.callback);
+        }
+      }
+    });
+  }
+
+  function onReauthFailure(msg) {
+    if (btn) { btn.disabled = false; btn.textContent = 'تجديد الجلسة والمتابعة'; }
+    if (errEl) {
+      errEl.textContent = msg || 'كلمة المرور غير صحيحة';
+      errEl.style.display = 'block';
+    }
+  }
+
+  if (user.includes('@')) {
+    apiPost('auth_login', { email: user, password: pass }, async function(res) {
+      if (res && res.ok) {
+        onReauthSuccess({
+          time: Date.now(),
+          user: (res.user && res.user.email) ? res.user.email : user,
+          name: (res.user && res.user.name) ? res.user.name : '',
+          token: res.token || '',
+          role: (res.user && res.user.role) ? res.user.role : 'OWNER',
+          tenant: res.tenant || null
+        });
+      } else {
+        try {
+          var passHash = await hashPasswordAsync(pass);
+          apiPost('verify_admin', { password: passHash }, function(data) {
+            if (data && data.ok) {
+              onReauthSuccess({
+                hash: passHash,
+                time: Date.now(),
+                user: user,
+                token: data.token || '',
+                role: 'OWNER'
+              });
+            } else {
+              onReauthFailure((res && res.error) || (data && data.error) || 'كلمة المرور غير صحيحة');
+            }
+          });
+        } catch (_) {
+          onReauthFailure((res && res.error) || 'كلمة المرور غير صحيحة');
+        }
+      }
+    });
+  } else {
+    try {
+      var passHash = await hashPasswordAsync(pass);
+      apiPost('verify_admin', { password: passHash }, function(data) {
+        if (data && data.ok) {
+          onReauthSuccess({
+            hash: passHash,
+            time: Date.now(),
+            user: user,
+            token: data.token || '',
+            role: 'OWNER'
+          });
+        } else {
+          apiPost('auth_login', { email: user, password: pass }, function(res) {
+            if (res && res.ok) {
+              onReauthSuccess({
+                time: Date.now(),
+                user: (res.user && res.user.email) ? res.user.email : user,
+                name: (res.user && res.user.name) ? res.user.name : '',
+                token: res.token || '',
+                role: (res.user && res.user.role) ? res.user.role : 'OWNER',
+                tenant: res.tenant || null
+              });
+            } else {
+              onReauthFailure((data && data.error) || (res && res.error) || 'كلمة المرور غير صحيحة');
+            }
+          });
+        }
+      });
+    } catch (_) {
+      onReauthFailure('حدث خطأ أثناء التحقق');
+    }
+  }
+}
+
+function cancelAdminReauth() {
+  var modal = document.getElementById('adminReauthModal');
+  if (modal) modal.style.display = 'none';
+  isReauthModalOpen = false;
+  pendingReauthQueue = [];
+  doLogout();
 }
 
 // ===== ADMIN I18N SYSTEM (Bilingual AR / EN) =====
@@ -2328,6 +2527,7 @@ function saveProduct(e) {
       variant_price: document.getElementById('p_variant_price').value || '',
       variant_stock: document.getElementById('p_variant_stock').value || '',
       variant_options: [],
+      cost_price: (document.getElementById('p_cost_price') && document.getElementById('p_cost_price').value.trim() !== '') ? Number(document.getElementById('p_cost_price').value) : null,
       // Phase 7: إعداد قصبة الهبوط يُرسل كنص JSON
       landing_config_json: collectLpEditorConfig()
     };
@@ -2386,12 +2586,112 @@ function deleteProduct(id, name) {
 // ===== ORDERS =====
 // ملاحظة (Phase 5C): orders.js يتوقّع order_id (نص "SK-...") للتحديد/الحذف
 // وليس _row أو id. لا يُمس منطق الملكية (customer_id/session) الموجود في orders.js.
-function loadOrders() {
-  apiGet('admin_orders', {}, function(data) {
+var ordersPaginationState = {
+  page: 1,
+  limit: 50,
+  total: 0,
+  pages: 1
+};
+
+function loadOrders(page) {
+  if (page !== undefined && page !== null) {
+    ordersPaginationState.page = Math.max(1, parseInt(page));
+  }
+  var p = ordersPaginationState.page || 1;
+  var limit = ordersPaginationState.limit || 50;
+  var sf = (document.getElementById('orderStatusFilter') || {}).value || '';
+
+  var params = { page: p, limit: limit };
+  if (sf) params.status = sf;
+
+  apiGet('admin_orders', params, function(data) {
     if (!data || !data.orders) return;
     allOrders = data.orders;
+    if (data.pagination) {
+      ordersPaginationState.total = (typeof data.pagination.total === 'number') ? data.pagination.total : allOrders.length;
+      ordersPaginationState.pages = (typeof data.pagination.pages === 'number') ? data.pagination.pages : (Math.ceil(ordersPaginationState.total / limit) || 1);
+      ordersPaginationState.page = (typeof data.pagination.page === 'number') ? data.pagination.page : p;
+    } else {
+      ordersPaginationState.total = allOrders.length;
+      ordersPaginationState.pages = Math.ceil(allOrders.length / limit) || 1;
+    }
     renderOrders();
+    renderOrdersPagination();
   });
+}
+
+function changeOrdersPage(delta) {
+  var target = (ordersPaginationState.page || 1) + delta;
+  if (target >= 1 && target <= (ordersPaginationState.pages || 1)) {
+    loadOrders(target);
+  }
+}
+
+function goToOrdersPage(p) {
+  var target = parseInt(p);
+  if (target >= 1 && target <= (ordersPaginationState.pages || 1)) {
+    loadOrders(target);
+  }
+}
+
+function renderOrdersPagination() {
+  var pagEl = document.getElementById('ordersPagination');
+  var infoEl = document.getElementById('ordersPaginationInfo');
+  var prevBtn = document.getElementById('btnPrevOrdersPage');
+  var nextBtn = document.getElementById('btnNextOrdersPage');
+  var numbersEl = document.getElementById('ordersPageNumbers');
+  if (!pagEl) return;
+
+  var cur = ordersPaginationState.page || 1;
+  var totalPages = ordersPaginationState.pages || 1;
+  var totalRecords = ordersPaginationState.total || 0;
+  var limit = ordersPaginationState.limit || 50;
+
+  if (totalRecords === 0) {
+    pagEl.style.display = 'none';
+    return;
+  }
+  pagEl.style.display = 'flex';
+
+  var startItem = Math.min((cur - 1) * limit + 1, totalRecords);
+  var endItem = Math.min(cur * limit, totalRecords);
+
+  if (infoEl) {
+    infoEl.textContent = 'عرض ' + startItem + ' - ' + endItem + ' من إجمالي ' + totalRecords + ' طلب';
+  }
+
+  if (prevBtn) {
+    prevBtn.disabled = (cur <= 1);
+  }
+  if (nextBtn) {
+    nextBtn.disabled = (cur >= totalPages);
+  }
+
+  if (numbersEl) {
+    var html = '';
+    var maxButtons = 5;
+    var startPage = Math.max(1, cur - 2);
+    var endPage = Math.min(totalPages, startPage + maxButtons - 1);
+    if (endPage - startPage < maxButtons - 1) {
+      startPage = Math.max(1, endPage - maxButtons + 1);
+    }
+
+    if (startPage > 1) {
+      html += '<button type="button" class="btn btn-outline btn-xs" onclick="goToOrdersPage(1)" style="min-width:28px">1</button>';
+      if (startPage > 2) html += '<span style="color:var(--text3);padding:0 2px">...</span>';
+    }
+
+    for (var i = startPage; i <= endPage; i++) {
+      var isCurrent = (i === cur);
+      html += '<button type="button" class="btn btn-xs ' + (isCurrent ? 'btn-primary' : 'btn-outline') + '" onclick="goToOrdersPage(' + i + ')" style="min-width:28px;' + (isCurrent ? 'font-weight:800;background:var(--accent);border-color:var(--accent);color:#fff' : '') + '">' + i + '</button>';
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) html += '<span style="color:var(--text3);padding:0 2px">...</span>';
+      html += '<button type="button" class="btn btn-outline btn-xs" onclick="goToOrdersPage(' + totalPages + ')" style="min-width:28px">' + totalPages + '</button>';
+    }
+    numbersEl.innerHTML = html;
+  }
 }
 
 function renderOrders() {
@@ -4594,13 +4894,20 @@ function showAdminPanel() {
 
   <!-- Action Chips -->
   <div class="ai-chips-bar" id="aiChipsBar">
-    <button class="ai-chip active" onclick="triggerAiMode('store_overview')">📊 تحليل شامل</button>
-    <button class="ai-chip" onclick="triggerAiMode('sales_analysis')">💰 المبيعات والأرباح</button>
-    <button class="ai-chip" onclick="triggerAiMode('product_performance')">📦 أداء المنتجات</button>
-    <button class="ai-chip" onclick="triggerAiMode('campaign_analysis')">📢 تحليل الحملات</button>
-    <button class="ai-chip" onclick="triggerAiMode('budget_recommendations')">⚠️ أين نخسر المال؟</button>
-    <button class="ai-chip" onclick="triggerAiMode('action_plan')">🎯 ماذا أفعل اليوم؟</button>
-    <button class="ai-chip" onclick="triggerAiMode('whatsapp_draft')">✍️ صياغة WhatsApp</button>
+    <button class="ai-chip active" onclick="triggerAiMode('daily_brief')">🔥 موجز اليوم (Daily Brief)</button>
+    <button class="ai-chip" onclick="triggerAiMode('weekly_review')">📅 مراجعة أسبوعية</button>
+    <button class="ai-chip" onclick="triggerAiMode('monthly_review')">📆 مراجعة شهرية</button>
+    <button class="ai-chip" onclick="triggerAiMode('financial_commander')">💰 المدير المالي (CFO Unit Economics)</button>
+    <button class="ai-chip" onclick="triggerAiMode('campaign_commander')">🚀 قائد الحملات والإعلانات</button>
+    <button class="ai-chip" onclick="triggerAiMode('pricing_advisor')">🏷️ مستشار التسعير الآمن</button>
+    <button class="ai-chip" onclick="triggerAiMode('offer_builder')">🎁 هندسة العروض والمقارنة</button>
+    <button class="ai-chip" onclick="triggerAiMode('budget_commander')">💵 توزيع الميزانية وسيناريوهات النمو</button>
+    <button class="ai-chip" onclick="triggerAiMode('product_profitability')">📦 ربحية المنتجات ومصفوفة الـ 6</button>
+    <button class="ai-chip" onclick="triggerAiMode('delivery_intelligence')">🚚 استخبارات الشحن والولايات</button>
+    <button class="ai-chip" onclick="triggerAiMode('inventory_risk')">⚠️ مخاطر المخزون وتأمين الطلب</button>
+    <button class="ai-chip" onclick="triggerAiMode('experiment_manager')">🧪 مدير تجارب النمو</button>
+    <button class="ai-chip" onclick="triggerAiMode('store_overview')">📊 تحليل شامل للمتجر</button>
+    <button class="ai-chip" onclick="triggerAiMode('whatsapp_draft')">✍️ مسودة WhatsApp للعميل</button>
   </div>
 
   <!-- Main Body Content -->
@@ -5047,20 +5354,58 @@ function renderAiAnalysisResults(data, rawMetrics, timestamp, mode, orderId) {
 
   var html = '';
 
-  // 1. Health Status Banner
+  // 1. Decision & Health Status Banner
   var health = data.health || 'good';
   var healthLabels = {
-    good: '🟢 أداء ممتاز ومستقر',
-    warning: '🟡 تنبيه: مؤشرات تحتاج لمتابعة',
-    critical: '🔴 تحذير: هدر مالي أو انخفاض حاد',
+    good: '🟢 أداء مستقر ومربح',
+    warning: '🟡 تنبيه: مؤشرات تتطلب تدخلاً',
+    critical: '🔴 تحذير: هدر مالي أو نزيف ميزانية',
     insufficient_data: '⚪ بيانات قيد التجميع'
   };
-  html += `
-    <div class="ai-health-card ${health}">
-      <span>${healthLabels[health] || healthLabels.good}</span>
-      <span style="font-size:0.75rem;font-weight:600;opacity:0.8">SmartKiosk Copilot</span>
-    </div>
-  `;
+
+  if (data.decision) {
+    var dec = String(data.decision).toUpperCase();
+    var decCls = (dec === 'SCALE' || dec === 'MAINTAIN') ? 'positive' : (dec === 'STOP' || dec === 'REDUCE' ? 'critical' : 'warning');
+    html += `
+      <div class="ai-health-card ${decCls}" style="margin-bottom:8px">
+        <div style="font-weight:800;display:flex;align-items:center;gap:6px">
+          <span>🎯</span> <span>القرار التجاري المعتمد:</span> <span class="ai-badge" style="font-size:0.85rem;padding:2px 8px">${esc(dec)}</span>
+        </div>
+        <span style="font-size:0.75rem;font-weight:600;opacity:0.9">${healthLabels[health] || ''}</span>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="ai-health-card ${health}">
+        <span>${healthLabels[health] || healthLabels.good}</span>
+        <span style="font-size:0.75rem;font-weight:600;opacity:0.8">SmartKiosk OS</span>
+      </div>
+    `;
+  }
+
+  // Top Priority Today Card
+  if (data.top_priority_today) {
+    html += `
+      <div class="ai-item-card insight" style="background:#fffbeb;border-right:4px solid #f59e0b;color:#92400e;margin-bottom:10px">
+        <div style="font-weight:800;display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span>🔥</span> <span>أولوية اليوم القصوى (Top Priority Today):</span>
+        </div>
+        <div style="font-size:0.86rem;line-height:1.5">${formatAiMarkdown(data.top_priority_today)}</div>
+      </div>
+    `;
+  }
+
+  // Financial Impact Box
+  if (data.financial_impact) {
+    html += `
+      <div class="ai-item-card insight" style="background:#f0fdf4;border-right:4px solid #10b981;color:#166534;margin-bottom:10px">
+        <div style="font-weight:800;display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span>💰</span> <span>الأثر المالي المتوقع (Net Delivered Profit Impact):</span>
+        </div>
+        <div style="font-size:0.86rem;line-height:1.5">${formatAiMarkdown(data.financial_impact)}</div>
+      </div>
+    `;
+  }
 
   // 2. Summary Box
   if (data.summary) {
@@ -5155,6 +5500,22 @@ function renderAiAnalysisResults(data, rawMetrics, timestamp, mode, orderId) {
       `;
     });
     html += '</div>';
+  }
+
+  // 8. Scientific Growth Experiment Card (if present)
+  if (data.experiment && data.experiment.hypothesis) {
+    html += `
+      <div class="ai-section-block">
+        <div class="ai-block-title">🧪 تصميم تجربة النمو العلمي (Scientific Growth Experiment)</div>
+        <div class="ai-item-card insight" style="background:#f8fafc;border:1px solid #e2e8f0;border-right:4px solid #4338ca">
+          <div style="font-weight:700;margin-bottom:4px"><strong>الفرضية (Hypothesis):</strong> ${formatAiMarkdown(data.experiment.hypothesis)}</div>
+          ${data.experiment.variable ? `<div style="font-size:0.84rem;margin-bottom:4px"><strong>المتغير المراد اختباره:</strong> ${formatAiMarkdown(data.experiment.variable)}</div>` : ''}
+          ${data.experiment.budget ? `<div style="font-size:0.84rem;margin-bottom:4px"><strong>الميزانية:</strong> ${esc(data.experiment.budget)} • <strong>المدة:</strong> ${esc(data.experiment.duration || 'غير محددة')}</div>` : ''}
+          ${data.experiment.primary_kpi ? `<div style="font-size:0.84rem;margin-bottom:4px"><strong>المؤشر الأساسي:</strong> ${esc(data.experiment.primary_kpi)}</div>` : ''}
+          ${data.experiment.stop_loss ? `<div style="font-size:0.84rem;color:#b91c1c"><strong>حد الإيقاف الفوري (Stop-Loss):</strong> ${esc(data.experiment.stop_loss)}</div>` : ''}
+        </div>
+      </div>
+    `;
   }
 
   body.innerHTML = html;

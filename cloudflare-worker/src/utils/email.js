@@ -149,13 +149,21 @@ export class EmailProvider {
             `,
           })
         });
+        let resJson = null;
+        try {
+          resJson = await res.json();
+        } catch (_) {}
+
         if (res.ok) {
-          return { delivered: true, status: 'DELIVERED', provider: 'resend' };
+          return { delivered: true, id: resJson?.id, status: 'DELIVERED', provider: 'resend' };
         }
-        console.error('[Email Error] Resend API returned error status for order confirmation:', res.status);
-        return { delivered: false, status: 'PROVIDER_ERROR', provider: 'resend' };
+        console.error('[Email Error] Resend API returned error status for order confirmation:', {
+          status: res.status,
+          code: resJson?.name || 'RESEND_API_ERROR'
+        });
+        return { delivered: false, status: 'PROVIDER_ERROR', code: resJson?.name || 'RESEND_API_ERROR', provider: 'resend' };
       } catch (e) {
-        console.error('[Email Error] Failed to send order confirmation via Resend transport');
+        console.error('[Email Error] Failed to send order confirmation via Resend transport:', { code: 'DISPATCH_ERROR' });
         return { delivered: false, status: 'DISPATCH_ERROR', provider: 'resend' };
       }
     }
