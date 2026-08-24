@@ -158,6 +158,7 @@
     </button>
   </div>
   <nav class="sidebar-nav">
+    <a href="#" onclick="toggleAiCopilotDrawer();return false;" id="nav-ai-copilot" style="background:linear-gradient(135deg, rgba(67,56,202,0.25) 0%, rgba(99,102,241,0.18) 100%);border:1px solid rgba(99,102,241,0.4);margin:4px 0 8px 0;border-radius:8px"><span class="icon">🤖</span><span style="font-weight:800;color:#a5b4fc">مساعد الأعمال الذكي</span></a>
     <a href="#" onclick="showSection('dashboard')" class="active" id="nav-dashboard"><span class="icon">📊</span><span data-i18n="dashboard">الرئيسية</span></a>
     <a href="#" onclick="showSection('analytics')" id="nav-analytics"><span class="icon">📈</span><span data-i18n="analytics">تتبع الحملات والأرباح</span></a>
     <a href="#" onclick="showSection('products')" id="nav-products"><span class="icon">📦</span><span data-i18n="products">المنتجات</span></a>
@@ -181,9 +182,14 @@
   <div id="sec-dashboard">
     <div class="top-bar">
       <h1 data-i18n="admin_panel">لوحة التحكم</h1>
-      <button type="button" class="btn-lang-toggle" onclick="toggleAdminLang()" title="تغيير اللغة / Switch Language">
-        <span>🌐</span> <span class="admin-lang-label">English</span>
-      </button>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button type="button" class="btn btn-primary btn-sm" onclick="toggleAiCopilotDrawer()" style="background:linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%);color:#fff;border-radius:20px;font-weight:700;padding:6px 14px;display:flex;align-items:center;gap:6px">
+          <span>🤖</span> <span>مساعد الأعمال الذكي</span>
+        </button>
+        <button type="button" class="btn-lang-toggle" onclick="toggleAdminLang()" title="تغيير اللغة / Switch Language">
+          <span>🌐</span> <span class="admin-lang-label">English</span>
+        </button>
+      </div>
     </div>
     <div class="stats">
       <div class="stat-card"><div class="label" data-i18n="stat_products">المنتجات</div><div class="value accent" id="stat-products">0</div></div>
