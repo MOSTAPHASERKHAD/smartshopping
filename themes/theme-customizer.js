@@ -428,8 +428,31 @@
           badge3_desc: 'وصف الشارة الثالثة'
         };
 
+        if (sid === 'fast-order-form' || sid === 'order-form') {
+          if (sec.settings.show_quantity_selector === undefined) sec.settings.show_quantity_selector = true;
+          if (sec.settings.show_pricing_tiers === undefined) sec.settings.show_pricing_tiers = true;
+          if (sec.settings.tier2_discount_pct === undefined) sec.settings.tier2_discount_pct = 10;
+          if (sec.settings.tier3_discount_pct === undefined) sec.settings.tier3_discount_pct = 20;
+          if (sec.settings.tier3_free_shipping === undefined) sec.settings.tier3_free_shipping = true;
+        }
+
+        var ORDER_KEYS = {
+          'fast-order-form': [
+            'title', 'submit_btn_text', 'delivery_note',
+            'show_quantity_selector', 'show_pricing_tiers',
+            'tier2_discount_pct', 'tier3_discount_pct', 'tier3_free_shipping',
+            'show_wilaya_selector', 'show_email_field', 'show_baladiya_field',
+            'show_address_field', 'show_delivery_preference', 'show_notes_field'
+          ]
+        };
+
+        var keysToRender = (ORDER_KEYS[sid])
+          ? ORDER_KEYS[sid].concat(Object.keys(sec.settings).filter(function(k) { return !ORDER_KEYS[sid].includes(k); }))
+          : Object.keys(sec.settings);
+
         html += '<div style="padding:12px;background:#1e293b;border-top:1px solid #334155;">';
-        Object.keys(sec.settings).forEach(function(sKey) {
+        keysToRender.forEach(function(sKey) {
+          if (sec.settings[sKey] === undefined) return;
           var sVal = sec.settings[sKey];
           var labelText = SETTING_LABELS[sKey] || sKey;
 
