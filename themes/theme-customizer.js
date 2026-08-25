@@ -437,17 +437,18 @@
         };
 
         if (sid === 'fast-order-form' || sid === 'order-form') {
+          sec.settings = sec.settings || {};
           if (sec.settings.show_quantity_selector === undefined) sec.settings.show_quantity_selector = true;
           if (sec.settings.show_pricing_tiers === undefined) sec.settings.show_pricing_tiers = true;
-          if (sec.settings.tier1_label === undefined) sec.settings.tier1_label = '1 قطعة (شراء عادي)';
-          if (sec.settings.tier1_subtext === undefined) sec.settings.tier1_subtext = 'السعر القياسي';
-          if (sec.settings.tier2_label === undefined) sec.settings.tier2_label = '2 قطع (الأكثر طلباً ⭐)';
-          if (sec.settings.tier2_badge === undefined) sec.settings.tier2_badge = 'الأكثر طلباً';
-          if (sec.settings.tier2_subtext === undefined) sec.settings.tier2_subtext = 'العرض الموصى به للمنازل';
+          if (!sec.settings.tier1_label) sec.settings.tier1_label = '1 قطعة (شراء عادي)';
+          if (!sec.settings.tier1_subtext) sec.settings.tier1_subtext = 'السعر القياسي';
+          if (!sec.settings.tier2_label) sec.settings.tier2_label = '2 قطع (الأكثر طلباً ⭐)';
+          if (!sec.settings.tier2_badge) sec.settings.tier2_badge = 'الأكثر طلباً';
+          if (!sec.settings.tier2_subtext) sec.settings.tier2_subtext = 'العرض الموصى به للمنازل';
           if (sec.settings.tier2_discount_pct === undefined) sec.settings.tier2_discount_pct = 10;
-          if (sec.settings.tier3_label === undefined) sec.settings.tier3_label = '3 قطع (توفير كلي 🎁)';
-          if (sec.settings.tier3_badge === undefined) sec.settings.tier3_badge = 'توفير كلي';
-          if (sec.settings.tier3_subtext === undefined) sec.settings.tier3_subtext = 'أفضل قيمة وأعلى توفير';
+          if (!sec.settings.tier3_label) sec.settings.tier3_label = '3 قطع (توفير كلي 🎁)';
+          if (!sec.settings.tier3_badge) sec.settings.tier3_badge = 'توفير كلي';
+          if (!sec.settings.tier3_subtext) sec.settings.tier3_subtext = 'أفضل قيمة وأعلى توفير';
           if (sec.settings.tier3_discount_pct === undefined) sec.settings.tier3_discount_pct = 20;
           if (sec.settings.tier3_free_shipping === undefined) sec.settings.tier3_free_shipping = true;
         }
@@ -473,6 +474,14 @@
           if (sec.settings[sKey] === undefined) return;
           var sVal = sec.settings[sKey];
           var labelText = SETTING_LABELS[sKey] || sKey;
+
+          if (sKey === 'tier1_label') {
+            html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #6366f1;border-radius:4px;font-size:0.82rem;font-weight:800;color:#a5b4fc">📦 إعدادات العرض الأول (1 قطعة / مفرد)</div>';
+          } else if (sKey === 'tier2_label') {
+            html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #f59e0b;border-radius:4px;font-size:0.82rem;font-weight:800;color:#fde68a">⭐ إعدادات العرض الثاني (عرض مع علبة / قطعتين)</div>';
+          } else if (sKey === 'tier3_label') {
+            html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #10b981;border-radius:4px;font-size:0.82rem;font-weight:800;color:#86efac">🎁 إعدادات العرض الثالث (عرض التوفير الأقصى)</div>';
+          }
 
           if (sKey === 'end_at') {
             html += '<div style="margin-bottom:12px;background:#0f172a;padding:10px;border-radius:8px;border:1px solid #334155;">';
