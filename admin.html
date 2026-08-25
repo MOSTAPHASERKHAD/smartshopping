@@ -1243,6 +1243,28 @@ var allProducts = [];
 var allOrders = [];
 var settings = {};
 
+// Global AI Copilot Forwarder (Guarantees immediate availability across all admin views)
+if (typeof window.toggleAiCopilotDrawer !== 'function') {
+  window.toggleAiCopilotDrawer = function(forceOpen) {
+    var drawer = document.getElementById('aiCopilotDrawer');
+    if (!drawer) return;
+    var willOpen = (typeof forceOpen === 'boolean') ? forceOpen : !drawer.classList.contains('open');
+    if (willOpen) {
+      drawer.classList.add('open');
+      var body = document.getElementById('aiCopilotBody');
+      if (body && typeof renderAiChatThread === 'function') {
+        renderAiChatThread();
+      }
+      setTimeout(function() {
+        var input = document.getElementById('aiPromptInput');
+        if (input) input.focus();
+      }, 150);
+    } else {
+      drawer.classList.remove('open');
+    }
+  };
+}
+
 // Escape server-provided values before injecting into innerHTML (prevents stored XSS).
 function esc(s) {
   if (s === null || s === undefined) return '';
