@@ -291,6 +291,7 @@
         <div style="font-size:0.78rem;color:var(--text2);margin-top:2px">Meta Ads Manager Hierarchy & First-Party Marketing Attribution</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-sm" onclick="openAnalyticsUtmBuilder()" style="background:#4338ca;color:#fff;border-color:#4338ca;font-weight:700">🔗 منشئ روابط التتبع UTM</button>
         <select id="analytics_preset_filter" onchange="loadAnalytics()" style="padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card);font-size:0.85rem;font-weight:600">
           <option value="today">اليوم | Today</option>
           <option value="yesterday">أمس | Yesterday</option>
@@ -300,6 +301,15 @@
         </select>
         <button class="btn btn-outline btn-sm" onclick="loadAnalytics()">🔄 تحديث البيانات</button>
       </div>
+    </div>
+
+    <!-- Quick Preset Filter Pills -->
+    <div class="analytics-preset-pills" id="analytics_preset_pills" style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 16px">
+      <button type="button" class="analytics-pill active" onclick="setAnalyticsPreset('today', this)">📅 اليوم</button>
+      <button type="button" class="analytics-pill" onclick="setAnalyticsPreset('yesterday', this)">📅 أمس</button>
+      <button type="button" class="analytics-pill" onclick="setAnalyticsPreset('last_7d', this)">📊 آخر 7 أيام</button>
+      <button type="button" class="analytics-pill" onclick="setAnalyticsPreset('last_30d', this)">📈 آخر 30 يوماً</button>
+      <button type="button" class="analytics-pill" onclick="setAnalyticsPreset('maximum', this)">♾️ كل الأوقات</button>
     </div>
 
     <!-- Meta Connection Banner -->
@@ -378,10 +388,16 @@
 
     <!-- Hierarchical Attribution Table -->
     <div class="panel">
-      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center">
-        <h3>📊 تفصيل أداء الحملات والمجموعات والإعلانات (Meta Ads Hierarchy)</h3>
-        <div style="font-size:0.78rem;color:var(--text2)">
-          💡 اضغط على الحملة أو المجموعة لتوسيع الإعلانات التابعة لها
+      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div>
+          <h3>📊 تفصيل أداء الحملات والمجموعات والإعلانات (Meta Ads Hierarchy)</h3>
+          <div style="font-size:0.78rem;color:var(--text2)">
+            💡 اضغط على ➕ لتوسيع الإعلانات التابعة للحملة، أو ابحث مباشرة في الجدول
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <input type="text" id="analyticsTableSearch" placeholder="🔍 بحث في الحملات والإعلانات..." oninput="filterAnalyticsTable(this.value)" style="padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);font-size:0.82rem;width:220px">
+          <button type="button" class="btn btn-outline btn-xs" id="btnToggleAllAnalytics" onclick="toggleAllAnalyticsGroups()" style="padding:6px 12px;font-size:0.8rem">➕ توسيع كافة المجموعات</button>
         </div>
       </div>
       <div class="panel-body">
@@ -1288,6 +1304,78 @@
         <button type="submit" id="reauthSubmitBtn" class="btn btn-accent" style="font-size:13px">تجديد الجلسة والمتابعة</button>
       </div>
     </form>
+  </div>
+</div>
+</div>
+
+<!-- UTM Campaign Link Builder Modal -->
+<div class="modal-overlay" id="analyticsUtmModal" style="display:none">
+<div class="modal" style="max-width:540px">
+  <div class="modal-header">
+    <h3>🔗 منشئ روابط التتبع للحملات الإعلانية (UTM Builder)</h3>
+    <button class="modal-close" onclick="closeAnalyticsUtmBuilder()">✕</button>
+  </div>
+  <div class="modal-body" style="padding:20px">
+    <div style="font-size:0.8rem;color:var(--text2);margin-bottom:14px;line-height:1.5">
+      قم بإنشاء رابط تتبع دقيق يتيح لـ SmartKiosk ومحرك الذكاء الاصطناعي و Meta CAPI ربط كل زائر وطلب بالحملة الإعلانية المحددة.
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label style="font-weight:700;display:block;margin-bottom:4px">1. اختر الصفحة أو المنتج المستهدف:</label>
+      <select id="utm_target_page" onchange="generateUtmLink()" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem">
+        <option value="home">الصفحة الرئيسية للمتجر (Home)</option>
+      </select>
+    </div>
+    <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="form-group">
+        <label style="font-weight:700;display:block;margin-bottom:4px">2. المنصة الإعلانية (Source):</label>
+        <select id="utm_source_select" onchange="onUtmSourceChange()" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem">
+          <option value="facebook">Facebook / Meta Ads</option>
+          <option value="instagram">Instagram</option>
+          <option value="tiktok">TikTok Ads</option>
+          <option value="snapchat">Snapchat Ads</option>
+          <option value="google">Google Ads</option>
+          <option value="custom">مخصص (Custom)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label style="font-weight:700;display:block;margin-bottom:4px">نوع الوسيط (Medium):</label>
+        <input type="text" id="utm_medium_input" value="cpc" oninput="generateUtmLink()" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label style="font-weight:700;display:block;margin-bottom:4px">3. اسم الحملة الإعلانية (Campaign Name):</label>
+      <input type="text" id="utm_campaign_input" placeholder="مثال: watch_promo_sep أو {{campaign.name}}" oninput="generateUtmLink()" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem">
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:3px">💡 يمكنك كتابة اسم ثابت أو استخدام وسم فيسبوك التلقائي <code>{{campaign.name}}</code></div>
+    </div>
+    <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="form-group">
+        <label style="font-weight:700;display:block;margin-bottom:4px">المجموعة (AdSet / Term):</label>
+        <input type="text" id="utm_term_input" placeholder="{{adset.name}} أو رجال_25_45" oninput="generateUtmLink()" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem">
+      </div>
+      <div class="form-group">
+        <label style="font-weight:700;display:block;margin-bottom:4px">الإعلان (Ad / Content):</label>
+        <input type="text" id="utm_content_input" placeholder="{{ad.name}} أو فيديو_1" oninput="generateUtmLink()" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem">
+      </div>
+    </div>
+
+    <!-- Generated Results -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px">
+      <div style="font-size:0.82rem;font-weight:700;margin-bottom:6px">📋 الرابط النهائي الجاهز للإعلان:</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="utm_generated_url" readonly style="width:100%;font-family:monospace;font-size:0.78rem;padding:6px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg)">
+        <button type="button" class="btn btn-accent btn-sm" onclick="copyUtmGeneratedUrl()">📋 نسخ</button>
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">
+        <div style="font-size:0.78rem;font-weight:700;margin-bottom:4px">🎯 وسوم فيسبوك (URL Parameters):</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" id="utm_meta_params" readonly value="utm_source=facebook&utm_medium=cpc&utm_campaign={{campaign.name}}&utm_content={{ad.name}}&utm_term={{adset.name}}" style="width:100%;font-family:monospace;font-size:0.75rem;padding:6px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg)">
+          <button type="button" class="btn btn-outline btn-sm" onclick="copyUtmMetaParams()">📋 نسخ الوسوم</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end">
+      <button type="button" class="btn btn-outline" onclick="closeAnalyticsUtmBuilder()">إغلاق</button>
+    </div>
   </div>
 </div>
 </div>
@@ -2954,7 +3042,7 @@ function renderOrders() {
       '<td style="width:36px;text-align:center" onclick="event.stopPropagation()"><input type="checkbox" class="order-check" value="' + oid + '"' + isChecked + ' onchange="onOrderCheckChanged(this, event)"></td>' +
       '<td><strong style="color:var(--accent);font-family:monospace;font-size:0.82rem">' + esc(o.order_id) + '</strong></td>' +
       '<td style="white-space:nowrap;color:var(--text3);font-size:0.78rem">' + esc((o.created_at || '').substring(0, 10)) + '</td>' +
-      '<td><div style="font-weight:600">' + esc(o.name) + '</div>' + (itemsText ? '<div style="font-size:0.72rem;color:var(--text3)">' + itemsText + '</div>' : '') + '</td>' +
+      '<td onclick="event.stopPropagation();viewOrder(\'' + oid + '\')" style="cursor:pointer" title="انقر لعرض تفاصيل الطلبية الكاملة"><div style="font-weight:700;color:var(--accent,#4f46e5);display:inline-flex;align-items:center;gap:4px;border-bottom:1px dashed var(--accent,#4f46e5)"><span>👤</span> <span>' + esc(o.name) + '</span></div>' + (itemsText ? '<div style="font-size:0.72rem;color:var(--text3);margin-top:2px">' + itemsText + '</div>' : '') + '</td>' +
       '<td><a href="https://wa.me/' + esc(o.phone || '') + '" target="_blank" style="color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-family:monospace;white-space:nowrap" onclick="event.stopPropagation()">📱 ' + esc(o.phone || '') + '</a></td>' +
       '<td>' + esc(o.wilaya_ar || o.wilaya || '-') + '</td>' +
       '<td>' + (o.delivery_type === 'Office' ? adminT('delivery_office') : adminT('delivery_home')) + '</td>' +
@@ -3005,10 +3093,15 @@ function generateOrderLabelHtml(o) {
   var items = [];
   try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
   var itemsRows = items.map(function(it) {
+    var name = esc(it.name || it.title || '');
+    var tierText = (it.tier_name) ? ('<div style="font-size:8px;color:#4338ca;font-weight:700;margin-top:1px;">🎁 ' + esc(it.tier_name) + '</div>') : '';
+    var unitP = Number(it.price || it.unit_price || 0);
+    var itemQty = Number(it.qty || 1);
+    var itemTotal = Number(it.subtotal || (unitP * itemQty));
     return '<tr>' +
-      '<td style="padding:3px 5px;border:1px solid #000;font-size:9.5px;text-align:right;">' + esc(it.name || it.title || '') + '</td>' +
-      '<td style="padding:3px 5px;border:1px solid #000;font-size:9.5px;text-align:center;font-weight:800;width:28px;">' + (it.qty || 1) + '</td>' +
-      '<td style="padding:3px 5px;border:1px solid #000;font-size:9.5px;text-align:left;font-weight:800;width:60px;">' + Number(it.price * (it.qty || 1)).toLocaleString() + ' دج</td>' +
+      '<td style="padding:3px 5px;border:1px solid #000;font-size:9.5px;text-align:right;">' + name + tierText + '</td>' +
+      '<td style="padding:3px 5px;border:1px solid #000;font-size:9.5px;text-align:center;font-weight:800;width:28px;">' + itemQty + '</td>' +
+      '<td style="padding:3px 5px;border:1px solid #000;font-size:9.5px;text-align:left;font-weight:800;width:60px;">' + itemTotal.toLocaleString() + ' دج</td>' +
     '</tr>';
   }).join('');
 
@@ -3020,8 +3113,9 @@ function generateOrderLabelHtml(o) {
   var orderAddr = orderAddrRaw ? esc(orderAddrRaw.trim()) : '';
 
   var subtotal = Number(o.subtotal || 0);
+  var discount = Number(o.discount || 0);
   var shipCost = Number(o.shipping_cost || 0);
-  var grandTotal = subtotal + shipCost;
+  var grandTotal = Number(o.total || (subtotal + shipCost - discount));
   var storeName = (window.storeSettings && window.storeSettings.store_name) ? window.storeSettings.store_name : 'Smart Shopping';
 
   return '<div class="bulk-label">' +
@@ -3053,7 +3147,7 @@ function generateOrderLabelHtml(o) {
       '<table style="width:100%;border-collapse:collapse;margin-bottom:6px;">' +
         '<thead>' +
           '<tr style="background:#f1f5f9;">' +
-            '<th style="padding:3px 5px;border:1px solid #000;text-align:right;font-size:9px;">المنتج</th>' +
+            '<th style="padding:3px 5px;border:1px solid #000;text-align:right;font-size:9px;">المنتج والباقة</th>' +
             '<th style="padding:3px 5px;border:1px solid #000;text-align:center;font-size:9px;width:28px;">الكمية</th>' +
             '<th style="padding:3px 5px;border:1px solid #000;text-align:left;font-size:9px;width:60px;">المجموع</th>' +
           '</tr>' +
@@ -3117,49 +3211,109 @@ function viewOrder(orderId) {
   if (!o) return;
   var items = [];
   try { items = JSON.parse(o.items_json || '[]'); } catch(e) {}
+
   var itemsHtml = items.map(function(it) {
-    return '<tr><td>' + esc(it.name || it.title || '') + '</td><td style="text-align:center">' + it.qty + '</td><td>' + Number(it.price).toLocaleString() + ' DZD</td><td style="font-weight:700">' + Number(it.price * it.qty).toLocaleString() + ' DZD</td></tr>';
+    var name = esc(it.name || it.title || 'منتج');
+    var tierBadge = (it.tier_name)
+      ? ('<div style="margin-top:4px"><span style="display:inline-flex;align-items:center;gap:4px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;padding:2px 8px;border-radius:12px;font-size:0.75rem;font-weight:700">🎁 ' + esc(it.tier_name) + '</span></div>')
+      : '';
+    var unitPrice = Number(it.price || it.unit_price || 0);
+    var itemQty = Number(it.qty || 1);
+    var itemSubtotal = Number(it.subtotal || (unitPrice * itemQty));
+
+    return '<tr style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:10px 8px;vertical-align:middle;">' +
+        '<div style="font-weight:700;font-size:0.92rem;color:var(--text);">' + name + '</div>' +
+        tierBadge +
+      '</td>' +
+      '<td style="padding:10px 8px;text-align:center;font-weight:800;font-size:1rem;color:var(--text);vertical-align:middle;">' + itemQty + '</td>' +
+      '<td style="padding:10px 8px;text-align:right;font-size:0.9rem;color:var(--text2);vertical-align:middle;">' + unitPrice.toLocaleString() + ' DZD</td>' +
+      '<td style="padding:10px 8px;text-align:right;font-weight:800;font-size:0.95rem;color:var(--text);vertical-align:middle;">' + itemSubtotal.toLocaleString() + ' DZD</td>' +
+    '</tr>';
   }).join('');
+
   var rawNote = String(o.notes || '');
   var addrMatch = rawNote.match(/\| (.+)$/);
   var orderAddrRaw = addrMatch ? addrMatch[1] : '';
   var orderNoteRaw = addrMatch ? rawNote.replace(' | ' + orderAddrRaw, '') : rawNote;
-  var orderNote = esc(orderNoteRaw);
-  var orderAddr = orderAddrRaw ? esc(orderAddrRaw) : '';
+  var orderNote = esc(orderNoteRaw.trim());
+  var orderAddr = orderAddrRaw ? esc(orderAddrRaw.trim()) : '';
+
   var subtotal = Number(o.subtotal || 0);
-  var shipCost = Number(o.shipping_cost || 0);
-  var grandTotal = subtotal + shipCost;
+  var discount = Number(o.discount || 0);
+  var shipCost = (o.shipping_cost !== null && o.shipping_cost !== undefined && o.shipping_cost !== '') ? Number(o.shipping_cost) : null;
+  var isFreeShip = (shipCost === 0 || (shipCost === null && subtotal > 0 && o.total === subtotal));
+  var grandTotal = Number(o.total || (subtotal + (shipCost || 0) - discount));
+
+  var statusBadges = {
+    pending: '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-weight:800">⏳ قيد الانتظار</span>',
+    confirmed: '<span class="badge" style="background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;font-weight:800">✅ تم التأكيد</span>',
+    shipped: '<span class="badge" style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;font-weight:800">🚚 تم الشحن</span>',
+    delivered: '<span class="badge" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;font-weight:800">🎉 تم التسليم</span>',
+    cancelled: '<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-weight:800">❌ ملغي</span>'
+  };
 
   document.getElementById('orderDetail').innerHTML =
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">' +
-      '<div><strong>رقم الطلب:</strong><br><span style="font-family:monospace;font-weight:800;font-size:1.05rem">' + esc(o.order_id) + '</span></div>' +
-      '<div><strong>التاريخ:</strong><br>' + esc(o.created_at) + '</div>' +
-      '<div><strong>العميل:</strong><br><strong style="font-size:1rem">' + esc(o.name) + '</strong></div>' +
-      '<div><strong>الهاتف:</strong><br><a href="https://wa.me/' + esc(o.phone) + '" target="_blank" style="color:var(--accent);font-weight:800;direction:ltr;display:inline-block">' + esc(o.phone) + '</a></div>' +
-      '<div><strong>الولاية والبلدية:</strong><br>' + esc(o.wilaya_ar || '') + (o.municipality ? ' — ' + esc(o.municipality) : '') + '</div>' +
-      '<div><strong>نوع التوصيل:</strong><br>' + (o.delivery_type === 'Office' ? '🏢 مكتب (Stop Desk)' : '🏠 لباب المنزل (À Domicile)') + '</div>' +
-      '<div style="grid-column:1/-1"><strong>الشحن:</strong><br>' +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px" class="no-print">' +
-          '<label style="font-size:.75rem">سعر التوصيل (دج)</label><input id="o_ship_cost" type="number" style="width:90px" value="' + shipCost + '">' +
-          '<label style="font-size:.75rem">شركة التوصيل</label><input id="o_ship_company" style="width:110px" value="' + esc(o.delivery_company || 'yalidine') + '">' +
-          '<label style="font-size:.75rem">رقم التتبع</label><input id="o_ship_tracking" style="width:140px" value="' + esc(o.tracking_code || '') + '">' +
-          '<button class="btn btn-accent btn-xs" onclick="saveOrderShipping(\'' + esc(o.order_id) + '\')">حفظ</button>' +
+    '<div style="background:var(--card,#1e293b);border-radius:8px;padding:12px;margin-bottom:14px;border:1px solid var(--border);">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:10px;">' +
+        '<div>' +
+          '<span style="font-size:0.75rem;color:var(--text3);">رقم الطلبية:</span> ' +
+          '<strong style="font-family:monospace;font-size:1.1rem;color:var(--accent);">' + esc(o.order_id) + '</strong>' +
         '</div>' +
-        '<div class="print-only" style="display:none;margin-top:2px;">' +
-          'شركة الشحن: <strong>' + esc(o.delivery_company || 'yalidine') + '</strong>' +
-          (shipCost > 0 ? ' | سعر التوصيل: <strong>' + shipCost.toLocaleString() + ' DZD</strong>' : ' | التوصيل: <strong>مجاني (0 DZD)</strong>') +
-          (o.tracking_code ? ' | رقم التتبع: <strong>' + esc(o.tracking_code) + '</strong>' : '') +
-        '</div>' +
+        '<div>' + (statusBadges[o.status] || '<span class="badge">' + esc(o.status) + '</span>') + '</div>' +
       '</div>' +
-      (orderAddr ? '<div style="grid-column:1/-1"><strong>العنوان الدقيق:</strong><br>' + orderAddr + '</div>' : '') +
-      (orderNote ? '<div style="grid-column:1/-1"><strong>ملاحظة الطلب:</strong><br>' + orderNote + '</div>' : '') +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.88rem;">' +
+        '<div><span style="color:var(--text3);">👤 اسم العميل:</span> <strong>' + esc(o.name) + '</strong></div>' +
+        '<div><span style="color:var(--text3);">📱 رقم الهاتف:</span> <a href="https://wa.me/' + esc(o.phone) + '" target="_blank" style="color:var(--accent);font-weight:800;direction:ltr;display:inline-block">' + esc(o.phone) + '</a></div>' +
+        '<div><span style="color:var(--text3);">📍 الولاية والبلدية:</span> <strong>' + esc(o.wilaya_ar || o.wilaya || '-') + (o.municipality ? ' — ' + esc(o.municipality) : '') + '</strong></div>' +
+        '<div><span style="color:var(--text3);">🚚 مكان التسليم:</span> <strong>' + (o.delivery_type === 'Office' ? '🏢 مكتب (Stop Desk)' : '🏠 لباب المنزل (À Domicile)') + '</strong></div>' +
+        '<div><span style="color:var(--text3);">⏱️ التاريخ والوقت:</span> <span>' + esc(o.created_at || '') + '</span></div>' +
+        '<div><span style="color:var(--text3);">🚚 شركة الشحن:</span> <strong>' + esc(o.delivery_company || 'Yalidine') + '</strong></div>' +
+        (orderAddr ? '<div style="grid-column:1/-1;"><span style="color:var(--text3);">🏠 العنوان الدقيق:</span> <strong>' + orderAddr + '</strong></div>' : '') +
+        (orderNote ? '<div style="grid-column:1/-1;background:rgba(255,255,255,0.03);padding:6px 10px;border-radius:6px;border-right:3px solid var(--accent);"><span style="color:var(--text3);">📝 ملاحظات الزبون:</span> <span>' + orderNote + '</span></div>' : '') +
+      '</div>' +
     '</div>' +
-    '<h4 style="margin-bottom:6px;font-size:.9rem">المنتجات المطلوبة</h4>' +
-    '<table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:var(--bg)"><th style="padding:6px 8px;text-align:right">المنتج</th><th style="padding:6px 8px;text-align:center">الكمية</th><th style="padding:6px 8px;text-align:right">السعر</th><th style="padding:6px 8px;text-align:right">الإجمالي</th></tr></thead><tbody>' + itemsHtml + '</tbody></table>' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg);padding:8px 12px;border-radius:6px;border:1px dashed var(--border);font-weight:700;font-size:1rem;margin-bottom:12px">' +
-      '<span>المبلغ الإجمالي عند الاستلام (COD):</span><span style="color:var(--accent);font-size:1.15rem;font-weight:900">' + grandTotal.toLocaleString() + ' DZD</span>' +
+
+    '<h4 style="margin:14px 0 8px;font-size:0.92rem;display:flex;align-items:center;gap:6px;"><span>🛍️</span> <span>المنتجات والباقات المطلوبة</span></h4>' +
+    '<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">' +
+      '<table style="width:100%;border-collapse:collapse;margin:0;">' +
+        '<thead><tr style="background:var(--bg);border-bottom:1px solid var(--border);">' +
+          '<th style="padding:8px;text-align:right;font-size:0.82rem;">المنتج والباقة</th>' +
+          '<th style="padding:8px;text-align:center;font-size:0.82rem;width:60px;">الكمية</th>' +
+          '<th style="padding:8px;text-align:right;font-size:0.82rem;width:100px;">سعر الوحدة</th>' +
+          '<th style="padding:8px;text-align:right;font-size:0.82rem;width:110px;">المجموع</th>' +
+        '</tr></thead>' +
+        '<tbody>' + itemsHtml + '</tbody>' +
+      '</table>' +
     '</div>' +
-    '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap" class="no-print">' +
+
+    '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:14px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:0.88rem;">' +
+        '<span style="color:var(--text2);">المجموع الفرعي للمنتجات:</span>' +
+        '<span style="font-weight:700;">' + subtotal.toLocaleString() + ' DZD</span>' +
+      '</div>' +
+      (discount > 0 ? ('<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:0.88rem;color:#ef4444;"><span>🎁 الخصم المطبق' + (o.coupon_code ? ' (' + esc(o.coupon_code) + ')' : '') + ':</span><span style="font-weight:700;">- ' + discount.toLocaleString() + ' DZD</span></div>') : '') +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:0.88rem;">' +
+        '<span style="color:var(--text2);">مصاريف التوصيل:</span>' +
+        '<span>' + (isFreeShip ? '<strong style="color:#10b981;display:inline-flex;align-items:center;gap:4px">🚚 شحن مجاني (مشمول في العرض)</strong>' : ('<strong>' + (shipCost ? shipCost.toLocaleString() : 0) + ' DZD</strong>')) + '</span>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1.5px dashed var(--border);font-size:1.1rem;font-weight:900;">' +
+        '<span>💵 المبلغ الإجمالي للدفع عند الاستلام (COD):</span>' +
+        '<span style="color:var(--accent);font-size:1.25rem;">' + grandTotal.toLocaleString() + ' DZD</span>' +
+      '</div>' +
+    '</div>' +
+
+    '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;" class="no-print">' +
+      '<strong style="font-size:0.82rem;display:block;margin-bottom:6px;">🚚 إدارة الشحن والتتبع</strong>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+        '<label style="font-size:.78rem">سعر التوصيل (دج):</label><input id="o_ship_cost" type="number" style="width:90px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);" value="' + (shipCost !== null ? shipCost : 0) + '">' +
+        '<label style="font-size:.78rem">شركة التوصيل:</label><input id="o_ship_company" style="width:110px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);" value="' + esc(o.delivery_company || 'yalidine') + '">' +
+        '<label style="font-size:.78rem">رقم التتبع:</label><input id="o_ship_tracking" style="width:140px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);" value="' + esc(o.tracking_code || '') + '">' +
+        '<button class="btn btn-accent btn-xs" onclick="saveOrderShipping(\'' + esc(o.order_id) + '\')">💾 حفظ الشحن</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;" class="no-print">' +
       '<button type="button" class="btn btn-warning" onclick="printOrderLabel()" style="background:#f59e0b;color:#fff;font-weight:700">🖨️ طباعة الوصل (A6)</button>' +
       '<button type="button" class="btn btn-success" onclick="sendOrderToStaff(\'' + esc(o.order_id) + '\')" style="background:#059669;color:#fff;font-weight:700">📲 إرسال تفاصيل الطلبية لمسؤول التأكيد</button>' +
       '<a href="https://wa.me/' + esc(o.phone) + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-outline">📱 واتساب العميل</a>' +
@@ -3403,9 +3557,11 @@ function formatSingleOrderBlock(o, orderIndex) {
   if (Array.isArray(items) && items.length > 0) {
     itemsText = items.map(function(it) {
       var name = (it && (it.name || it.title)) ? String(it.name || it.title).trim() : 'منتج';
+      var tierText = (it && it.tier_name) ? ('\n  🎁 الباقة: ' + it.tier_name) : '';
       var qty = (it && it.qty) ? it.qty : 1;
-      return '• ' + name + ' ×' + qty;
-    }).join('\n');
+      var unitP = (it && (it.price || it.unit_price)) ? (' (سعر الوحدة: ' + Number(it.price || it.unit_price).toLocaleString() + ' دج)') : '';
+      return '• ' + name + tierText + '\n  🔢 الكمية: ' + qty + unitP;
+    }).join('\n\n');
   } else {
     itemsText = '• ' + (o.name || 'منتج') + ' ×1';
   }
@@ -4079,10 +4235,29 @@ function formatDzd(val) {
   return n.toLocaleString('fr-DZ') + ' دج';
 }
 
+function setAnalyticsPreset(preset, btn) {
+  var select = document.getElementById('analytics_preset_filter');
+  if (select) select.value = preset;
+  var pills = document.querySelectorAll('.analytics-pill');
+  pills.forEach(function(p) { p.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  loadAnalytics();
+}
+
 function loadAnalytics() {
   var preset = (document.getElementById('analytics_preset_filter') || {}).value || 'today';
   var adAcc = (document.getElementById('analytics_ad_account_input') || {}).value || '';
   var usdRate = (document.getElementById('analytics_usd_rate_input') || {}).value || '230';
+
+  // Sync pills state with current preset
+  var pills = document.querySelectorAll('.analytics-pill');
+  pills.forEach(function(p) {
+    if (p.getAttribute('onclick') && p.getAttribute('onclick').indexOf("'" + preset + "'") > -1) {
+      p.classList.add('active');
+    } else {
+      p.classList.remove('active');
+    }
+  });
 
   var tbody = document.getElementById('analytics-table-body');
   if (tbody) {
@@ -4142,12 +4317,39 @@ function loadAnalytics() {
   });
 }
 
+function getRoiHealthBadge(roasVal, spendDzd, purchases) {
+  if (spendDzd > 0 && purchases === 0) {
+    return '<span class="badge" style="background:#fee2e2;color:#dc2626;font-size:0.64rem;padding:2px 6px;border-radius:4px;white-space:nowrap">🛑 كوست دون طلبات</span>';
+  }
+  if (roasVal >= 3.0) {
+    return '<span class="badge" style="background:#dcfce7;color:#15803d;font-size:0.64rem;padding:2px 6px;border-radius:4px;white-space:nowrap">🚀 رابحة جداً (Scale)</span>';
+  }
+  if (roasVal >= 1.5) {
+    return '<span class="badge" style="background:#fef3c7;color:#b45309;font-size:0.64rem;padding:2px 6px;border-radius:4px;white-space:nowrap">🟢 جيدة ومستقرة</span>';
+  }
+  if (roasVal > 0) {
+    return '<span class="badge" style="background:#fee2e2;color:#dc2626;font-size:0.64rem;padding:2px 6px;border-radius:4px;white-space:nowrap">⚠️ مهددة بالخسارة</span>';
+  }
+  return '';
+}
+
 function renderAnalyticsTable(campaigns) {
   var tbody = document.getElementById('analytics-table-body');
   if (!tbody) return;
 
   if (!campaigns || !campaigns.length) {
-    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text2)">لا توجد حملات أو زيارات مسجلة في هذا النطاق الزمني</td></tr>';
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="13" style="text-align:center;padding:40px 20px;color:var(--text2)">
+          <div style="font-size:2.4rem;margin-bottom:10px">📊</div>
+          <div style="font-weight:700;color:var(--text);font-size:1.05rem;margin-bottom:6px">لا توجد بيانات حملات أو زيارات مسجلة في هذا النطاق الزمني</div>
+          <div style="font-size:0.84rem;max-width:560px;margin:0 auto 16px;line-height:1.6;color:var(--text2)">
+            لربط إعلانات فيسبوك وتيك توك بالمتجر وتتبع أرباح كل إعلان بدقة، أنشئ رابط تتبع UTM والصقه في إعلاناتك، أو تأكد من إدخال معرّف الحساب الإعلاني أعلاه.
+          </div>
+          <button type="button" class="btn btn-accent btn-sm" onclick="openAnalyticsUtmBuilder()" style="padding:8px 16px;font-weight:700">🔗 فتح منشئ روابط التتبع UTM</button>
+        </td>
+      </tr>
+    `;
     return;
   }
 
@@ -4158,6 +4360,7 @@ function renderAnalyticsTable(campaigns) {
     var hasAdSets = camp.children && camp.children.length > 0;
     var roasVal = parseFloat(camp.roas) || 0;
     var roasClass = roasVal >= 3 ? 'analytics-metric-roas-high' : (roasVal >= 1.5 ? 'analytics-metric-roas-med' : 'analytics-metric-roas-low');
+    var healthBadge = getRoiHealthBadge(roasVal, camp.spend_dzd, camp.purchases || 0);
 
     // Campaign Row
     html += '<tr class="analytics-row-campaign" id="row_' + cId + '">';
@@ -4167,7 +4370,8 @@ function renderAnalyticsTable(campaigns) {
     } else {
       html += '<span style="display:inline-block;width:24px"></span>';
     }
-    html += '<span class="analytics-badge-campaign">حملة</span> <strong>' + esc(camp.name) + '</strong>';
+    html += '<span class="analytics-badge-campaign">حملة</span> <strong class="analytics-item-name">' + esc(camp.name) + '</strong>';
+    if (healthBadge) html += '<div style="margin-top:3px">' + healthBadge + '</div>';
     html += '</td>';
     html += '<td><span class="badge" style="font-size:0.7rem">' + esc(camp.status_badge) + '</span></td>';
     html += '<td><strong>' + formatDzd(camp.spend_dzd) + '</strong><br><span style="font-size:0.7rem;color:var(--text3)">$' + (camp.spend_usd || 0).toFixed(2) + '</span></td>';
@@ -4190,6 +4394,7 @@ function renderAnalyticsTable(campaigns) {
         var hasAds = adset.children && adset.children.length > 0;
         var sRoasVal = parseFloat(adset.roas) || 0;
         var sRoasClass = sRoasVal >= 3 ? 'analytics-metric-roas-high' : (sRoasVal >= 1.5 ? 'analytics-metric-roas-med' : 'analytics-metric-roas-low');
+        var sHealthBadge = getRoiHealthBadge(sRoasVal, adset.spend_dzd, adset.purchases || 0);
 
         html += '<tr class="analytics-row-adset child_of_' + cId + ' hidden" id="row_' + sId + '">';
         html += '<td style="padding-right:28px">';
@@ -4198,7 +4403,8 @@ function renderAnalyticsTable(campaigns) {
         } else {
           html += '<span style="display:inline-block;width:20px"></span>';
         }
-        html += '<span class="analytics-badge-adset">مجموعة</span> ' + esc(adset.name);
+        html += '<span class="analytics-badge-adset">مجموعة</span> <span class="analytics-item-name">' + esc(adset.name) + '</span>';
+        if (sHealthBadge) html += '<div style="margin-top:2px">' + sHealthBadge + '</div>';
         html += '</td>';
         html += '<td><span class="badge" style="font-size:0.68rem">' + esc(adset.status_badge) + '</span></td>';
         html += '<td>' + formatDzd(adset.spend_dzd) + '<br><span style="font-size:0.68rem;color:var(--text3)">$' + (adset.spend_usd || 0).toFixed(2) + '</span></td>';
@@ -4220,10 +4426,12 @@ function renderAnalyticsTable(campaigns) {
             var aId = sId + '_ad_' + aIdx;
             var aRoasVal = parseFloat(ad.roas) || 0;
             var aRoasClass = aRoasVal >= 3 ? 'analytics-metric-roas-high' : (aRoasVal >= 1.5 ? 'analytics-metric-roas-med' : 'analytics-metric-roas-low');
+            var aHealthBadge = getRoiHealthBadge(aRoasVal, ad.spend_dzd, ad.purchases || 0);
 
             html += '<tr class="analytics-row-ad child_of_' + cId + ' child_of_' + sId + ' hidden" id="row_' + aId + '">';
             html += '<td style="padding-right:52px">';
-            html += '<span class="analytics-badge-ad">إعلان</span> ' + esc(ad.name);
+            html += '<span class="analytics-badge-ad">إعلان</span> <span class="analytics-item-name">' + esc(ad.name) + '</span>';
+            if (aHealthBadge) html += '<div style="margin-top:2px">' + aHealthBadge + '</div>';
             html += '</td>';
             html += '<td><span class="badge" style="font-size:0.65rem">' + esc(ad.status_badge) + '</span></td>';
             html += '<td>' + formatDzd(ad.spend_dzd) + '<br><span style="font-size:0.65rem;color:var(--text3)">$' + (ad.spend_usd || 0).toFixed(2) + '</span></td>';
@@ -4245,6 +4453,71 @@ function renderAnalyticsTable(campaigns) {
   });
 
   tbody.innerHTML = html;
+}
+
+function filterAnalyticsTable(query) {
+  var q = (query || '').trim().toLowerCase();
+  var tbody = document.getElementById('analytics-table-body');
+  if (!tbody) return;
+  var rows = tbody.querySelectorAll('tr');
+
+  if (!q) {
+    // Reset to collapsed view
+    rows.forEach(function(row) {
+      if (row.classList.contains('analytics-row-campaign')) {
+        row.style.display = '';
+      } else {
+        row.classList.add('hidden');
+        row.style.display = '';
+      }
+    });
+    var btns = tbody.querySelectorAll('.analytics-expand-btn');
+    btns.forEach(function(b) { b.textContent = '➕'; });
+    return;
+  }
+
+  // Show matching rows and their parents
+  rows.forEach(function(row) {
+    var nameEl = row.querySelector('.analytics-item-name');
+    var text = nameEl ? nameEl.textContent.toLowerCase() : row.textContent.toLowerCase();
+    if (text.indexOf(q) > -1) {
+      row.classList.remove('hidden');
+      row.style.display = '';
+    } else {
+      if (row.classList.contains('analytics-row-campaign')) {
+        // Check if any child matches
+        var cId = (row.id || '').replace('row_', '');
+        var matchingChild = tbody.querySelector('.child_of_' + cId + ':not(.hidden)');
+        if (matchingChild) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      } else {
+        row.style.display = 'none';
+      }
+    }
+  });
+}
+
+function toggleAllAnalyticsGroups() {
+  var btn = document.getElementById('btnToggleAllAnalytics');
+  var isExpanded = btn && btn.textContent.indexOf('طي') > -1;
+  var tbody = document.getElementById('analytics-table-body');
+  if (!tbody) return;
+
+  var subRows = tbody.querySelectorAll('.analytics-row-adset, .analytics-row-ad');
+  var expandBtns = tbody.querySelectorAll('.analytics-expand-btn');
+
+  if (isExpanded) {
+    subRows.forEach(function(r) { r.classList.add('hidden'); });
+    expandBtns.forEach(function(b) { b.textContent = '➕'; });
+    if (btn) btn.textContent = '➕ توسيع كافة المجموعات';
+  } else {
+    subRows.forEach(function(r) { r.classList.remove('hidden'); });
+    expandBtns.forEach(function(b) { b.textContent = '➖'; });
+    if (btn) btn.textContent = '➖ طي كافة المجموعات';
+  }
 }
 
 function toggleAnalyticsGroup(groupId, btn) {
@@ -4286,6 +4559,118 @@ function saveAnalyticsQuickSettings() {
     }
   });
 }
+
+// ===== UTM CAMPAIGN LINK BUILDER =====
+function openAnalyticsUtmBuilder() {
+  var modal = document.getElementById('analyticsUtmModal');
+  var select = document.getElementById('utm_target_page');
+  if (!modal || !select) return;
+
+  // Populate products
+  var opts = '<option value="home">🏠 الصفحة الرئيسية للمتجر</option>';
+  if (allProducts && allProducts.length > 0) {
+    allProducts.forEach(function(p) {
+      var pName = esc(p.title_ar || p.name || ('منتج #' + p.id));
+      opts += '<option value="product_' + p.id + '">📦 ' + pName + ' (' + (p.price || 0) + ' دج)</option>';
+    });
+  }
+  select.innerHTML = opts;
+  modal.style.display = 'flex';
+  generateUtmLink();
+}
+
+function closeAnalyticsUtmBuilder() {
+  var modal = document.getElementById('analyticsUtmModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function onUtmSourceChange() {
+  var sel = document.getElementById('utm_source_select');
+  var medInput = document.getElementById('utm_medium_input');
+  if (!sel || !medInput) return;
+  var s = sel.value;
+  if (s === 'facebook' || s === 'instagram' || s === 'tiktok' || s === 'snapchat' || s === 'google') {
+    medInput.value = 'cpc';
+  }
+  generateUtmLink();
+}
+
+function generateUtmLink() {
+  var storeOrigin = window.location.origin || 'https://smartshopping.click';
+  var targetPage = (document.getElementById('utm_target_page') || {}).value || 'home';
+  var source = (document.getElementById('utm_source_select') || {}).value || 'facebook';
+  var medium = (document.getElementById('utm_medium_input') || {}).value || 'cpc';
+  var campaign = (document.getElementById('utm_campaign_input') || {}).value || '';
+  var term = (document.getElementById('utm_term_input') || {}).value || '';
+  var content = (document.getElementById('utm_content_input') || {}).value || '';
+
+  var baseUrl = storeOrigin;
+  if (targetPage.startsWith('product_')) {
+    var pId = targetPage.replace('product_', '');
+    baseUrl += '/product.html?id=' + pId;
+  } else {
+    baseUrl += '/index.html';
+  }
+
+  var sep = baseUrl.indexOf('?') > -1 ? '&' : '?';
+  var params = [];
+  if (source) params.push('utm_source=' + encodeURIComponent(source));
+  if (medium) params.push('utm_medium=' + encodeURIComponent(medium));
+  if (campaign) params.push('utm_campaign=' + encodeURIComponent(campaign));
+  if (term) params.push('utm_term=' + encodeURIComponent(term));
+  if (content) params.push('utm_content=' + encodeURIComponent(content));
+
+  var fullUrl = baseUrl + (params.length ? (sep + params.join('&')) : '');
+  var urlEl = document.getElementById('utm_generated_url');
+  if (urlEl) urlEl.value = fullUrl;
+
+  var metaParams = 'utm_source=' + (source || 'facebook') + '&utm_medium=' + (medium || 'cpc') +
+    '&utm_campaign=' + (campaign || '{{campaign.name}}') +
+    '&utm_content=' + (content || '{{ad.name}}') +
+    '&utm_term=' + (term || '{{adset.name}}');
+
+  var metaEl = document.getElementById('utm_meta_params');
+  if (metaEl) metaEl.value = metaParams;
+}
+
+function copyUtmGeneratedUrl() {
+  var urlEl = document.getElementById('utm_generated_url');
+  if (urlEl && urlEl.value) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(urlEl.value).then(function() {
+        toast('تم نسخ الرابط الكامل بنجاح 📋');
+      });
+    } else {
+      urlEl.select();
+      document.execCommand('copy');
+      toast('تم نسخ الرابط الكامل 📋');
+    }
+  }
+}
+
+function copyUtmMetaParams() {
+  var metaEl = document.getElementById('utm_meta_params');
+  if (metaEl && metaEl.value) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(metaEl.value).then(function() {
+        toast('تم نسخ وسوم فيسبوك (URL Parameters) 🎯');
+      });
+    } else {
+      metaEl.select();
+      document.execCommand('copy');
+      toast('تم نسخ وسوم فيسبوك 🎯');
+    }
+  }
+}
+
+window.openAnalyticsUtmBuilder = openAnalyticsUtmBuilder;
+window.closeAnalyticsUtmBuilder = closeAnalyticsUtmBuilder;
+window.generateUtmLink = generateUtmLink;
+window.copyUtmGeneratedUrl = copyUtmGeneratedUrl;
+window.copyUtmMetaParams = copyUtmMetaParams;
+window.setAnalyticsPreset = setAnalyticsPreset;
+window.filterAnalyticsTable = filterAnalyticsTable;
+window.toggleAllAnalyticsGroups = toggleAllAnalyticsGroups;
 
 // ===== SETTINGS =====
 function loadSettings() {
@@ -5098,7 +5483,8 @@ function showAdminPanel() {
       </div>
     </div>
     <div class="ai-header-tools">
-      <button class="ai-tool-btn" id="aiResizeBtn" onclick="toggleAiCopilotSize()" title="تكبير / تصغير النافذة">⤢</button>
+      <button class="ai-tool-btn" id="aiResizeBtn" onclick="toggleAiCopilotSize()" title="توسيع النافذة (عريض)">⤢</button>
+      <button class="ai-tool-btn" id="aiFullscreenBtn" onclick="toggleAiCopilotFullscreen()" title="ملء الشاشة بالكامل (مسرح التحليل)">🗖</button>
       <button class="ai-tool-btn" onclick="toggleAiCopilotDrawer()" title="إغلاق">✕</button>
     </div>
   </div>
@@ -5181,6 +5567,39 @@ function saveAiChatHistoryToStorage() {
   } catch (_) {}
 }
 
+function copyAiBubbleText(btn) {
+  var bubble = btn.closest('.ai-msg-bubble');
+  if (!bubble) return;
+  // Clone to avoid copying the button text
+  var clone = bubble.cloneNode(true);
+  var actionRow = clone.querySelector('.ai-msg-actions');
+  if (actionRow) actionRow.remove();
+  var text = clone.innerText || clone.textContent || '';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text.trim()).then(function() {
+      toast('تم نسخ التحليل إلى الحافظة بنجاح 📋');
+    });
+  } else {
+    toast('تم نسخ التحليل 📋');
+  }
+}
+
+function setAiQuickPrompt(promptText) {
+  var input = document.getElementById('aiPromptInput');
+  if (input) {
+    input.value = promptText;
+    input.focus();
+    var form = input.closest('form');
+    if (form) {
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        handleAiChatSubmit(new Event('submit'));
+      }
+    }
+  }
+}
+
 function renderAiChatThread() {
   var body = document.getElementById('aiCopilotBody');
   if (!body) return;
@@ -5200,6 +5619,9 @@ function renderAiChatThread() {
             <div class="ai-msg-avatar">🤖</div>
             <div class="ai-msg-bubble">
               ${formatAiMarkdown(m.text)}
+              <div class="ai-msg-actions">
+                <button type="button" class="ai-copy-btn" onclick="copyAiBubbleText(this)">📋 نسخ التحليل</button>
+              </div>
             </div>
           </div>
         `;
@@ -5207,11 +5629,19 @@ function renderAiChatThread() {
     });
   } else {
     msgsHtml = `
-      <div style="text-align:center;padding:28px 16px;color:#64748b">
-        <div style="font-size:2.2rem;margin-bottom:8px">🤖</div>
-        <div style="font-weight:800;color:#1e293b;margin-bottom:4px">مستشار التجارة وهوامش الأرباح الجزائري</div>
-        <div style="font-size:0.82rem;line-height:1.5">
-          جاهز لتحليل أسعار الجملة، حساب العروض بدون خسارة، ومتابعة الحملات والمخزون.
+      <div style="text-align:center;padding:32px 16px;color:#64748b">
+        <div style="font-size:2.4rem;margin-bottom:10px">🤖</div>
+        <div style="font-weight:800;color:#1e293b;font-size:1.1rem;margin-bottom:6px">مستشار التجارة وهوامش الأرباح الجزائري</div>
+        <div style="font-size:0.86rem;line-height:1.6;max-width:540px;margin:0 auto 20px;color:#64748b">
+          جاهز لتحليل أسعار الجملة، حساب العروض بدون خسارة، مراجعة كوست فيسبوك، ومتابعة حملات الشحن والمخزون.
+        </div>
+
+        <div style="font-size:0.82rem;font-weight:700;color:#334155;margin-bottom:10px">💡 أسئلة واستشارات سريعة مقترحة:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:620px;margin:0 auto">
+          <button type="button" class="btn btn-outline btn-xs" onclick="setAiQuickPrompt('💰 ما هو صافي أرباحي اليوم مع تفصيل التكاليف؟')" style="font-size:0.8rem;padding:6px 12px;border-radius:18px;background:#f8fafc">💰 ما هو صافي أرباحي اليوم؟</button>
+          <button type="button" class="btn btn-outline btn-xs" onclick="setAiQuickPrompt('📦 ما هي أكثر 3 منتجات مبيعاً وربحية في المتجر؟')" style="font-size:0.8rem;padding:6px 12px;border-radius:18px;background:#f8fafc">📦 أكثر المنتجات ربحية ومبيعاً</button>
+          <button type="button" class="btn btn-outline btn-xs" onclick="setAiQuickPrompt('🎯 حلل أداء حملات فيسبوك الإعلانية وجودة الكوست')" style="font-size:0.8rem;padding:6px 12px;border-radius:18px;background:#f8fafc">🎯 تحليل كوست إعلانات فيسبوك</button>
+          <button type="button" class="btn btn-outline btn-xs" onclick="setAiQuickPrompt('🚚 كيف أقلل تكلفة الشحن ونسبة الطلبات المرتجعة؟')" style="font-size:0.8rem;padding:6px 12px;border-radius:18px;background:#f8fafc">🚚 تقليل كوست الشحن والمرتجع</button>
         </div>
       </div>
     `;
@@ -5221,7 +5651,7 @@ function renderAiChatThread() {
     <div class="ai-chat-thread" id="aiChatThread">
       <div class="ai-chat-top-bar">
         <span>💬 استشارة فورية مع خبير النمو وحماية الأرباح</span>
-        <button class="btn btn-outline btn-xs" onclick="resetAiChatSession()" style="font-size:0.75rem;padding:2px 8px">🔄 محادثة جديدة</button>
+        <button class="btn btn-outline btn-xs" onclick="resetAiChatSession()" style="font-size:0.75rem;padding:3px 10px;border-radius:6px">🔄 محادثة جديدة</button>
       </div>
       <div class="ai-chat-messages" id="aiChatMessages">
         ${msgsHtml}
@@ -5258,11 +5688,28 @@ function toggleAiCopilotSize() {
   var drawer = document.getElementById('aiCopilotDrawer');
   var btn = document.getElementById('aiResizeBtn');
   if (!drawer) return;
+  if (drawer.classList.contains('fullscreen')) {
+    drawer.classList.remove('fullscreen');
+  }
   drawer.classList.toggle('expanded');
   if (btn) {
     btn.textContent = drawer.classList.contains('expanded') ? '⤡' : '⤢';
   }
 }
+
+function toggleAiCopilotFullscreen() {
+  var drawer = document.getElementById('aiCopilotDrawer');
+  var fsBtn = document.getElementById('aiFullscreenBtn');
+  if (!drawer) return;
+  drawer.classList.toggle('fullscreen');
+  if (fsBtn) {
+    fsBtn.textContent = drawer.classList.contains('fullscreen') ? '🗗' : '🗖';
+  }
+}
+
+window.toggleAiCopilotFullscreen = toggleAiCopilotFullscreen;
+window.copyAiBubbleText = copyAiBubbleText;
+window.setAiQuickPrompt = setAiQuickPrompt;
 
 function resetAiChatSession() {
   window.aiChatHistory = [];

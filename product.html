@@ -780,7 +780,7 @@
       // ── Quantity Breaks / Bundle Offers or Standard Quantity Selector ──
       if (showQtySelector) {
         if (showPricingTiers && typeof renderQuantityBreaks === 'function') {
-          html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1, themeTierSettings);
+          html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1, themeTierSettings, window.selectedQuantityState ? window.selectedQuantityState.offerId : null);
         } else {
           var curQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
           html += '<div class="pl-field-group" style="margin-bottom:16px">';
@@ -794,7 +794,7 @@
         }
       } else {
         // When quantity selector is hidden by theme, lock quantity state to 1
-        window.selectedQuantityState = { qty: 1, tierPrice: p.price, discountPct: 0, freeShipping: false };
+        window.selectedQuantityState = { qty: 1, tierPrice: p.price, discountPct: 0, freeShipping: false, offerId: 'tier-1', tierName: '1 قطعة' };
       }
 
       var formSettings = lpCfg.form_settings || {};
@@ -890,8 +890,8 @@
 
       // Order Summary inside Form
       html += '<div class="pl-order-summary">';
-      html += '<div class="pl-summary-row"><span>المنتج:</span><span>' + escHtml(title) + ' × 1</span></div>';
-      html += '<div class="pl-summary-row"><span>سعر المنتج:</span><span>' + priceStr + '</span></div>';
+      html += '<div class="pl-summary-row"><span>المنتج:</span><span id="plSummaryProductTitle">' + escHtml(title) + ' × 1</span></div>';
+      html += '<div class="pl-summary-row"><span>سعر المنتج:</span><span id="plSummaryProductPrice">' + priceStr + '</span></div>';
       html += '<div class="pl-summary-row"><span>الشحن:</span><span id="plShippingLabel">اختر ولايتك لحساب الشحن</span></div>';
       html += '<div class="pl-summary-row total"><span>المجموع المستحق:</span><span class="price" id="plTotalSummaryPrice">' + priceStr + '</span></div>';
       html += '</div>';
@@ -1508,22 +1508,30 @@
       window.selectedQuantityState = {
         qty: qty,
         price: basePrice * qty,
-        freeShipping: false
+        freeShipping: false,
+        offerId: 'tier-' + qty,
+        tierName: qty + ' قطع'
       };
       updateFreeShippingBadges();
       updateShippingSummary();
     }
 
-    function onSelectQuantityTier(qty, tierPrice, freeShipping) {
+    function onSelectQuantityTier(qty, tierPrice, freeShipping, offerId, tierName) {
+      var safeOfferId = offerId || ('tier-' + qty);
+      var safeTierName = tierName || (qty + ' قطع');
+
       window.selectedQuantityState = {
         qty: Number(qty),
         price: Number(tierPrice),
-        freeShipping: Boolean(freeShipping)
+        freeShipping: Boolean(freeShipping),
+        offerId: safeOfferId,
+        tierName: safeTierName
       };
 
       var cards = document.querySelectorAll('.pl-tier-card');
       cards.forEach(function(c) {
-        if (Number(c.dataset.qty) === Number(qty)) {
+        var isMatch = offerId ? (c.dataset.offerId === String(offerId)) : (Number(c.dataset.qty) === Number(qty));
+        if (isMatch) {
           c.classList.add('active');
           var r = c.querySelector('input[type="radio"]');
           if (r) r.checked = true;
@@ -1599,12 +1607,30 @@
       }
 
       var currentQty = showQtySelector ? (window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1) : 1;
+      var curOfferId = window.selectedQuantityState ? window.selectedQuantityState.offerId : null;
+      var curTierName = window.selectedQuantityState ? window.selectedQuantityState.tierName : null;
       var basePrice = Number(currentProduct ? (currentProduct.effectivePrice || currentProduct.price || 0) : 0);
       var tierResult = (showQtySelector && showPricingTiers && typeof calculateTierSubtotal === 'function')
-        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings)
+        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings, curOfferId)
         : { subtotal: basePrice * currentQty, freeShipping: false, saveAmount: 0 };
 
       var effectiveSubtotal = tierResult.subtotal;
+
+      // ── تحديث سطر المنتج وسعر المنتج في ملخص الطلب ديناميكياً ──
+      var prodTitleEl = document.getElementById('plSummaryProductTitle');
+      var prodPriceEl = document.getElementById('plSummaryProductPrice');
+      if (prodTitleEl) {
+        var prodBaseName = currentProduct ? (currentProduct.title_ar || currentProduct.name || 'المنتج') : 'المنتج';
+        var dynamicSummaryText = escHtml(prodBaseName);
+        if (curTierName && typeof curTierName === 'string' && curTierName.trim() && curTierName !== 'undefined' && curTierName !== 'null') {
+          dynamicSummaryText += ' — ' + escHtml(curTierName.trim());
+        }
+        dynamicSummaryText += ' × ' + currentQty;
+        prodTitleEl.innerHTML = dynamicSummaryText;
+      }
+      if (prodPriceEl) {
+        prodPriceEl.textContent = formatPrice(effectiveSubtotal);
+      }
 
       // ── التوصيل المجاني (إعداد المتجر الصريح أو عرض الكميات أو إعداد المنتج) ──
       var isStoreFreeShipping = Boolean(storeSettings && (storeSettings.free_shipping_enabled === 'true' || storeSettings.free_shipping_enabled === true || storeSettings.free_shipping_enabled === '1'));
@@ -1737,9 +1763,11 @@
       }
 
       var currentQty = showQtySelector ? (window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1) : 1;
+      var curOfferId = window.selectedQuantityState ? window.selectedQuantityState.offerId : null;
+      var curTierName = window.selectedQuantityState ? window.selectedQuantityState.tierName : null;
       var basePrice = Number(currentProduct.effectivePrice || currentProduct.price || 0);
       var tierResult = (showQtySelector && showPricingTiers && typeof calculateTierSubtotal === 'function')
-        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings)
+        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings, curOfferId)
         : { subtotal: basePrice * currentQty, freeShipping: false };
 
       var finalOrderSubtotal = Number(tierResult.subtotal) || (basePrice * currentQty);
@@ -1751,6 +1779,8 @@
         title: (currentProduct.title_ar || currentProduct.name) + (variantTitle ? ' (' + variantTitle + ')' : ''),
         price: (currentQty > 0) ? Math.round(finalOrderSubtotal / currentQty) : basePrice,
         qty: currentQty,
+        offer_id: curOfferId,
+        tier_name: curTierName,
         variant_selection: window.selectedVariantState,
         variant_title: variantTitle,
         tier_subtotal: finalOrderSubtotal

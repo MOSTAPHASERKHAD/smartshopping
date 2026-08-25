@@ -301,6 +301,9 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
 .analytics-metric-roas-med{color:#d97706;font-weight:800}
 .analytics-metric-roas-low{color:#dc2626;font-weight:800}
 .analytics-meta-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;flex-wrap:wrap}
+.analytics-pill{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--text2);font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.18s;display:inline-flex;align-items:center;gap:4px}
+.analytics-pill:hover{background:var(--bg);color:var(--text)}
+.analytics-pill.active{background:var(--accent,#4f46e5);color:#fff;border-color:var(--accent,#4f46e5);box-shadow:0 2px 6px rgba(79,70,229,0.25)}
 
 /* Print Shipping Label (A6) */
 /* Print Shipping Label (A6 and Bulk 4-on-A4) */
@@ -540,8 +543,22 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
 }
 
 .ai-copilot-drawer.expanded {
-  width: 920px;
-  height: 820px;
+  width: 960px;
+  max-width: calc(100vw - 48px);
+  height: 840px;
+  max-height: calc(100vh - 90px);
+}
+
+.ai-copilot-drawer.fullscreen {
+  width: calc(100vw - 32px) !important;
+  max-width: 1400px !important;
+  height: calc(100vh - 32px) !important;
+  max-height: calc(100vh - 32px) !important;
+  bottom: 16px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 30px 70px -15px rgba(15, 23, 42, 0.5) !important;
 }
 
 @keyframes aiSlideUp {
@@ -1014,12 +1031,14 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
 
 .ai-msg-bubble {
   max-width: 94%;
-  padding: 14px 16px;
-  border-radius: 14px;
-  font-size: 0.88rem;
-  line-height: 1.7;
+  padding: 16px 20px;
+  border-radius: 16px;
+  font-family: 'Almarai', 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.8;
   word-break: break-word;
   direction: rtl;
+  letter-spacing: -0.1px;
 }
 
 .ai-msg.user .ai-msg-bubble {
@@ -1027,6 +1046,8 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
   color: #ffffff;
   border-bottom-left-radius: 4px;
   font-weight: 600;
+  font-size: 0.92rem;
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.2);
 }
 
 .ai-msg.assistant .ai-msg-bubble {
@@ -1034,7 +1055,7 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
   color: #0f172a;
   border: 1px solid #e2e8f0;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .ai-msg-bubble.loading {
@@ -1046,28 +1067,59 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
   gap: 8px;
 }
 
+.ai-msg-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ai-copy-btn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.ai-copy-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #94a3b8;
+}
+
 /* AI Markdown Content Typography */
 .ai-md-h2 {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #1e1b4b;
-  margin: 12px 0 6px 0;
+  margin: 14px 0 8px 0;
   border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
 }
 
 .ai-md-h3 {
-  font-size: 0.98rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: #312e81;
-  margin: 10px 0 4px 0;
+  margin: 12px 0 6px 0;
 }
 
 .ai-md-h4 {
-  font-size: 0.92rem;
-  font-weight: 700;
+  font-size: 0.98rem;
+  font-weight: 800;
   color: #4338ca;
-  margin: 8px 0 4px 0;
+  margin: 10px 0 6px 0;
+  border-bottom: 1.5px solid #e0e7ff;
+  padding-bottom: 3px;
 }
 
 .ai-md-quote {

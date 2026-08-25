@@ -529,6 +529,7 @@
     if (customTiers && Array.isArray(customTiers) && customTiers.length > 0) {
       return customTiers;
     }
+
     var ts = themeSettings || {};
     var d2 = (ts.tier2_discount_pct != null && !isNaN(Number(ts.tier2_discount_pct)))
       ? Math.max(0, Math.min(100, Number(ts.tier2_discount_pct))) : 10;
@@ -539,27 +540,38 @@
     var p2 = Math.round(basePrice * 2 * (1 - d2 / 100));
     var p3 = Math.round(basePrice * 3 * (1 - d3 / 100));
 
-    var badge2 = d2 > 0 ? ('وفر ' + d2 + '%') : '';
-    var badge3 = '';
+    var defaultBadge2 = d2 > 0 ? ('وفر ' + d2 + '%') : '';
+    var defaultBadge3 = '';
     if (fs3 && d3 > 0) {
-      badge3 = 'شحن مجاني + خصم ' + d3 + '%';
+      defaultBadge3 = 'شحن مجاني + خصم ' + d3 + '%';
     } else if (fs3) {
-      badge3 = 'شحن مجاني 🚚';
+      defaultBadge3 = 'شحن مجاني 🚚';
     } else if (d3 > 0) {
-      badge3 = 'وفر ' + d3 + '%';
+      defaultBadge3 = 'وفر ' + d3 + '%';
     }
 
+    var label1 = ts.tier1_label || '1 قطعة (شراء عادي)';
+    var subtext1 = ts.tier1_subtext || 'السعر القياسي';
+
+    var label2 = ts.tier2_label || '2 قطع (الأكثر طلباً ⭐)';
+    var badge2 = (ts.tier2_badge !== undefined && ts.tier2_badge !== null) ? ts.tier2_badge : defaultBadge2;
+    var subtext2 = ts.tier2_subtext || 'العرض الموصى به للمنازل';
+
+    var label3 = ts.tier3_label || '3 قطع (توفير كلي 🎁)';
+    var badge3 = (ts.tier3_badge !== undefined && ts.tier3_badge !== null) ? ts.tier3_badge : defaultBadge3;
+    var subtext3 = ts.tier3_subtext || 'أفضل قيمة وأعلى توفير';
+
     return [
-      { qty: 1, label: '1 قطعة (شراء عادي)', price: basePrice, subtext: 'السعر القياسي' },
-      { qty: 2, label: '2 قطع (الأكثر طلباً ⭐)', price: p2, badge: badge2, subtext: 'العرض الموصى به للمنازل' },
-      { qty: 3, label: '3 قطع (توفير كلي 🎁)', price: p3, free_shipping: fs3, badge: badge3, subtext: 'أفضل قيمة وأعلى توفير' }
+      { offer_id: 'tier-1', qty: 1, label: label1, price: basePrice, subtext: subtext1, free_shipping: false },
+      { offer_id: 'tier-2', qty: 2, label: label2, price: p2, badge: badge2, subtext: subtext2, free_shipping: false },
+      { offer_id: 'tier-3', qty: 3, label: label3, price: p3, free_shipping: fs3, badge: badge3, subtext: subtext3 }
     ];
   }
 
   /**
    * Render HTML for Quantity Breaks & Bundle Offers
    */
-  function renderQuantityBreaks(tiers, basePrice, activeQty, themeSettings) {
+  function renderQuantityBreaks(tiers, basePrice, activeQty, themeSettings, activeOfferId) {
     basePrice = Number(basePrice || 0);
     activeQty = Number(activeQty || 1);
 
@@ -571,14 +583,18 @@
 
     tiers.forEach(function(tier, idx) {
       var tQty = Number(tier.qty || (idx + 1));
-      var isSelected = (tQty === activeQty);
+      var tOfferId = tier.offer_id || ('tier-' + tQty + (idx > 0 ? '-' + idx : ''));
+      var isSelected = activeOfferId ? (tOfferId === activeOfferId) : (tQty === activeQty);
       var tPrice = tier.price != null ? Number(tier.price) : (basePrice * tQty);
-      var tLabel = tier.label || (tQty + ' قطع');
+      var tLabel = tier.label || tier.name || (tQty + ' قطع');
       var tSubtext = tier.subtext || '';
       var tBadge = tier.badge || '';
       var tFreeShip = Boolean(tier.free_shipping);
 
-      html += '<div class="pl-tier-card' + (isSelected ? ' active' : '') + '" onclick="onSelectQuantityTier(' + tQty + ', ' + tPrice + ', ' + tFreeShip + ')" data-qty="' + tQty + '">';
+      var safeOfferId = escHtml(tOfferId).replace(/'/g, "\\'");
+      var safeLabel = escHtml(tLabel).replace(/'/g, "\\'");
+
+      html += '<div class="pl-tier-card' + (isSelected ? ' active' : '') + '" onclick="onSelectQuantityTier(' + tQty + ', ' + tPrice + ', ' + tFreeShip + ', \'' + safeOfferId + '\', \'' + safeLabel + '\')" data-qty="' + tQty + '" data-offer-id="' + escHtml(tOfferId) + '">';
       if (tBadge) {
         html += '<div class="pl-tier-badge-pill">' + escHtml(tBadge) + '</div>';
       }
@@ -604,7 +620,7 @@
   /**
    * Authoritatively calculate tier pricing and savings
    */
-  function calculateTierSubtotal(basePrice, qty, tiers, themeSettings) {
+  function calculateTierSubtotal(basePrice, qty, tiers, themeSettings, offerId) {
     basePrice = Number(basePrice || 0);
     qty = Math.max(1, parseInt(qty || 1, 10));
 
@@ -613,7 +629,17 @@
       : buildDynamicPricingTiers(basePrice, null, themeSettings);
 
     if (effectiveTiers && Array.isArray(effectiveTiers) && effectiveTiers.length > 0) {
-      var matchedTier = effectiveTiers.find(function(t) { return Number(t.qty) === qty; });
+      var matchedTier = null;
+      if (offerId) {
+        matchedTier = effectiveTiers.find(function(t, idx) {
+          var tId = t.offer_id || ('tier-' + (t.qty || (idx + 1)) + (idx > 0 ? '-' + idx : ''));
+          return String(tId) === String(offerId);
+        });
+      }
+      if (!matchedTier) {
+        matchedTier = effectiveTiers.find(function(t) { return Number(t.qty) === qty; });
+      }
+
       if (matchedTier) {
         var tierPrice = Number(matchedTier.price || (basePrice * qty));
         var standardPrice = basePrice * qty;

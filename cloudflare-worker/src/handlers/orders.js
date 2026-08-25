@@ -186,13 +186,33 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
     if (!isTiersDisabled) {
       if (customTiers && customTiers.length > 0) {
-        tiers = customTiers;
+        tiers = customTiers.map((t, idx) => {
+          const tQty = Number(t.qty || (idx + 1));
+          const tOfferId = t.offer_id || `tier-${tQty}${idx > 0 ? `-${idx}` : ''}`;
+          return {
+            offer_id: tOfferId,
+            qty: tQty,
+            label: t.label || t.name || `${tQty} قطع`,
+            price: t.price != null ? Number(t.price) : (basePrice * tQty),
+            badge: t.badge || '',
+            subtext: t.subtext || '',
+            free_shipping: Boolean(t.free_shipping)
+          };
+        });
       } else {
         // Resolve Active Theme Settings
         let themeShowTiers = true;
         let tier2Pct = 10;
         let tier3Pct = 20;
         let tier3FreeShipping = true;
+        let t1Label = '1 قطعة (شراء عادي)';
+        let t1Subtext = 'السعر القياسي';
+        let t2Label = '2 قطع (الأكثر طلباً ⭐)';
+        let t2Badge = 'الأكثر طلباً';
+        let t2Subtext = 'العرض الموصى به للمنازل';
+        let t3Label = '3 قطع (توفير كلي 🎁)';
+        let t3Badge = 'توفير كلي';
+        let t3Subtext = 'أفضل قيمة وأعلى توفير';
 
         if (storeThemeSections) {
           const tsSec = storeThemeSections['fast-order-form'] || storeThemeSections['order-form'];
@@ -201,9 +221,17 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
             if (tsSec.settings.show_pricing_tiers !== undefined) {
               themeShowTiers = (tsSec.settings.show_pricing_tiers !== false && tsSec.settings.show_quantity_selector !== false);
             }
+            if (tsSec.settings.tier1_label) t1Label = String(tsSec.settings.tier1_label);
+            if (tsSec.settings.tier1_subtext) t1Subtext = String(tsSec.settings.tier1_subtext);
+            if (tsSec.settings.tier2_label) t2Label = String(tsSec.settings.tier2_label);
+            if (tsSec.settings.tier2_badge) t2Badge = String(tsSec.settings.tier2_badge);
+            if (tsSec.settings.tier2_subtext) t2Subtext = String(tsSec.settings.tier2_subtext);
             if (tsSec.settings.tier2_discount_pct != null && !isNaN(Number(tsSec.settings.tier2_discount_pct))) {
               tier2Pct = Math.max(0, Math.min(100, Number(tsSec.settings.tier2_discount_pct)));
             }
+            if (tsSec.settings.tier3_label) t3Label = String(tsSec.settings.tier3_label);
+            if (tsSec.settings.tier3_badge) t3Badge = String(tsSec.settings.tier3_badge);
+            if (tsSec.settings.tier3_subtext) t3Subtext = String(tsSec.settings.tier3_subtext);
             if (tsSec.settings.tier3_discount_pct != null && !isNaN(Number(tsSec.settings.tier3_discount_pct))) {
               tier3Pct = Math.max(0, Math.min(100, Number(tsSec.settings.tier3_discount_pct)));
             }
@@ -218,17 +246,24 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
           const p2 = Math.round(basePrice * 2 * (1 - tier2Pct / 100));
           const p3 = Math.round(basePrice * 3 * (1 - tier3Pct / 100));
           tiers = [
-            { qty: 1, price: basePrice },
-            { qty: 2, price: p2 },
-            { qty: 3, price: p3, free_shipping: tier3FreeShipping }
+            { offer_id: 'tier-1', qty: 1, label: t1Label, subtext: t1Subtext, price: basePrice, free_shipping: false },
+            { offer_id: 'tier-2', qty: 2, label: t2Label, subtext: t2Subtext, badge: t2Badge, price: p2, free_shipping: false },
+            { offer_id: 'tier-3', qty: 3, label: t3Label, subtext: t3Subtext, badge: t3Badge, price: p3, free_shipping: tier3FreeShipping }
           ];
         }
       }
     }
 
     let itemSubtotal = basePrice * qty;
+    let matchedTier = null;
+
     if (tiers.length > 0) {
-      const matchedTier = tiers.find(t => Number(t.qty) === qty);
+      if (item.offer_id) {
+        matchedTier = tiers.find(t => String(t.offer_id) === String(item.offer_id));
+      }
+      if (!matchedTier) {
+        matchedTier = tiers.find(t => Number(t.qty) === qty);
+      }
       if (matchedTier && matchedTier.price != null && !isNaN(Number(matchedTier.price))) {
         itemSubtotal = Number(matchedTier.price);
         if (matchedTier.free_shipping) {
@@ -252,9 +287,13 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
     secureItems.push({
       id: dbProduct.id,
       name: dbProduct.name + (variantTitle ? ` (${variantTitle})` : ''),
+      title: dbProduct.name,
       variant: item.variant_selection || null,
       variant_title: variantTitle || null,
+      offer_id: matchedTier ? (matchedTier.offer_id || null) : (item.offer_id || null),
+      tier_name: matchedTier ? (matchedTier.label || `${qty} قطع`) : (item.tier_name || null),
       qty: qty,
+      unit_price: effectiveUnitPrice,
       price: effectiveUnitPrice,
       subtotal: itemSubtotal
     });

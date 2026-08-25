@@ -411,7 +411,15 @@
           submit_btn_text: 'نص زر تأكيد الطلب',
           show_quantity_selector: 'إظهار خيار تحديد الكمية',
           show_pricing_tiers: '🎁 إظهار عروض الكميات والتوفير (Bundles)',
+          tier1_label: '📝 عنوان عرض 1 قطعة (Tier 1)',
+          tier1_subtext: '💬 الوصف الفرعي لعرض 1 قطعة',
+          tier2_label: '⭐ عنوان عرض قطعتين (Tier 2)',
+          tier2_badge: '🏷️ شارة عرض قطعتين (Badge)',
+          tier2_subtext: '💬 الوصف الفرعي لعرض قطعتين',
           tier2_discount_pct: '🏷️ نسبة خصم عرض قطعتين (%)',
+          tier3_label: '🎁 عنوان عرض 3 قطع (Tier 3)',
+          tier3_badge: '🏷️ شارة عرض 3 قطع (Badge)',
+          tier3_subtext: '💬 الوصف الفرعي لعرض 3 قطع',
           tier3_discount_pct: '🎁 نسبة خصم عرض 3 قطع (%)',
           tier3_free_shipping: '🚚 شحن مجاني لعرض 3 قطع',
           show_wilaya_selector: 'إظهار خيار الولاية',
@@ -431,7 +439,15 @@
         if (sid === 'fast-order-form' || sid === 'order-form') {
           if (sec.settings.show_quantity_selector === undefined) sec.settings.show_quantity_selector = true;
           if (sec.settings.show_pricing_tiers === undefined) sec.settings.show_pricing_tiers = true;
+          if (sec.settings.tier1_label === undefined) sec.settings.tier1_label = '1 قطعة (شراء عادي)';
+          if (sec.settings.tier1_subtext === undefined) sec.settings.tier1_subtext = 'السعر القياسي';
+          if (sec.settings.tier2_label === undefined) sec.settings.tier2_label = '2 قطع (الأكثر طلباً ⭐)';
+          if (sec.settings.tier2_badge === undefined) sec.settings.tier2_badge = 'الأكثر طلباً';
+          if (sec.settings.tier2_subtext === undefined) sec.settings.tier2_subtext = 'العرض الموصى به للمنازل';
           if (sec.settings.tier2_discount_pct === undefined) sec.settings.tier2_discount_pct = 10;
+          if (sec.settings.tier3_label === undefined) sec.settings.tier3_label = '3 قطع (توفير كلي 🎁)';
+          if (sec.settings.tier3_badge === undefined) sec.settings.tier3_badge = 'توفير كلي';
+          if (sec.settings.tier3_subtext === undefined) sec.settings.tier3_subtext = 'أفضل قيمة وأعلى توفير';
           if (sec.settings.tier3_discount_pct === undefined) sec.settings.tier3_discount_pct = 20;
           if (sec.settings.tier3_free_shipping === undefined) sec.settings.tier3_free_shipping = true;
         }
@@ -440,7 +456,9 @@
           'fast-order-form': [
             'title', 'submit_btn_text', 'delivery_note',
             'show_quantity_selector', 'show_pricing_tiers',
-            'tier2_discount_pct', 'tier3_discount_pct', 'tier3_free_shipping',
+            'tier1_label', 'tier1_subtext',
+            'tier2_label', 'tier2_badge', 'tier2_subtext', 'tier2_discount_pct',
+            'tier3_label', 'tier3_badge', 'tier3_subtext', 'tier3_discount_pct', 'tier3_free_shipping',
             'show_wilaya_selector', 'show_email_field', 'show_baladiya_field',
             'show_address_field', 'show_delivery_preference', 'show_notes_field'
           ]
