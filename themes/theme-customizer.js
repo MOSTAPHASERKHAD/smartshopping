@@ -462,6 +462,15 @@
             'tier3_label', 'tier3_badge', 'tier3_subtext', 'tier3_discount_pct', 'tier3_free_shipping',
             'show_wilaya_selector', 'show_email_field', 'show_baladiya_field',
             'show_address_field', 'show_delivery_preference', 'show_notes_field'
+          ],
+          'order-form': [
+            'title', 'submit_btn_text', 'delivery_note',
+            'show_quantity_selector', 'show_pricing_tiers',
+            'tier1_label', 'tier1_subtext',
+            'tier2_label', 'tier2_badge', 'tier2_subtext', 'tier2_discount_pct',
+            'tier3_label', 'tier3_badge', 'tier3_subtext', 'tier3_discount_pct', 'tier3_free_shipping',
+            'show_wilaya_selector', 'show_email_field', 'show_baladiya_field',
+            'show_address_field', 'show_delivery_preference', 'show_notes_field'
           ]
         };
 
