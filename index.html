@@ -70,7 +70,7 @@
   cursor: pointer !important;
   z-index: 99999 !important;
   box-shadow: 0 6px 20px rgba(67, 56, 202, 0.45) !important;
-  display: none;
+  display: flex !important;
   align-items: center !important;
   justify-content: center !important;
 }
@@ -1357,6 +1357,7 @@ function init(){
     var chatBtn = document.getElementById('chatbotBtn');
     if(chatBtn){
       chatBtn.style.display = isAiActive ? 'flex' : 'none';
+      chatBtn.style.setProperty('display', isAiActive ? 'flex' : 'none', 'important');
     }
     if(d.gemini_api_key){try{delete d.gemini_api_key}catch(e){}}
 
@@ -2837,12 +2838,16 @@ function closeCompareModal() {
 // === AI Chatbot ===
 var chatHistory = [];
 var chatOpen = false;
-var chatAIEnabled = false;
+var chatAIEnabled = true;
 
 function toggleChatbot() {
+  var win = document.getElementById('chatbotWindow');
+  if (!win) return;
   chatOpen = !chatOpen;
-  document.getElementById('chatbotWindow').classList.toggle('open', chatOpen);
-  document.getElementById('chatUnread').style.display = 'none';
+  win.classList.toggle('open', chatOpen);
+  win.style.setProperty('display', chatOpen ? 'flex' : 'none', 'important');
+  var unread = document.getElementById('chatUnread');
+  if (unread) unread.style.display = 'none';
   if (chatOpen && chatHistory.length === 0) {
     if (chatAIEnabled) {
       addBotMsg('مرحباً! 👋 أنا مساعد Smart Shopping الذكي.\n\nأقدر أساعدك في:\n• البحث عن منتجات\n• معلومات الأسعار والشحن\n• تتبع الطلبات\n• سياسة الإرجاع\n\nوش تبي اليوم؟ 😊');
@@ -2858,7 +2863,8 @@ function toggleChatbot() {
     ]);
   }
   if (chatOpen) {
-    document.getElementById('chatInput').focus();
+    var inp = document.getElementById('chatInput');
+    if (inp) setTimeout(function(){ inp.focus(); }, 100);
   }
 }
 
