@@ -139,13 +139,20 @@ export async function getSettings(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
 
   const { results } = await stmt.all();
 
+  let hasGeminiKey = Boolean(env.GEMINI_API_KEY && String(env.GEMINI_API_KEY).trim());
   const settings = {};
   for (const row of (results || [])) {
     if (row.key.startsWith('spam_order_')) continue;
+    if (row.key === 'gemini_api_key' && row.value && String(row.value).trim()) {
+      hasGeminiKey = true;
+    }
     if (!SECRET_KEYS.has(row.key)) {
       settings[row.key] = row.value;
     }
   }
+
+  // مؤشر عام آمن لتفعيل مساعد المتجر دون كشف المفتاح السري
+  settings.ai_enabled = hasGeminiKey;
 
   // ── جلب إعدادات الثيم النشط داخل نطاق التاجر ──
   if (settings.theme_default) {

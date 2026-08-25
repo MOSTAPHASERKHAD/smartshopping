@@ -1268,7 +1268,17 @@ function apiGet(action, params, callback, retries) {
     var token = getAuthToken();
     if (token) { body.token = token; }
     var form = [];
-    for (var key in body) { form.push(encodeURIComponent(key) + '=' + encodeURIComponent(body[key] === undefined || body[key] === null ? '' : String(body[key]))); }
+    for (var key in body) {
+      var val = body[key];
+      if (val === undefined || val === null) {
+        val = '';
+      } else if (typeof val === 'object') {
+        val = JSON.stringify(val);
+      } else {
+        val = String(val);
+      }
+      form.push(encodeURIComponent(key) + '=' + encodeURIComponent(val));
+    }
     var called = false;
     var ctrl = ('AbortController' in window) ? new AbortController() : null;
     var timer = ctrl ? setTimeout(function() { try { ctrl.abort(); } catch(e) {} }, 30000) : null;

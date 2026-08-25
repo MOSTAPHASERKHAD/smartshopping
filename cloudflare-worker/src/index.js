@@ -68,7 +68,7 @@ import { adminCapiTest } from './handlers/marketing.js';
 import { trackPublicAnalyticsEvent, getCampaignAnalytics } from './handlers/analytics.js';
 
 // ── استيراد معالجات الذكاء الاصطناعي ──
-import { adminAiChat } from './handlers/ai.js';
+import { adminAiChat, publicAiChat } from './handlers/ai.js';
 
 // ── استيراد معالجات مصادقة التجار (Phase 29) ──
 import {
@@ -350,6 +350,9 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
 
   // ── أقسام الثيمات الديناميكية (عام) ──
   if (action === 'get_theme_sections') return getThemeSections(env, params, tenantId);
+
+  // ── مساعد الزبائن الذكي (Public AI Chatbot) ──
+  if (action === 'ai_chat') return publicAiChat(env, params, request, tenantId);
 
   // ── الطلبات ──
   if (action === 'order')           return createOrder(env, params, request, ctx, token, tenantId);

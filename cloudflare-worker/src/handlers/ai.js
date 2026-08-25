@@ -27,7 +27,7 @@ async function resolveGeminiApiKey(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
   try {
     const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
     const row = isMaster
-      ? await env.DB.prepare(`SELECT value FROM settings WHERE key = 'gemini_api_key' AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(tenantId).first()
+      ? await env.DB.prepare(`SELECT value FROM settings WHERE key = 'gemini_api_key' AND (tenant_id = ? OR tenant_id IS NULL) ORDER BY CASE WHEN tenant_id = ? THEN 0 ELSE 1 END LIMIT 1`).bind(tenantId, tenantId).first()
       : await env.DB.prepare(`SELECT value FROM settings WHERE key = 'gemini_api_key' AND tenant_id = ? LIMIT 1`).bind(tenantId).first();
 
     if (row && row.value && String(row.value).trim()) {
@@ -828,8 +828,18 @@ Campaign → Ad Set → Creative → Landing Page → Product → Checkout → O
   // بناء هيكل المحادثة مع دعم الذاكرة التراكمية (Multi-turn Chat Memory حتى 16 دورة)
   const contents = [];
 
-  if (isChatMode && Array.isArray(params.history) && params.history.length > 0) {
-    params.history.slice(-16).forEach(msg => {
+  let historyArr = [];
+  if (Array.isArray(params.history)) {
+    historyArr = params.history.slice(-16);
+  } else if (typeof params.history === 'string' && params.history.trim()) {
+    try {
+      const parsed = JSON.parse(params.history);
+      if (Array.isArray(parsed)) historyArr = parsed.slice(-16);
+    } catch (_) {}
+  }
+
+  if (isChatMode && Array.isArray(historyArr) && historyArr.length > 0) {
+    historyArr.slice(-16).forEach(msg => {
       const r = (msg.role === 'model' || msg.role === 'assistant') ? 'model' : 'user';
       const t = sanitize(msg.text || msg.content || '', 4000);
       if (t) {
@@ -978,5 +988,137 @@ Campaign → Ad Set → Creative → Landing Page → Product → Checkout → O
   } catch (err) {
     console.error('[adminAiChat Exception]', err);
     return { ok: false, error: 'تعذر الاتصال بمحرك الذكاء الاصطناعي، يرجى المحاولة لاحقاً.' };
+  }
+}
+
+/**
+ * [PUBLIC] مساعد الزبائن الذكي لواجهة المتجر (Customer Storefront AI Assistant)
+ * ─────────────────────────────────────────────────────────────
+ * • يستقبل أسئلة الزبائن حول الكتالوج، المنتجات، الأسعار، المخزون، الشحن، وطرق الدفع
+ * • يجيب بالدارجة الجزائرية والعربية بأسلوب ودود وموجز
+ * • محمي بـ Rate Limiting وعزل المستأجرين (Tenant Isolation)
+ * • لا يسرب أي أسرار أو أسعار جملة أو بيانات إدارية
+ */
+export async function publicAiChat(env, params = {}, request = null, tenantId = DEFAULT_MASTER_TENANT_ID) {
+  const message = sanitize(params.message || '', 500);
+  if (!message) {
+    return { ok: true, reply: 'مرحباً بك! كيف يمكنني مساعدتك اليوم بخصوص منتجاتنا وعروضنا؟' };
+  }
+
+  // 1. استرجاع مفتاح Gemini
+  const apiKey = await resolveGeminiApiKey(env, tenantId);
+  if (!apiKey) {
+    return { ok: false, error: 'خدمة المساعد الذكي غير مهيأة حالياً' };
+  }
+
+  // 2. فحص الـ Rate Limiting لمنع الإغراق (Anti-Abuse)
+  if (env.CACHE && request) {
+    try {
+      const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown_ip';
+      const rateKey = `rl:ai_pub:${tenantId}:${clientIp}`;
+      const count = (await env.CACHE.get(rateKey, { type: 'json' })) || 0;
+      if (count > 25) { // 25 messages per minute max
+        return { ok: true, reply: 'المساعد مشغول حالياً. يرجى الانتظار دقيقة والمحاولة مرة أخرى 😊' };
+      }
+      await env.CACHE.put(rateKey, JSON.stringify(count + 1), { expirationTtl: 60 });
+    } catch (_) {}
+  }
+
+  // 3. جلب كتالوج المنتجات النشطة للمتجر بأمان تام (بدون cost_price)
+  const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
+  let productsList = [];
+  try {
+    const pStmt = isMaster
+      ? env.DB.prepare(`SELECT id, name, price, old_price, stock, category FROM products WHERE active = 1 AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 40`).bind(tenantId)
+      : env.DB.prepare(`SELECT id, name, price, old_price, stock, category FROM products WHERE active = 1 AND tenant_id = ? LIMIT 40`).bind(tenantId);
+    const { results } = await pStmt.all();
+    productsList = (results || []).map(p => {
+      const stockNum = Number(p.stock || 0);
+      const stockStatus = stockNum > 0 ? `متوفر (${stockNum} قطعة)` : 'نفد من المخزون';
+      const discount = (p.old_price && p.old_price > p.price) ? ` (خصم من ${p.old_price} دج إلى ${p.price} دج)` : ` (${p.price} دج)`;
+      return `#${p.id}: ${p.name} - السعر: ${p.price} دج${discount} - الحالة: ${stockStatus} - القسم: ${p.category || 'عام'}`;
+    });
+  } catch (err) {
+    console.warn('[publicAiChat products error]', err?.message);
+  }
+
+  // 4. بناء السياق الموجه للزبائن
+  const storeContext = `
+أنت "المساعد الذكي لمتجر Smart Shopping" — مساعد خدمة عملاء ودود ومحترف وسريع البديهة لمتجر تجارة إلكترونية جزائري.
+تتحدث بالدارجة الجزائرية المهذبة (أو العربية الفصحى أو الفرنسية بحسب لغة الزبون).
+
+معلومات المتجر الأساسية:
+- الدفع: عند الاستلام (COD) فقط بعد معاينة الطرد.
+- التوصيل: متوفر لكافة الولايات الـ 58 (توصيل للمنزل أو استلام من مكتب شركة التوصيل).
+- مدة التوصيل: من 2 إلى 5 أيام عمل بحسب الولاية.
+- الإرجاع والاستبدال: متاح خلال 7 أيام إذا كان المنتج في حالته الأصلية.
+
+كتالوج المنتجات المتوفرة حالياً في المتجر:
+${productsList.length > 0 ? productsList.join('\n') : 'المنتجات متوفرة في الصفحة الرئيسية.'}
+
+إرشادات الرد:
+1. كن ودوداً وموجزاً ومباشراً ولا تطل في الكلام.
+2. إذا سأل الزبون عن منتج متوفر، اذكر اسمه وسعره وتأكيد توفره وشجعه على الطلب من الموقع.
+3. إذا سأل الزبون عن منتج غير موجود، اعتذر بلطف وأخبره بعدم توفره حالياً واقترح المنتجات القريبة إن وجدت.
+4. إذا سأل عن التوصيل أو الدفع، وضح خيارات التوصيل والدفع عند الاستلام.
+5. لا تخترع منتجات غير موجودة في القائمة أعلاه مطلقاً.
+`.trim();
+
+  // 5. استخراج سجل المحادثة
+  const contents = [];
+  let historyArr = [];
+  if (Array.isArray(params.history)) {
+    historyArr = params.history;
+  } else if (typeof params.history === 'string' && params.history.trim()) {
+    try { historyArr = JSON.parse(params.history); } catch (_) {}
+  }
+
+  if (Array.isArray(historyArr) && historyArr.length > 0) {
+    historyArr.slice(-8).forEach(msg => {
+      const r = (msg.role === 'model' || msg.role === 'bot' || msg.role === 'assistant') ? 'model' : 'user';
+      const t = sanitize(msg.text || msg.content || '', 1000);
+      if (t) {
+        contents.push({ role: r, parts: [{ text: t }] });
+      }
+    });
+  }
+
+  contents.push({
+    role: 'user',
+    parts: [{ text: message }]
+  });
+
+  const promptPayload = {
+    system_instruction: {
+      parts: [{ text: storeContext }]
+    },
+    contents: contents,
+    generationConfig: {
+      temperature: 0.5,
+      maxOutputTokens: 1024
+    }
+  };
+
+  try {
+    const resolver = new GeminiModelResolver(env);
+    const aiResult = await resolver.generateContentWithFailover(apiKey, promptPayload, { timeoutMs: 15000 });
+
+    if (!aiResult.ok || !aiResult.reply) {
+      return {
+        ok: true,
+        reply: 'أهلاً بك! نحن في خدمتك. يمكنك تصفح المنتجات في المتجر أو التواصل معنا عبر واتساب للمساعدة الفورية 💬'
+      };
+    }
+
+    return {
+      ok: true,
+      reply: aiResult.reply
+    };
+  } catch (err) {
+    console.error('[publicAiChat Exception]', err);
+    return {
+      ok: true,
+      reply: 'أهلاً بك! يمكنك تصفح المنتجات المتاحة أو الطلب مباشرة من الموقع مع الدفع عند الاستلام 😊'
+    };
   }
 }

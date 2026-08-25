@@ -1302,7 +1302,7 @@ function init(){
     applySettings(d);
   });
   function applySettings(d){
-    if(d.gemini_api_key){chatAIEnabled=true;try{delete d.gemini_api_key}catch(e){}}
+    if(d.gemini_api_key || d.ai_enabled){chatAIEnabled=true;try{delete d.gemini_api_key}catch(e){}}
 
     // Apply server default theme if configured
     if(d.theme_default && window.ThemeEngine) {
