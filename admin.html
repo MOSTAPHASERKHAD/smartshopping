@@ -15,8 +15,64 @@
 <script src="themes/default-themes.js?v=20260825_fix4"></script>
 <script src="themes/theme-importer.js?v=20260825_fix4"></script>
 <script src="themes/theme-editor.js?v=20260825_fix4"></script>
-<link rel="stylesheet" href="assets/css/admin.css?v=20260825_fix4">
-<script src="themes/theme-customizer.js?v=20260825_fix4"></script>
+<link rel="stylesheet" href="assets/css/admin.css?v=20260825_ai_v5">
+<script src="themes/theme-customizer.js?v=20260825_ai_v5"></script>
+<style>
+/* 🤖 AI Copilot Drawer & FAB - Inline Production Guarantee */
+.ai-copilot-fab {
+  position: fixed !important;
+  bottom: 24px !important;
+  left: 24px !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 9999px !important;
+  padding: 12px 20px !important;
+  font-size: 0.92rem !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  box-shadow: 0 10px 25px -5px rgba(67, 56, 202, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-family: var(--font-ar, 'Cairo', sans-serif) !important;
+  direction: rtl !important;
+}
+.ai-copilot-fab:hover {
+  transform: translateY(-3px) scale(1.02) !important;
+  box-shadow: 0 16px 30px -5px rgba(67, 56, 202, 0.65) !important;
+}
+.ai-copilot-drawer {
+  position: fixed !important;
+  bottom: 84px !important;
+  left: 24px !important;
+  width: 480px !important;
+  max-width: calc(100vw - 48px) !important;
+  height: 680px !important;
+  max-height: calc(100vh - 110px) !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 20px !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35) !important;
+  z-index: 100000 !important;
+  display: none !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  direction: rtl !important;
+  font-family: var(--font-ar, 'Cairo', sans-serif) !important;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s ease !important;
+  animation: aiSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.ai-copilot-drawer.open {
+  display: flex !important;
+}
+.ai-copilot-drawer.expanded {
+  width: 920px !important;
+  height: 820px !important;
+}
+</style>
 
 </head>
 <body>

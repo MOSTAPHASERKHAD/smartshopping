@@ -30,7 +30,7 @@
 // === Versioned SW Cache Buster ===
 // If SW version changes, clear ALL caches and reload to serve fresh content
 (function(){
-  var REQUIRED_VER = 'v46';
+  var REQUIRED_VER = 'v47';
   var stored = localStorage.getItem('sk_sw_ver');
   if(stored === REQUIRED_VER) return; // already up to date
   if(!('serviceWorker' in navigator)) { localStorage.setItem('sk_sw_ver', REQUIRED_VER); return; }
@@ -53,7 +53,57 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://i.ibb.co">
 <link rel="preload" href="promo-hero.webp" as="image" type="image/webp">
-<link rel="stylesheet" href="assets/css/index.css">
+<link rel="stylesheet" href="assets/css/index.css?v=20260825_ai_v5">
+<style>
+/* 🤖 Storefront AI Chatbot - Inline Production Guarantee */
+.chatbot-btn {
+  position: fixed !important;
+  bottom: 76px !important;
+  left: 24px !important;
+  width: 58px !important;
+  height: 58px !important;
+  border: none !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%) !important;
+  color: #fff !important;
+  font-size: 1.6rem !important;
+  cursor: pointer !important;
+  z-index: 99999 !important;
+  box-shadow: 0 6px 20px rgba(67, 56, 202, 0.45) !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+}
+body.rtl .chatbot-btn, html[dir="rtl"] .chatbot-btn {
+  right: auto !important;
+  left: 24px !important;
+}
+.chatbot-btn:hover {
+  transform: scale(1.08) !important;
+}
+.chatbot-window {
+  position: fixed !important;
+  bottom: 142px !important;
+  left: 24px !important;
+  width: 380px !important;
+  max-width: calc(100vw - 32px) !important;
+  max-height: 540px !important;
+  background: #ffffff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+  z-index: 100000 !important;
+  display: none !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+body.rtl .chatbot-window, html[dir="rtl"] .chatbot-window {
+  right: auto !important;
+  left: 24px !important;
+}
+.chatbot-window.open {
+  display: flex !important;
+}
+</style>
 <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <!-- Tracking Pixels moved to body below -->
 
