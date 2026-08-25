@@ -1302,7 +1302,13 @@ function init(){
     applySettings(d);
   });
   function applySettings(d){
-    if(d.gemini_api_key || d.ai_enabled){chatAIEnabled=true;try{delete d.gemini_api_key}catch(e){}}
+    var isAiActive = Boolean(d.gemini_api_key || d.ai_enabled);
+    chatAIEnabled = isAiActive;
+    var chatBtn = document.getElementById('chatbotBtn');
+    if(chatBtn){
+      chatBtn.style.display = isAiActive ? 'flex' : 'none';
+    }
+    if(d.gemini_api_key){try{delete d.gemini_api_key}catch(e){}}
 
     // Apply server default theme if configured
     if(d.theme_default && window.ThemeEngine) {

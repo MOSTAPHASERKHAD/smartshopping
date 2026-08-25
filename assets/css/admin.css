@@ -525,7 +525,7 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
   border: 1px solid var(--ds-border, #e2e8f0);
   border-radius: 20px;
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
-  z-index: 9998;
+  z-index: 10000;
   display: none;
   flex-direction: column;
   overflow: hidden;
@@ -536,7 +536,7 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
 }
 
 .ai-copilot-drawer.open {
-  display: flex;
+  display: flex !important;
 }
 
 .ai-copilot-drawer.expanded {

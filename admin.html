@@ -5147,18 +5147,25 @@ function renderAiChatThread() {
   body.scrollTop = body.scrollHeight;
 }
 
-function toggleAiCopilotDrawer() {
+function toggleAiCopilotDrawer(forceOpen) {
   var drawer = document.getElementById('aiCopilotDrawer');
   if (!drawer) return;
-  var willOpen = !drawer.classList.contains('open');
-  drawer.classList.toggle('open');
+  var willOpen = (typeof forceOpen === 'boolean') ? forceOpen : !drawer.classList.contains('open');
   if (willOpen) {
+    drawer.classList.add('open');
     var body = document.getElementById('aiCopilotBody');
     if (body && (!body.children || body.children.length === 0 || currentAiState.activeMode === 'chat')) {
       renderAiChatThread();
     }
+    setTimeout(function() {
+      var input = document.getElementById('aiPromptInput');
+      if (input) input.focus();
+    }, 150);
+  } else {
+    drawer.classList.remove('open');
   }
 }
+window.toggleAiCopilotDrawer = toggleAiCopilotDrawer;
 
 function toggleAiCopilotSize() {
   var drawer = document.getElementById('aiCopilotDrawer');
