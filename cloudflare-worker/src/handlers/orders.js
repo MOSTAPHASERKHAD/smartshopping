@@ -122,8 +122,8 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
   const placeholders = productIds.map(() => '?').join(',');
   const productStmt = isMaster
-    ? env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json FROM products WHERE id IN (${placeholders}) AND (tenant_id = ? OR tenant_id IS NULL)`).bind(...productIds, tenantId)
-    : env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json FROM products WHERE id IN (${placeholders}) AND tenant_id = ?`).bind(...productIds, tenantId);
+    ? env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json, free_shipping FROM products WHERE id IN (${placeholders}) AND (tenant_id = ? OR tenant_id IS NULL)`).bind(...productIds, tenantId)
+    : env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json, free_shipping FROM products WHERE id IN (${placeholders}) AND tenant_id = ?`).bind(...productIds, tenantId);
 
   const { results: realProducts } = await productStmt.all();
 
@@ -131,6 +131,12 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
   let realSubtotal = 0;
   let hasTierFreeShipping = false;
+  let hasProdFreeShipping = false;
+  for (const p of realProducts) {
+    if (p.free_shipping === 1 || p.free_shipping === 'true' || p.free_shipping === true) {
+      hasProdFreeShipping = true;
+    }
+  }
   const secureItems = [];
 
   for (const item of itemsArr) {
@@ -293,7 +299,7 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
     for (const row of shipRows) shippingSettings[row.key] = row.value;
   } catch (e) { /* defaults remain '' */ }
 
-  const isFreeShipping = shippingSettings.free_shipping_enabled === 'true' || hasTierFreeShipping;
+  const isFreeShipping = shippingSettings.free_shipping_enabled === 'true' || hasTierFreeShipping || hasProdFreeShipping;
 
   const shippingCalc = calculateShippingCost({
     shippingConfig: shippingSettings.shipping_config,
@@ -310,7 +316,9 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
   // ── التوصيل المجاني: تجاوز السعر فقط مع الحفاظ على شركة التوصيل وبيانات الولاية ──
   const shippingCost = isFreeShipping ? 0 : shippingCalc.shippingCost;
-  const shippingNote = isFreeShipping ? (hasTierFreeShipping ? 'شحن مجاني (عرض ترويجي)' : 'توصيل مجاني') : shippingCalc.shippingNote;
+  const shippingNote = isFreeShipping
+    ? (hasTierFreeShipping ? 'شحن مجاني (عرض ترويجي)' : (hasProdFreeShipping ? 'شحن مجاني (خاص بالمنتج)' : 'توصيل مجاني'))
+    : shippingCalc.shippingNote;
   const deliveryCompany = shippingCalc.deliveryCompany || 'yalidine';
 
   // ── حجز الكوبون ذرياً قبل كتابة الطلب (Atomic Concurrency Protection) ──

@@ -184,7 +184,44 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
 .new-order-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-left:4px;animation:pulse 1.2s infinite}
 @keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
 
-/* Phase 7 — Landing page configuration panel inside the product modal */
+/* Phase 7 — Wide & Prominent Landing Page & Product Modal */
+#productModal .modal {
+  width: 960px;
+  max-width: 96vw;
+  max-height: 92vh;
+  border-radius: var(--radius);
+}
+#productModal .form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--ds-space-3);
+  margin-bottom: var(--ds-space-2);
+}
+#productModal .form-group label {
+  font-size: var(--ds-text-xs);
+  font-weight: 700;
+  margin-bottom: 5px;
+  color: var(--text);
+  display: block;
+}
+#productModal .form-group input,
+#productModal .form-group select,
+#productModal .form-group textarea {
+  font-size: var(--ds-text-sm);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color var(--ds-transition-fast), box-shadow var(--ds-transition-fast);
+}
+#productModal .form-group input:focus,
+#productModal .form-group select:focus,
+#productModal .form-group textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(233,69,96,0.15);
+  outline: none;
+}
 .config-panel{border:1px solid var(--border);border-radius:var(--radius);margin-top:var(--ds-space-4);background:var(--bg);overflow:hidden}
 .config-panel summary{list-style:none;cursor:pointer;padding:var(--ds-space-3) var(--ds-space-5);display:flex;align-items:center;justify-content:space-between;gap:var(--ds-space-3);font-weight:700;font-size:var(--ds-text-sm);color:var(--text);user-select:none;transition:background var(--ds-transition-fast)}
 .config-panel summary::-webkit-details-marker{display:none}
@@ -195,20 +232,21 @@ html[dir="ltr"] .login-card .form-group{text-align:left}
 .config-panel-body{padding:var(--ds-space-4) var(--ds-space-5) var(--ds-space-5);border-top:1px solid var(--border)}
 .config-panel-body .form-group{margin-bottom:12px}
 .config-panel-body .form-group label{text-transform:none;letter-spacing:0;font-weight:700}
-.config-section-title{font-size:var(--ds-text-xs);font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin:var(--ds-space-4) 0 var(--ds-space-2);padding-bottom:var(--ds-space-1);border-bottom:1px dashed var(--border)}
+.config-section-title{font-size:var(--ds-text-xs);font-weight:800;color:#38bdf8;text-transform:uppercase;letter-spacing:.4px;margin:var(--ds-space-4) 0 var(--ds-space-2);padding-bottom:var(--ds-space-1);border-bottom:1px solid rgba(56,189,248,0.2)}
 .config-section-title:first-child{margin-top:0}
-.config-check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--ds-space-2)}
-.config-check{display:flex;align-items:center;gap:6px;font-size:var(--ds-text-sm);cursor:pointer;color:var(--text);padding:var(--ds-space-1) 0}
+.config-check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--ds-space-2)}
+.config-check{display:flex;align-items:center;gap:8px;font-size:var(--ds-text-sm);cursor:pointer;color:var(--text);padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);transition:all var(--ds-transition-fast)}
+.config-check:hover{border-color:var(--accent);background:rgba(233,69,96,0.05)}
 .config-check input{width:auto;cursor:pointer}
 .config-preview-row{display:flex;align-items:center;gap:var(--ds-space-2);margin-bottom:var(--ds-space-3)}
-.lp-row{display:grid;grid-template-columns:60px 1fr 1fr 32px;gap:6px;align-items:center;margin-bottom:6px}
-.lp-row.lp-row-faq{grid-template-columns:1fr 1fr 32px}
-.lp-row input{padding:7px var(--ds-space-2);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:var(--ds-text-xs);outline:none;background:var(--card);width:100%}
+.lp-row{display:grid;grid-template-columns:70px 1fr 1fr 34px;gap:8px;align-items:center;margin-bottom:8px}
+.lp-row.lp-row-faq{grid-template-columns:1fr 1fr 34px}
+.lp-row input{padding:8px var(--ds-space-2);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:var(--ds-text-xs);outline:none;background:var(--card);width:100%}
 .lp-row input:focus{border-color:var(--accent)}
 .config-accent-line{display:flex;align-items:center;gap:8px}
 .config-accent-line input[type=color]{width:40px;height:32px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;cursor:pointer;padding:2px}
 .config-accent-line input[type=text]{width:110px;font-family:monospace!important;direction:ltr!important;text-align:left!important}
-.config-add-btn{font-size:var(--ds-text-xs);padding:5px var(--ds-space-3);border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;transition:all var(--ds-transition-fast);display:inline-flex;align-items:center;gap:4px;margin-top:2px}
+.config-add-btn{font-size:var(--ds-text-xs);padding:6px var(--ds-space-3);border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text2);cursor:pointer;transition:all var(--ds-transition-fast);display:inline-flex;align-items:center;gap:4px;margin-top:2px}
 .config-add-btn:hover{border-color:var(--accent);color:var(--accent)}
 .config-hint{font-size:var(--ds-text-xs);color:var(--text3);margin-bottom:var(--ds-space-2)}
 

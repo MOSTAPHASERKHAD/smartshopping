@@ -120,6 +120,8 @@
     </div>
     <button type="button" class="pl-lb-nav prev" id="plLbPrev" onclick="navLightbox(-1, event)" aria-label="السابق">›</button>
     <button type="button" class="pl-lb-nav next" id="plLbNext" onclick="navLightbox(1, event)" aria-label="التالي">‹</button>
+  </div>
+
   <!-- Review Submission Modal -->
   <div id="plAddReviewModal" class="pl-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="plModalReviewTitle">
     <div class="pl-modal-card">
@@ -184,10 +186,10 @@
   </footer>
 
   <!-- Dynamic Theme Engine & Sections Scripts -->
-  <script src="themes/theme-schema.js?v=20260825_fix3"></script>
-  <script src="themes/default-themes.js?v=20260825_fix3"></script>
-  <script src="themes/theme-engine.js?v=20260825_fix3"></script>
-  <script src="assets/js/product-utils.js?v=20260825_fix3"></script>
+  <script src="themes/theme-schema.js?v=20260825_fix4"></script>
+  <script src="themes/default-themes.js?v=20260825_fix4"></script>
+  <script src="themes/theme-engine.js?v=20260825_fix4"></script>
+  <script src="assets/js/product-utils.js?v=20260825_fix4"></script>
   <script>
     // --- Global Configuration ---
     var API_URL = 'https://smart-shopping-api.mostaphaserkhad.workers.dev';
@@ -1434,11 +1436,27 @@
       var homeCard = document.getElementById('plRadioHome');
       var officeCard = document.getElementById('plRadioOffice');
       if (type === 'Home') {
-        if (homeCard) homeCard.classList.add('active');
-        if (officeCard) officeCard.classList.remove('active');
+        if (homeCard) {
+          homeCard.classList.add('active');
+          var rHome = homeCard.querySelector('input[type="radio"]');
+          if (rHome) rHome.checked = true;
+        }
+        if (officeCard) {
+          officeCard.classList.remove('active');
+          var rOffice = officeCard.querySelector('input[type="radio"]');
+          if (rOffice) rOffice.checked = false;
+        }
       } else {
-        if (officeCard) officeCard.classList.add('active');
-        if (homeCard) homeCard.classList.remove('active');
+        if (officeCard) {
+          officeCard.classList.add('active');
+          var rOffice = officeCard.querySelector('input[type="radio"]');
+          if (rOffice) rOffice.checked = true;
+        }
+        if (homeCard) {
+          homeCard.classList.remove('active');
+          var rHome = homeCard.querySelector('input[type="radio"]');
+          if (rHome) rHome.checked = false;
+        }
       }
       updateShippingSummary();
     }
@@ -1517,6 +1535,7 @@
       });
 
       updateFreeShippingBadges();
+      updateShippingSummary();
     }
 
     function handleWilayaChange() {
@@ -1580,6 +1599,7 @@
       }
 
       var currentQty = showQtySelector ? (window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1) : 1;
+      var basePrice = Number(currentProduct ? (currentProduct.effectivePrice || currentProduct.price || 0) : 0);
       var tierResult = (showQtySelector && showPricingTiers && typeof calculateTierSubtotal === 'function')
         ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings)
         : { subtotal: basePrice * currentQty, freeShipping: false, saveAmount: 0 };
