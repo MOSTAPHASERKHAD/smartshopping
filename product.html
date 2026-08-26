@@ -378,13 +378,10 @@
         if (formSec.settings.title) p.landing_config.form_title = formSec.settings.title;
         if (formSec.settings.submit_btn_text) p.landing_config.submit_btn_text = formSec.settings.submit_btn_text;
         p.landing_config.form_settings = formSec.settings;
-        p.landing_config.theme_pricing_tiers = {
+        p.landing_config.theme_pricing_tiers = Object.assign({}, formSec.settings, {
           show_quantity_selector: formSec.settings.show_quantity_selector !== false,
-          show_pricing_tiers: formSec.settings.show_pricing_tiers !== false,
-          tier2_discount_pct: formSec.settings.tier2_discount_pct,
-          tier3_discount_pct: formSec.settings.tier3_discount_pct,
-          tier3_free_shipping: formSec.settings.tier3_free_shipping
-        };
+          show_pricing_tiers: formSec.settings.show_pricing_tiers !== false
+        });
       }
 
       var trustSec = sections['trust-signals'] || sections['trust'];
