@@ -712,6 +712,7 @@
     calculateClientShippingCost: calculateClientShippingCost,
     trackAnalyticsEvent: trackAnalyticsEvent,
     renderVariantSwatches: renderVariantSwatches,
+    isSettingEnabled: isSettingEnabled,
     buildDynamicPricingTiers: buildDynamicPricingTiers,
     renderQuantityBreaks: renderQuantityBreaks,
     calculateTierSubtotal: calculateTierSubtotal
