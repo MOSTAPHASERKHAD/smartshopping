@@ -755,7 +755,7 @@
     <div class="top-bar"><h1>التقييمات</h1></div>
     <div class="panel">
       <div class="panel-body"><div class="table-wrap"><table><thead><tr>
-        <th>المنتج</th><th>الاسم</th><th>الهاتف</th><th>النص</th><th>الصورة</th><th>التقييم</th><th>التاريخ</th><th>إجراءات</th>
+        <th>المنتج</th><th>الاسم</th><th>الهاتف</th><th>النص</th><th>الصورة</th><th>التقييم</th><th>الحالة</th><th>التاريخ</th><th>إجراءات</th>
       </tr></thead><tbody id="reviews-list"></tbody></table></div></div>
     </div>
   </div>
@@ -4934,13 +4934,28 @@ function deleteTestimonial(id, name) {
 function loadReviews() {
   apiGet('admin_list_reviews', {}, function(data) {
     var list = document.getElementById('reviews-list');
-    if (!data || !data.reviews || !data.reviews.length) { list.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:24px">لا توجد تقييمات</td></tr>'; return; }
+    if (!data || !data.reviews || !data.reviews.length) { list.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text2);padding:24px">لا توجد تقييمات</td></tr>'; return; }
     list.innerHTML = data.reviews.map(function(r) {
       var stars = ''; for (var i = 0; i < (r.rating || 5); i++) stars += '★';
       var photoHtml = '—';
       if (r.image_url) {
         photoHtml = '<img src="' + esc(r.image_url) + '" style="width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:pointer" onclick="window.open(\'' + esc(r.image_url) + '\',\'_blank\')">';
       }
+      var status = r.status || 'pending';
+      var statusBadge = (status === 'approved')
+        ? '<span class="badge badge-confirmed">معتمد</span>'
+        : ((status === 'rejected')
+          ? '<span class="badge badge-cancelled">مرفوض</span>'
+          : '<span class="badge badge-pending">قيد المراجعة</span>');
+
+      var actionBtns = '';
+      if (status !== 'approved') {
+        actionBtns += '<button class="btn btn-success btn-xs" onclick="approveReview(' + r.id + ', \'approved\')" style="margin-left:4px">✅ قبول</button>';
+      } else {
+        actionBtns += '<button class="btn btn-warning btn-xs" onclick="approveReview(' + r.id + ', \'rejected\')" style="margin-left:4px">⏸️ إيقاف</button>';
+      }
+      actionBtns += '<button class="btn btn-danger btn-xs" onclick="deleteReview(' + r.id + ')">🗑️ حذف</button>';
+
       return '<tr>' +
         '<td>' + esc(r.product_name || r.product_id || '') + '</td>' +
         '<td>' + esc(r.author_name || '') + '</td>' +
@@ -4948,10 +4963,23 @@ function loadReviews() {
         '<td>' + esc(r.content || '') + '</td>' +
         '<td>' + photoHtml + '</td>' +
         '<td style="color:#f59e0b">' + stars + '</td>' +
+        '<td>' + statusBadge + '</td>' +
         '<td>' + esc(r.created_at || '') + '</td>' +
-        '<td><button class="btn btn-danger btn-xs" onclick="deleteReview(' + r.id + ')">حذف</button></td>' +
+        '<td style="white-space:nowrap">' + actionBtns + '</td>' +
       '</tr>';
     }).join('');
+  });
+}
+
+function approveReview(id, status) {
+  status = status || 'approved';
+  apiPost('admin_approve_review', { id: id, status: status }, function(res) {
+    if (res && res.error) {
+      toast(res.error, false);
+    } else {
+      toast(status === 'approved' ? '✅ تم اعتماد ونشر التقييم بنجاح' : 'تم تحديث حالة التقييم');
+      loadReviews();
+    }
   });
 }
 
