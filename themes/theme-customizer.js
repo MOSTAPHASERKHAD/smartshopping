@@ -411,15 +411,15 @@
           submit_btn_text: 'نص زر تأكيد الطلب',
           show_quantity_selector: 'إظهار خيار تحديد الكمية',
           show_pricing_tiers: '🎁 إظهار عروض الكميات والتوفير (Bundles)',
-          tier1_enabled: '☑️ إظهار وتفعيل العرض الأول (1 قطعة)',
+          tier1_enabled: '👁️ إظهار العرض الأول في صفحة الهبوط',
           tier1_label: '📝 عنوان عرض 1 قطعة (Tier 1)',
           tier1_subtext: '💬 الوصف الفرعي لعرض 1 قطعة',
-          tier2_enabled: '☑️ إظهار وتفعيل العرض الثاني (قطعتين / مع علبة)',
+          tier2_enabled: '👁️ إظهار العرض الثاني في صفحة الهبوط',
           tier2_label: '⭐ عنوان عرض قطعتين (Tier 2)',
           tier2_badge: '🏷️ شارة عرض قطعتين (Badge)',
           tier2_subtext: '💬 الوصف الفرعي لعرض قطعتين',
           tier2_discount_pct: '🏷️ نسبة خصم عرض قطعتين (%)',
-          tier3_enabled: '☑️ إظهار وتفعيل العرض الثالث (3 قطع / التوفير)',
+          tier3_enabled: '👁️ إظهار العرض الثالث في صفحة الهبوط',
           tier3_label: '🎁 عنوان عرض 3 قطع (Tier 3)',
           tier3_badge: '🏷️ شارة عرض 3 قطع (Badge)',
           tier3_subtext: '💬 الوصف الفرعي لعرض 3 قطع',
@@ -516,7 +516,7 @@
           } else if (typeof sVal === 'boolean') {
             html += '<div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;background:#0f172a;padding:8px 10px;border-radius:6px;border:1px solid #334155;">';
             html += '<label style="font-size:0.8rem;color:#e2e8f0;cursor:pointer;flex:1;" for="sk-chk-' + esc(sid) + '-' + esc(sKey) + '">' + esc(labelText) + '</label>';
-            html += '<input type="checkbox" id="sk-chk-' + esc(sid) + '-' + esc(sKey) + '" ' + (sVal ? 'checked' : '') + ' onchange="ThemeCustomizer.updateSectionSetting(\'' + esc(sid) + '\', \'' + esc(sKey) + '\', this.checked)" style="cursor:pointer;width:18px;height:18px;accent-color:#6366f1;">';
+            html += '<input type="checkbox" id="sk-chk-' + esc(sid) + '-' + esc(sKey) + '" ' + (sVal ? 'checked' : '') + ' onchange="ThemeCustomizer.updateSectionSetting(\'' + esc(sid) + '\', \'' + esc(sKey) + '\', this.checked)" onclick="ThemeCustomizer.updateSectionSetting(\'' + esc(sid) + '\', \'' + esc(sKey) + '\', this.checked)" style="cursor:pointer;width:18px;height:18px;accent-color:#6366f1;">';
             html += '</div>';
           } else if (typeof sVal === 'string' || typeof sVal === 'number') {
             html += '<div style="margin-bottom:10px;">';

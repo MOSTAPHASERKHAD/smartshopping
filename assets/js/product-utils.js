@@ -526,7 +526,24 @@
    */
   function buildDynamicPricingTiers(basePrice, customTiers, themeSettings) {
     basePrice = Number(basePrice || 0);
+    var ts = themeSettings || {};
+    var show1 = (ts.tier1_enabled !== false && ts.show_tier1 !== false);
+    var show2 = (ts.tier2_enabled !== false && ts.show_tier2 !== false);
+    var show3 = (ts.tier3_enabled !== false && ts.show_tier3 !== false);
+
     if (customTiers && Array.isArray(customTiers) && customTiers.length > 0) {
+      var filtered = customTiers.filter(function(t, idx) {
+        if (t.enabled === false) return false;
+        var tQty = Number(t.qty || (idx + 1));
+        if (tQty === 1 && !show1) return false;
+        if (tQty === 2 && !show2) return false;
+        if (tQty === 3 && !show3) return false;
+        if (t.offer_id === 'tier-1' && !show1) return false;
+        if (t.offer_id === 'tier-2' && !show2) return false;
+        if (t.offer_id === 'tier-3' && !show3) return false;
+        return true;
+      });
+      if (filtered.length > 0) return filtered;
       return customTiers;
     }
 
