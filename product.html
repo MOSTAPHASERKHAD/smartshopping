@@ -378,9 +378,17 @@
         if (formSec.settings.title) p.landing_config.form_title = formSec.settings.title;
         if (formSec.settings.submit_btn_text) p.landing_config.submit_btn_text = formSec.settings.submit_btn_text;
         p.landing_config.form_settings = formSec.settings;
+        var isEnabled = (typeof isSettingEnabled === 'function') ? isSettingEnabled : function(v, d) {
+          if (v === undefined || v === null || v === '') return (d !== undefined ? d : true);
+          if (v === false || v === 'false' || v === 0 || v === '0' || v === 'off' || v === 'no' || v === 'disabled') return false;
+          return true;
+        };
         p.landing_config.theme_pricing_tiers = Object.assign({}, formSec.settings, {
-          show_quantity_selector: formSec.settings.show_quantity_selector !== false,
-          show_pricing_tiers: formSec.settings.show_pricing_tiers !== false
+          show_quantity_selector: isEnabled(formSec.settings.show_quantity_selector, true),
+          show_pricing_tiers: isEnabled(formSec.settings.show_pricing_tiers, true),
+          tier1_enabled: isEnabled(formSec.settings.tier1_enabled, true),
+          tier2_enabled: isEnabled(formSec.settings.tier2_enabled, true),
+          tier3_enabled: isEnabled(formSec.settings.tier3_enabled, true)
         });
       }
 

@@ -524,16 +524,25 @@
   /**
    * Builds dynamic pricing tiers based on explicit custom tiers or active theme settings
    */
+  function isSettingEnabled(val, defaultVal) {
+    if (val === undefined || val === null || val === '') return (defaultVal !== undefined ? defaultVal : true);
+    if (val === false || val === 'false' || val === 0 || val === '0' || val === 'off' || val === 'no' || val === 'disabled') return false;
+    return true;
+  }
+
+  /**
+   * Builds dynamic pricing tiers based on explicit custom tiers or active theme settings
+   */
   function buildDynamicPricingTiers(basePrice, customTiers, themeSettings) {
     basePrice = Number(basePrice || 0);
     var ts = themeSettings || {};
-    var show1 = (ts.tier1_enabled !== false && ts.show_tier1 !== false);
-    var show2 = (ts.tier2_enabled !== false && ts.show_tier2 !== false);
-    var show3 = (ts.tier3_enabled !== false && ts.show_tier3 !== false);
+    var show1 = isSettingEnabled(ts.tier1_enabled, true) && isSettingEnabled(ts.show_tier1, true);
+    var show2 = isSettingEnabled(ts.tier2_enabled, true) && isSettingEnabled(ts.show_tier2, true);
+    var show3 = isSettingEnabled(ts.tier3_enabled, true) && isSettingEnabled(ts.show_tier3, true);
 
     if (customTiers && Array.isArray(customTiers) && customTiers.length > 0) {
       var filtered = customTiers.filter(function(t, idx) {
-        if (t.enabled === false) return false;
+        if (t.enabled === false || t.enabled === 'false' || t.enabled === 0 || t.enabled === '0') return false;
         var tQty = Number(t.qty || (idx + 1));
         if (tQty === 1 && !show1) return false;
         if (tQty === 2 && !show2) return false;
@@ -544,15 +553,14 @@
         return true;
       });
       if (filtered.length > 0) return filtered;
-      return customTiers;
+      if (customTiers.length > 0) return [customTiers[0]];
     }
 
-    var ts = themeSettings || {};
     var d2 = (ts.tier2_discount_pct != null && !isNaN(Number(ts.tier2_discount_pct)))
       ? Math.max(0, Math.min(100, Number(ts.tier2_discount_pct))) : 10;
     var d3 = (ts.tier3_discount_pct != null && !isNaN(Number(ts.tier3_discount_pct)))
       ? Math.max(0, Math.min(100, Number(ts.tier3_discount_pct))) : 20;
-    var fs3 = (ts.tier3_free_shipping !== undefined) ? (ts.tier3_free_shipping !== false) : true;
+    var fs3 = isSettingEnabled(ts.tier3_free_shipping, true);
 
     var p2 = Math.round(basePrice * 2 * (1 - d2 / 100));
     var p3 = Math.round(basePrice * 3 * (1 - d3 / 100));
@@ -577,10 +585,6 @@
     var label3 = ts.tier3_label || '3 قطع (توفير كلي 🎁)';
     var badge3 = (ts.tier3_badge !== undefined && ts.tier3_badge !== null) ? ts.tier3_badge : defaultBadge3;
     var subtext3 = ts.tier3_subtext || 'أفضل قيمة وأعلى توفير';
-
-    var show1 = (ts.tier1_enabled !== false && ts.show_tier1 !== false);
-    var show2 = (ts.tier2_enabled !== false && ts.show_tier2 !== false);
-    var show3 = (ts.tier3_enabled !== false && ts.show_tier3 !== false);
 
     var list = [];
     if (show1) {

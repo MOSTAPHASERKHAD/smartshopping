@@ -217,15 +217,21 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
         let t3Subtext = 'أفضل قيمة وأعلى توفير';
 
         if (storeThemeSections) {
+          const isSettingEnabled = (val, defaultVal = true) => {
+            if (val === undefined || val === null || val === '') return defaultVal;
+            if (val === false || val === 'false' || val === 0 || val === '0' || val === 'off' || val === 'no' || val === 'disabled') return false;
+            return true;
+          };
+
           const tsSec = storeThemeSections['fast-order-form'] || storeThemeSections['order-form'];
           if (tsSec && tsSec.settings) {
-            if (tsSec.settings.show_quantity_selector === false) themeShowTiers = false;
+            if (tsSec.settings.show_quantity_selector === false || tsSec.settings.show_quantity_selector === 'false') themeShowTiers = false;
             if (tsSec.settings.show_pricing_tiers !== undefined) {
-              themeShowTiers = (tsSec.settings.show_pricing_tiers !== false && tsSec.settings.show_quantity_selector !== false);
+              themeShowTiers = isSettingEnabled(tsSec.settings.show_pricing_tiers, true) && isSettingEnabled(tsSec.settings.show_quantity_selector, true);
             }
-            if (tsSec.settings.tier1_enabled !== undefined) tier1Enabled = (tsSec.settings.tier1_enabled !== false);
-            if (tsSec.settings.tier2_enabled !== undefined) tier2Enabled = (tsSec.settings.tier2_enabled !== false);
-            if (tsSec.settings.tier3_enabled !== undefined) tier3Enabled = (tsSec.settings.tier3_enabled !== false);
+            tier1Enabled = isSettingEnabled(tsSec.settings.tier1_enabled, true);
+            tier2Enabled = isSettingEnabled(tsSec.settings.tier2_enabled, true);
+            tier3Enabled = isSettingEnabled(tsSec.settings.tier3_enabled, true);
             if (tsSec.settings.tier1_label) t1Label = String(tsSec.settings.tier1_label);
             if (tsSec.settings.tier1_subtext) t1Subtext = String(tsSec.settings.tier1_subtext);
             if (tsSec.settings.tier2_label) t2Label = String(tsSec.settings.tier2_label);
@@ -241,7 +247,7 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
               tier3Pct = Math.max(0, Math.min(100, Number(tsSec.settings.tier3_discount_pct)));
             }
             if (tsSec.settings.tier3_free_shipping !== undefined) {
-              tier3FreeShipping = (tsSec.settings.tier3_free_shipping !== false);
+              tier3FreeShipping = isSettingEnabled(tsSec.settings.tier3_free_shipping, true);
             }
           }
         }

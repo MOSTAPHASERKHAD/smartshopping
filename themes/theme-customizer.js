@@ -192,9 +192,22 @@
   };
 
   ThemeCustomizerClass.prototype.updateSectionSetting = function(sectionId, key, value) {
+    var updated = false;
     if (state.sections && state.sections[sectionId]) {
       if (!state.sections[sectionId].settings) state.sections[sectionId].settings = {};
       state.sections[sectionId].settings[key] = value;
+      updated = true;
+    }
+    if (sectionId === 'fast-order-form' && state.sections && state.sections['order-form']) {
+      if (!state.sections['order-form'].settings) state.sections['order-form'].settings = {};
+      state.sections['order-form'].settings[key] = value;
+      updated = true;
+    } else if (sectionId === 'order-form' && state.sections && state.sections['fast-order-form']) {
+      if (!state.sections['fast-order-form'].settings) state.sections['fast-order-form'].settings = {};
+      state.sections['fast-order-form'].settings[key] = value;
+      updated = true;
+    }
+    if (updated) {
       this.sendPreviewUpdate();
       return true;
     }
