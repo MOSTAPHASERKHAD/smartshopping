@@ -777,6 +777,19 @@
       // ── Quantity Breaks / Bundle Offers or Standard Quantity Selector ──
       if (showQtySelector) {
         if (showPricingTiers && typeof renderQuantityBreaks === 'function') {
+          var activeTiers = (typeof buildDynamicPricingTiers === 'function') ? buildDynamicPricingTiers(p.price, p.pricing_tiers, themeTierSettings) : [];
+          var currentOfferId = window.selectedQuantityState ? window.selectedQuantityState.offerId : null;
+          var matchedCurrent = (activeTiers && activeTiers.length > 0) ? activeTiers.find(function(t) { return t.offer_id === currentOfferId; }) : null;
+          if (!matchedCurrent && activeTiers && activeTiers.length > 0) {
+            var firstT = activeTiers[0];
+            window.selectedQuantityState = {
+              qty: Number(firstT.qty || 1),
+              price: Number(firstT.price != null ? firstT.price : (p.price * (firstT.qty || 1))),
+              freeShipping: Boolean(firstT.free_shipping),
+              offerId: firstT.offer_id,
+              tierName: firstT.label || firstT.name || ''
+            };
+          }
           html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1, themeTierSettings, window.selectedQuantityState ? window.selectedQuantityState.offerId : null);
         } else {
           var curQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;

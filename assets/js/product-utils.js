@@ -561,11 +561,26 @@
     var badge3 = (ts.tier3_badge !== undefined && ts.tier3_badge !== null) ? ts.tier3_badge : defaultBadge3;
     var subtext3 = ts.tier3_subtext || 'أفضل قيمة وأعلى توفير';
 
-    return [
-      { offer_id: 'tier-1', qty: 1, label: label1, price: basePrice, subtext: subtext1, free_shipping: false },
-      { offer_id: 'tier-2', qty: 2, label: label2, price: p2, badge: badge2, subtext: subtext2, free_shipping: false },
-      { offer_id: 'tier-3', qty: 3, label: label3, price: p3, free_shipping: fs3, badge: badge3, subtext: subtext3 }
-    ];
+    var show1 = (ts.tier1_enabled !== false && ts.show_tier1 !== false);
+    var show2 = (ts.tier2_enabled !== false && ts.show_tier2 !== false);
+    var show3 = (ts.tier3_enabled !== false && ts.show_tier3 !== false);
+
+    var list = [];
+    if (show1) {
+      list.push({ offer_id: 'tier-1', qty: 1, label: label1, price: basePrice, subtext: subtext1, free_shipping: false });
+    }
+    if (show2) {
+      list.push({ offer_id: 'tier-2', qty: 2, label: label2, price: p2, badge: badge2, subtext: subtext2, free_shipping: false });
+    }
+    if (show3) {
+      list.push({ offer_id: 'tier-3', qty: 3, label: label3, price: p3, free_shipping: fs3, badge: badge3, subtext: subtext3 });
+    }
+
+    if (list.length === 0) {
+      list.push({ offer_id: 'tier-1', qty: 1, label: label1, price: basePrice, subtext: subtext1, free_shipping: false });
+    }
+
+    return list;
   }
 
   /**

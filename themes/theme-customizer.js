@@ -411,12 +411,15 @@
           submit_btn_text: 'نص زر تأكيد الطلب',
           show_quantity_selector: 'إظهار خيار تحديد الكمية',
           show_pricing_tiers: '🎁 إظهار عروض الكميات والتوفير (Bundles)',
+          tier1_enabled: '☑️ إظهار وتفعيل العرض الأول (1 قطعة)',
           tier1_label: '📝 عنوان عرض 1 قطعة (Tier 1)',
           tier1_subtext: '💬 الوصف الفرعي لعرض 1 قطعة',
+          tier2_enabled: '☑️ إظهار وتفعيل العرض الثاني (قطعتين / مع علبة)',
           tier2_label: '⭐ عنوان عرض قطعتين (Tier 2)',
           tier2_badge: '🏷️ شارة عرض قطعتين (Badge)',
           tier2_subtext: '💬 الوصف الفرعي لعرض قطعتين',
           tier2_discount_pct: '🏷️ نسبة خصم عرض قطعتين (%)',
+          tier3_enabled: '☑️ إظهار وتفعيل العرض الثالث (3 قطع / التوفير)',
           tier3_label: '🎁 عنوان عرض 3 قطع (Tier 3)',
           tier3_badge: '🏷️ شارة عرض 3 قطع (Badge)',
           tier3_subtext: '💬 الوصف الفرعي لعرض 3 قطع',
@@ -440,12 +443,15 @@
           sec.settings = sec.settings || {};
           if (sec.settings.show_quantity_selector === undefined) sec.settings.show_quantity_selector = true;
           if (sec.settings.show_pricing_tiers === undefined) sec.settings.show_pricing_tiers = true;
+          if (sec.settings.tier1_enabled === undefined) sec.settings.tier1_enabled = true;
           if (!sec.settings.tier1_label) sec.settings.tier1_label = '1 قطعة (شراء عادي)';
           if (!sec.settings.tier1_subtext) sec.settings.tier1_subtext = 'السعر القياسي';
+          if (sec.settings.tier2_enabled === undefined) sec.settings.tier2_enabled = true;
           if (!sec.settings.tier2_label) sec.settings.tier2_label = '2 قطع (الأكثر طلباً ⭐)';
           if (!sec.settings.tier2_badge) sec.settings.tier2_badge = 'الأكثر طلباً';
           if (!sec.settings.tier2_subtext) sec.settings.tier2_subtext = 'العرض الموصى به للمنازل';
           if (sec.settings.tier2_discount_pct === undefined) sec.settings.tier2_discount_pct = 10;
+          if (sec.settings.tier3_enabled === undefined) sec.settings.tier3_enabled = true;
           if (!sec.settings.tier3_label) sec.settings.tier3_label = '3 قطع (توفير كلي 🎁)';
           if (!sec.settings.tier3_badge) sec.settings.tier3_badge = 'توفير كلي';
           if (!sec.settings.tier3_subtext) sec.settings.tier3_subtext = 'أفضل قيمة وأعلى توفير';
@@ -457,18 +463,18 @@
           'fast-order-form': [
             'title', 'submit_btn_text', 'delivery_note',
             'show_quantity_selector', 'show_pricing_tiers',
-            'tier1_label', 'tier1_subtext',
-            'tier2_label', 'tier2_badge', 'tier2_subtext', 'tier2_discount_pct',
-            'tier3_label', 'tier3_badge', 'tier3_subtext', 'tier3_discount_pct', 'tier3_free_shipping',
+            'tier1_enabled', 'tier1_label', 'tier1_subtext',
+            'tier2_enabled', 'tier2_label', 'tier2_badge', 'tier2_subtext', 'tier2_discount_pct',
+            'tier3_enabled', 'tier3_label', 'tier3_badge', 'tier3_subtext', 'tier3_discount_pct', 'tier3_free_shipping',
             'show_wilaya_selector', 'show_email_field', 'show_baladiya_field',
             'show_address_field', 'show_delivery_preference', 'show_notes_field'
           ],
           'order-form': [
             'title', 'submit_btn_text', 'delivery_note',
             'show_quantity_selector', 'show_pricing_tiers',
-            'tier1_label', 'tier1_subtext',
-            'tier2_label', 'tier2_badge', 'tier2_subtext', 'tier2_discount_pct',
-            'tier3_label', 'tier3_badge', 'tier3_subtext', 'tier3_discount_pct', 'tier3_free_shipping',
+            'tier1_enabled', 'tier1_label', 'tier1_subtext',
+            'tier2_enabled', 'tier2_label', 'tier2_badge', 'tier2_subtext', 'tier2_discount_pct',
+            'tier3_enabled', 'tier3_label', 'tier3_badge', 'tier3_subtext', 'tier3_discount_pct', 'tier3_free_shipping',
             'show_wilaya_selector', 'show_email_field', 'show_baladiya_field',
             'show_address_field', 'show_delivery_preference', 'show_notes_field'
           ]
@@ -484,11 +490,11 @@
           var sVal = sec.settings[sKey];
           var labelText = SETTING_LABELS[sKey] || sKey;
 
-          if (sKey === 'tier1_label') {
+          if (sKey === 'tier1_enabled') {
             html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #6366f1;border-radius:4px;font-size:0.82rem;font-weight:800;color:#a5b4fc">📦 إعدادات العرض الأول (1 قطعة / مفرد)</div>';
-          } else if (sKey === 'tier2_label') {
+          } else if (sKey === 'tier2_enabled') {
             html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #f59e0b;border-radius:4px;font-size:0.82rem;font-weight:800;color:#fde68a">⭐ إعدادات العرض الثاني (عرض مع علبة / قطعتين)</div>';
-          } else if (sKey === 'tier3_label') {
+          } else if (sKey === 'tier3_enabled') {
             html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #10b981;border-radius:4px;font-size:0.82rem;font-weight:800;color:#86efac">🎁 إعدادات العرض الثالث (عرض التوفير الأقصى)</div>';
           }
 

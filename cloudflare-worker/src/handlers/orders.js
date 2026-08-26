@@ -201,7 +201,9 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
         });
       } else {
         // Resolve Active Theme Settings
-        let themeShowTiers = true;
+        let tier1Enabled = true;
+        let tier2Enabled = true;
+        let tier3Enabled = true;
         let tier2Pct = 10;
         let tier3Pct = 20;
         let tier3FreeShipping = true;
@@ -221,6 +223,9 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
             if (tsSec.settings.show_pricing_tiers !== undefined) {
               themeShowTiers = (tsSec.settings.show_pricing_tiers !== false && tsSec.settings.show_quantity_selector !== false);
             }
+            if (tsSec.settings.tier1_enabled !== undefined) tier1Enabled = (tsSec.settings.tier1_enabled !== false);
+            if (tsSec.settings.tier2_enabled !== undefined) tier2Enabled = (tsSec.settings.tier2_enabled !== false);
+            if (tsSec.settings.tier3_enabled !== undefined) tier3Enabled = (tsSec.settings.tier3_enabled !== false);
             if (tsSec.settings.tier1_label) t1Label = String(tsSec.settings.tier1_label);
             if (tsSec.settings.tier1_subtext) t1Subtext = String(tsSec.settings.tier1_subtext);
             if (tsSec.settings.tier2_label) t2Label = String(tsSec.settings.tier2_label);
@@ -245,11 +250,12 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
         if (effectiveShow) {
           const p2 = Math.round(basePrice * 2 * (1 - tier2Pct / 100));
           const p3 = Math.round(basePrice * 3 * (1 - tier3Pct / 100));
-          tiers = [
-            { offer_id: 'tier-1', qty: 1, label: t1Label, subtext: t1Subtext, price: basePrice, free_shipping: false },
-            { offer_id: 'tier-2', qty: 2, label: t2Label, subtext: t2Subtext, badge: t2Badge, price: p2, free_shipping: false },
-            { offer_id: 'tier-3', qty: 3, label: t3Label, subtext: t3Subtext, badge: t3Badge, price: p3, free_shipping: tier3FreeShipping }
-          ];
+          const list = [];
+          if (tier1Enabled) list.push({ offer_id: 'tier-1', qty: 1, label: t1Label, subtext: t1Subtext, price: basePrice, free_shipping: false });
+          if (tier2Enabled) list.push({ offer_id: 'tier-2', qty: 2, label: t2Label, subtext: t2Subtext, badge: t2Badge, price: p2, free_shipping: false });
+          if (tier3Enabled) list.push({ offer_id: 'tier-3', qty: 3, label: t3Label, subtext: t3Subtext, badge: t3Badge, price: p3, free_shipping: tier3FreeShipping });
+          if (list.length === 0) list.push({ offer_id: 'tier-1', qty: 1, label: t1Label, subtext: t1Subtext, price: basePrice, free_shipping: false });
+          tiers = list;
         }
       }
     }
