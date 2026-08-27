@@ -446,11 +446,6 @@
 
       try { if (typeof trackAnalyticsEvent === 'function') trackAnalyticsEvent(API_URL, 'PageView', pid); } catch(e) {}
 
-      if (!pid) {
-        showNotFound();
-        return;
-      }
-
       var url = API_URL + '?action=catalog' + (currentStoreSlug ? '&store=' + encodeURIComponent(currentStoreSlug) : '');
       fetch(url)
         .then(function(r) { return r.json(); })
@@ -460,9 +455,16 @@
             return;
           }
 
-          var rawProduct = d.products.find(function(x) {
-            return String(x.id) === String(pid);
-          });
+          var rawProduct = null;
+          if (pid) {
+            rawProduct = d.products.find(function(x) {
+              return String(x.id) === String(pid);
+            });
+          }
+          if (!rawProduct && (!pid || d.products.length === 1)) {
+            rawProduct = d.products[0];
+            pid = rawProduct.id;
+          }
 
           if (!rawProduct) {
             showNotFound();

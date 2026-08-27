@@ -2254,7 +2254,12 @@ function renderHeroSlide(idx) {
   
   if (slide.link) {
     el.style.cursor = 'pointer';
-    el.onclick = function() { window.open(esc(slide.link), '_blank'); };
+    el.onclick = function() {
+      var targetUrl = (slide.link || '').trim();
+      if (targetUrl) {
+        window.location.href = targetUrl;
+      }
+    };
   }
   el.innerHTML = html;
   banner.insertBefore(el, banner.querySelector('.dots'));
