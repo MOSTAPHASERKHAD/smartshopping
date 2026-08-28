@@ -151,8 +151,41 @@ export async function getSettings(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
     }
   }
 
-  // مؤشر عام آمن لتفعيل مساعد المتجر دون كشف المفتاح السري
-  settings.ai_enabled = hasGeminiKey;
+  // ── تحديد حالة تفعيل مساعد المتجر بدقة وأمان (Source of Truth & Priority) ──
+  // 1. الأولوية الأولى: الإعداد المخصص لمساعد المتجر (ai_assistant_enabled)
+  // 2. الأولوية الثانية: الإعداد العام للذكاء الاصطناعي (ai_enabled)
+  // 3. السلوك الافتراضي: التفعيل إذا توفرت قدرة Gemini خادمياً (hasGeminiKey)
+  // قاعدة حاسمة: التعطيل الصريح (false/0) يفوز دائماً، والتفعيل يتطلب توفر القدرة التقنية hasGeminiKey
+  let resolvedAiEnabled = false;
+
+  const rawAssistantSetting = settings.ai_assistant_enabled;
+  const rawGeneralSetting = settings.ai_enabled;
+
+  if (rawAssistantSetting !== undefined && rawAssistantSetting !== null && String(rawAssistantSetting).trim() !== '') {
+    const val = String(rawAssistantSetting).trim().toLowerCase();
+    if (val === 'false' || val === '0' || val === 'off' || val === 'disabled') {
+      resolvedAiEnabled = false;
+    } else if (val === 'true' || val === '1' || val === 'on' || val === 'enabled') {
+      resolvedAiEnabled = hasGeminiKey;
+    } else {
+      resolvedAiEnabled = hasGeminiKey;
+    }
+  } else if (rawGeneralSetting !== undefined && rawGeneralSetting !== null && String(rawGeneralSetting).trim() !== '') {
+    const val = String(rawGeneralSetting).trim().toLowerCase();
+    if (val === 'false' || val === '0' || val === 'off' || val === 'disabled') {
+      resolvedAiEnabled = false;
+    } else if (val === 'true' || val === '1' || val === 'on' || val === 'enabled') {
+      resolvedAiEnabled = hasGeminiKey;
+    } else {
+      resolvedAiEnabled = hasGeminiKey;
+    }
+  } else {
+    resolvedAiEnabled = hasGeminiKey;
+  }
+
+  // إرسال boolean آمن فقط للواجهة دون كشف أي أسرار
+  settings.ai_enabled = resolvedAiEnabled;
+  settings.ai_assistant_enabled = resolvedAiEnabled;
 
   // ── جلب إعدادات الثيم النشط داخل نطاق التاجر ──
   if (settings.theme_default) {

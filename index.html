@@ -1352,11 +1352,10 @@ function init(){
     applySettings(d);
   });
   function applySettings(d){
-    var isAiActive = Boolean(d.gemini_api_key || d.ai_enabled);
+    var isAiActive = (d.ai_enabled === true || d.ai_enabled === 'true' || d.ai_assistant_enabled === 'true' || d.ai_assistant_enabled === true);
     chatAIEnabled = isAiActive;
     var chatBtn = document.getElementById('chatbotBtn');
     if(chatBtn){
-      chatBtn.style.display = isAiActive ? 'flex' : 'none';
       chatBtn.style.setProperty('display', isAiActive ? 'flex' : 'none', 'important');
     }
     if(d.gemini_api_key){try{delete d.gemini_api_key}catch(e){}}
@@ -2970,18 +2969,19 @@ function processChatInput(text) {
   // If AI is enabled, send to Gemini
   if (chatAIEnabled) {
     showTyping();
-    var historyForAI = chatHistory.slice(-8).map(function(h) {
-      return (h.role === 'user' ? 'Customer' : 'Assistant') + ': ' + h.text;
-    }).join('\n');
+    var historyPayload = chatHistory.slice(-8).map(function(h) {
+      return { role: (h.role === 'user' ? 'user' : 'bot'), text: h.text };
+    });
 
-    apiCall('ai_chat', { message: text, history: JSON.stringify(chatHistory.slice(-8)) }, function(d) {
+    apiPost('ai_chat', { message: text, history: JSON.stringify(historyPayload) }, function(d) {
       hideTyping();
       if (d && d.reply) {
         addBotMsg(d.reply.replace(/\n/g, '<br>'));
-        chatHistory.push({ role: 'user', text: text });
-        chatHistory.push({ role: 'bot', text: d.reply });
+      } else if (d && d.error) {
+        var errText = (typeof d.error === 'object' ? (d.error.message || JSON.stringify(d.error)) : String(d.error));
+        addBotMsg('عذراً، ' + errText + '. يمكنك أيضاً التواصل معنا مباشرة عبر واتساب 💬');
       } else {
-        addBotMsg('عذراً، صارت مشكلة. حاول مرة أخرى.');
+        addBotMsg('عذراً، تعذر الاتصال بالمساعد حالياً. يمكنك التواصل معنا مباشرة عبر واتساب للمساعدة الفورية 💬');
       }
     });
     return;
