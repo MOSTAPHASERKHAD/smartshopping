@@ -801,17 +801,17 @@
             };
           }
           html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1, themeTierSettings, window.selectedQuantityState ? window.selectedQuantityState.offerId : null);
-        } else {
-          var curQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
-          html += '<div class="pl-field-group" style="margin-bottom:16px">';
-          html += '<label for="plStandardQty" style="font-weight:700;display:block;margin-bottom:6px">الكمية المطلوبة:</label>';
-          html += '<div style="display:inline-flex;align-items:center;border:1px solid var(--pl-border,#e2e8f0);border-radius:8px;background:var(--pl-card-bg,#fff);overflow:hidden;width:fit-content">';
-          html += '<button type="button" onclick="changeStandardQuantity(-1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="تقليل الكمية">−</button>';
-          html += '<input type="number" id="plStandardQty" min="1" max="99" value="' + curQty + '" onchange="onStandardQuantityChange(this.value)" style="width:50px;text-align:center;border:none;font-weight:700;font-size:1rem;background:transparent;outline:none" readonly>';
-          html += '<button type="button" onclick="changeStandardQuantity(1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="زيادة الكمية">+</button>';
-          html += '</div>';
-          html += '</div>';
         }
+
+        var curQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
+        html += '<div class="pl-field-group" style="margin-bottom:16px">';
+        html += '<label for="plStandardQty" style="font-weight:700;display:block;margin-bottom:6px">الكمية المطلوبة:</label>';
+        html += '<div style="display:inline-flex;align-items:center;border:1px solid var(--pl-border,#e2e8f0);border-radius:8px;background:var(--pl-card-bg,#fff);overflow:hidden;width:fit-content">';
+        html += '<button type="button" onclick="changeStandardQuantity(-1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="تقليل الكمية">−</button>';
+        html += '<input type="number" id="plStandardQty" min="1" max="99" value="' + curQty + '" onchange="onStandardQuantityChange(this.value)" style="width:50px;text-align:center;border:none;font-weight:700;font-size:1rem;background:transparent;outline:none" readonly>';
+        html += '<button type="button" onclick="changeStandardQuantity(1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="زيادة الكمية">+</button>';
+        html += '</div>';
+        html += '</div>';
       } else {
         // When quantity selector is hidden by theme, lock quantity state to 1
         window.selectedQuantityState = { qty: 1, tierPrice: p.price, discountPct: 0, freeShipping: false, offerId: 'tier-1', tierName: '1 قطعة' };
@@ -1516,7 +1516,7 @@
 
     function changeStandardQuantity(delta) {
       var input = document.getElementById('plStandardQty');
-      var current = input ? parseInt(input.value, 10) || 1 : 1;
+      var current = input ? parseInt(input.value, 10) || 1 : (window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1);
       var next = Math.max(1, Math.min(99, current + delta));
       if (input) input.value = next;
       onStandardQuantityChange(next);
@@ -1524,16 +1524,62 @@
 
     function onStandardQuantityChange(val) {
       var qty = Math.max(1, parseInt(val, 10) || 1);
+      var input = document.getElementById('plStandardQty');
+      if (input) input.value = qty;
+
       var basePrice = Number(currentProduct ? (currentProduct.effectivePrice || currentProduct.price || 0) : 0);
-      window.selectedQuantityState = {
-        qty: qty,
-        price: basePrice * qty,
-        freeShipping: false,
-        offerId: 'standard-' + qty,
-        tierName: ''
-      };
-      updateFreeShippingBadges();
-      updateShippingSummary();
+
+      var lpCfg = (currentProduct && currentProduct.landing_config) || {};
+      if (typeof lpCfg === 'string' && lpCfg.trim()) { try { lpCfg = JSON.parse(lpCfg); } catch(_) { lpCfg = {}; } }
+      var sec = lpCfg.sections || {};
+      var themeTierSettings = {};
+      if (lpCfg.theme_pricing_tiers) {
+        themeTierSettings = lpCfg.theme_pricing_tiers;
+      } else if (storeSettings && storeSettings.theme_config && storeSettings.theme_config.sections) {
+        var tsSec = storeSettings.theme_config.sections['fast-order-form'] || storeSettings.theme_config.sections['order-form'];
+        if (tsSec && tsSec.settings) themeTierSettings = tsSec.settings;
+      }
+
+      var themeShowTiers = (themeTierSettings.show_pricing_tiers !== undefined) ? (themeTierSettings.show_pricing_tiers !== false) : true;
+      var showPricingTiers;
+      if (sec.pricing_tiers === false || sec.pricing_tiers === 'disabled') {
+        showPricingTiers = false;
+      } else if (sec.pricing_tiers === true || sec.pricing_tiers === 'enabled') {
+        showPricingTiers = true;
+      } else {
+        showPricingTiers = themeShowTiers;
+      }
+
+      var activeTiers = (showPricingTiers && typeof buildDynamicPricingTiers === 'function')
+        ? buildDynamicPricingTiers(basePrice, currentProduct ? currentProduct.pricing_tiers : null, themeTierSettings)
+        : [];
+
+      var matchedTier = (activeTiers && activeTiers.length > 0)
+        ? activeTiers.find(function(t) { return Number(t.qty) === qty; })
+        : null;
+
+      if (matchedTier) {
+        var tierPrice = (matchedTier.price != null && !isNaN(Number(matchedTier.price))) ? Number(matchedTier.price) : (basePrice * qty);
+        onSelectQuantityTier(qty, tierPrice, matchedTier.free_shipping, matchedTier.offer_id, matchedTier.label || matchedTier.name);
+      } else {
+        window.selectedQuantityState = {
+          qty: qty,
+          price: basePrice * qty,
+          freeShipping: false,
+          offerId: 'standard-' + qty,
+          tierName: ''
+        };
+
+        var cards = document.querySelectorAll('.pl-tier-card');
+        cards.forEach(function(c) {
+          c.classList.remove('active');
+          var r = c.querySelector('input[type="radio"]');
+          if (r) r.checked = false;
+        });
+
+        updateFreeShippingBadges();
+        updateShippingSummary();
+      }
     }
 
     function onSelectQuantityTier(qty, tierPrice, freeShipping, offerId, tierName) {
@@ -1547,6 +1593,9 @@
         offerId: safeOfferId,
         tierName: safeTierName
       };
+
+      var input = document.getElementById('plStandardQty');
+      if (input) input.value = Number(qty);
 
       var cards = document.querySelectorAll('.pl-tier-card');
       cards.forEach(function(c) {
