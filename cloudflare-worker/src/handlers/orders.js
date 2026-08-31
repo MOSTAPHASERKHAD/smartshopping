@@ -246,9 +246,8 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
           const tsSec = storeThemeSections['fast-order-form'] || storeThemeSections['order-form'];
           if (tsSec && tsSec.settings) {
-            if (tsSec.settings.show_quantity_selector === false || tsSec.settings.show_quantity_selector === 'false') themeShowTiers = false;
             if (tsSec.settings.show_pricing_tiers !== undefined) {
-              themeShowTiers = isSettingEnabled(tsSec.settings.show_pricing_tiers, true) && isSettingEnabled(tsSec.settings.show_quantity_selector, true);
+              themeShowTiers = isSettingEnabled(tsSec.settings.show_pricing_tiers, true);
             }
             tier1Enabled = isSettingEnabled(tsSec.settings.tier1_enabled, true);
             tier2Enabled = isSettingEnabled(tsSec.settings.tier2_enabled, true);

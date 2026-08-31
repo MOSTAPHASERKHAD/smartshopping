@@ -784,27 +784,30 @@
 
       html += '<form id="plOrderForm" onsubmit="handleOrderSubmit(event)">';
 
-      // ── Quantity Breaks / Bundle Offers or Standard Quantity Selector ──
-      if (showQtySelector) {
-        if (showPricingTiers && typeof renderQuantityBreaks === 'function') {
-          var activeTiers = (typeof buildDynamicPricingTiers === 'function') ? buildDynamicPricingTiers(p.price, p.pricing_tiers, themeTierSettings) : [];
-          var currentOfferId = window.selectedQuantityState ? window.selectedQuantityState.offerId : null;
-          var matchedCurrent = (activeTiers && activeTiers.length > 0) ? activeTiers.find(function(t) { return t.offer_id === currentOfferId; }) : null;
-          if (!matchedCurrent && activeTiers && activeTiers.length > 0) {
-            var firstT = activeTiers[0];
-            var fMode = firstT.free_shipping_mode || (firstT.free_shipping ? 'both' : 'none');
-            window.selectedQuantityState = {
-              qty: Number(firstT.qty || 1),
-              price: Number(firstT.price != null ? firstT.price : (p.price * (firstT.qty || 1))),
-              freeShipping: Boolean(firstT.free_shipping),
-              freeShippingMode: fMode,
-              offerId: firstT.offer_id,
-              tierName: firstT.label || firstT.name || ''
-            };
-          }
-          html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1, themeTierSettings, window.selectedQuantityState ? window.selectedQuantityState.offerId : null);
+      // ── Quantity Breaks / Bundle Offers (Independent of Quantity Selector) ──
+      if (showPricingTiers && typeof renderQuantityBreaks === 'function') {
+        var activeTiers = (typeof buildDynamicPricingTiers === 'function') ? buildDynamicPricingTiers(p.price, p.pricing_tiers, themeTierSettings) : [];
+        var currentOfferId = window.selectedQuantityState ? window.selectedQuantityState.offerId : null;
+        var matchedCurrent = (activeTiers && activeTiers.length > 0) ? activeTiers.find(function(t) { return t.offer_id === currentOfferId; }) : null;
+        if (!matchedCurrent && activeTiers && activeTiers.length > 0) {
+          var firstT = activeTiers[0];
+          var fMode = firstT.free_shipping_mode || (firstT.free_shipping ? 'both' : 'none');
+          window.selectedQuantityState = {
+            qty: Number(firstT.qty || 1),
+            price: Number(firstT.price != null ? firstT.price : (p.price * (firstT.qty || 1))),
+            freeShipping: Boolean(firstT.free_shipping),
+            freeShippingMode: fMode,
+            offerId: firstT.offer_id,
+            tierName: firstT.label || firstT.name || ''
+          };
         }
+        html += renderQuantityBreaks(p.pricing_tiers, p.price, window.selectedQuantityState ? window.selectedQuantityState.qty : 1, themeTierSettings, window.selectedQuantityState ? window.selectedQuantityState.offerId : null);
+      } else if (!window.selectedQuantityState) {
+        window.selectedQuantityState = { qty: 1, tierPrice: p.price, discountPct: 0, freeShipping: false, freeShippingMode: 'none', offerId: 'tier-1', tierName: '1 قطعة' };
+      }
 
+      // ── Standard Quantity Selector (+ / -) (Independent of Pricing Tiers) ──
+      if (showQtySelector) {
         var curQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
         html += '<div class="pl-field-group" style="margin-bottom:16px">';
         html += '<label for="plStandardQty" style="font-weight:700;display:block;margin-bottom:6px">الكمية المطلوبة:</label>';
@@ -814,9 +817,6 @@
         html += '<button type="button" onclick="changeStandardQuantity(1)" style="border:none;background:rgba(0,0,0,0.05);width:40px;height:40px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="زيادة الكمية">+</button>';
         html += '</div>';
         html += '</div>';
-      } else {
-        // When quantity selector is hidden by theme, lock quantity state to 1
-        window.selectedQuantityState = { qty: 1, tierPrice: p.price, discountPct: 0, freeShipping: false, freeShippingMode: 'none', offerId: 'tier-1', tierName: '1 قطعة' };
       }
 
       var formSettings = lpCfg.form_settings || {};
@@ -1695,11 +1695,11 @@
         showPricingTiers = themeShowTiers;
       }
 
-      var currentQty = showQtySelector ? (window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1) : 1;
+      var currentQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
       var curOfferId = window.selectedQuantityState ? window.selectedQuantityState.offerId : null;
       var curTierName = window.selectedQuantityState ? window.selectedQuantityState.tierName : null;
       var basePrice = Number(currentProduct ? (currentProduct.effectivePrice || currentProduct.price || 0) : 0);
-      var tierResult = (showQtySelector && showPricingTiers && typeof calculateTierSubtotal === 'function')
+      var tierResult = (showPricingTiers && typeof calculateTierSubtotal === 'function')
         ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings, curOfferId, deliveryType)
         : { subtotal: basePrice * currentQty, freeShipping: false, freeShippingMode: 'none', saveAmount: 0 };
 
@@ -1896,9 +1896,9 @@
         showPricingTiers = themeShowTiers;
       }
 
-      var currentQty = showQtySelector ? (window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1) : 1;
+      var currentQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
       var currentDeliveryVal = deliveryRadio ? deliveryRadio.value : 'Home';
-      var tierResult = (showQtySelector && showPricingTiers && typeof calculateTierSubtotal === 'function')
+      var tierResult = (showPricingTiers && typeof calculateTierSubtotal === 'function')
         ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings, curOfferId, currentDeliveryVal)
         : { subtotal: basePrice * currentQty, freeShipping: false, freeShippingMode: 'none' };
 
