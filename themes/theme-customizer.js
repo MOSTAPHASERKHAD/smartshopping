@@ -425,19 +425,28 @@
           show_quantity_selector: 'إظهار خيار تحديد الكمية',
           show_pricing_tiers: '🎁 إظهار عروض الكميات والتوفير (Bundles)',
           tier1_enabled: '👁️ إظهار العرض الأول في صفحة الهبوط',
+          tier1_qty: '📦 كمية العرض الأول (عدد القطع)',
           tier1_label: '📝 عنوان عرض 1 قطعة (Tier 1)',
+          tier1_price: '💰 سعر الباقة 1 (دج - اتركه فارغاً للسعر القياسي)',
+          tier1_free_shipping_mode: '🚚 نطاق التوصيل المجاني لعرض 1 قطعة',
           tier1_subtext: '💬 الوصف الفرعي لعرض 1 قطعة',
           tier2_enabled: '👁️ إظهار العرض الثاني في صفحة الهبوط',
+          tier2_qty: '📦 كمية العرض الثاني (عدد القطع)',
           tier2_label: '⭐ عنوان عرض قطعتين (Tier 2)',
+          tier2_price: '💰 سعر الباقة 2 (دج - السعر النهائي للباقة)',
           tier2_badge: '🏷️ شارة عرض قطعتين (Badge)',
+          tier2_free_shipping_mode: '🚚 نطاق التوصيل المجاني لعرض قطعتين',
           tier2_subtext: '💬 الوصف الفرعي لعرض قطعتين',
-          tier2_discount_pct: '🏷️ نسبة خصم عرض قطعتين (%)',
+          tier2_discount_pct: '🏷️ نسبة خصم عرض قطعتين (%) - اختياري للتسويق',
           tier3_enabled: '👁️ إظهار العرض الثالث في صفحة الهبوط',
+          tier3_qty: '📦 كمية العرض الثالث (عدد القطع)',
           tier3_label: '🎁 عنوان عرض 3 قطع (Tier 3)',
+          tier3_price: '💰 سعر الباقة 3 (دج - السعر النهائي للباقة)',
           tier3_badge: '🏷️ شارة عرض 3 قطع (Badge)',
+          tier3_free_shipping_mode: '🚚 نطاق التوصيل المجاني لعرض 3 قطع',
           tier3_subtext: '💬 الوصف الفرعي لعرض 3 قطع',
-          tier3_discount_pct: '🎁 نسبة خصم عرض 3 قطع (%)',
-          tier3_free_shipping: '🚚 شحن مجاني لعرض 3 قطع',
+          tier3_discount_pct: '🎁 نسبة خصم عرض 3 قطع (%) - اختياري للتسويق',
+          tier3_free_shipping: '🚚 شحن مجاني لعرض 3 قطع (تنسيق قديم)',
           show_wilaya_selector: 'إظهار خيار الولاية',
           show_email_field: 'إظهار حقل البريد الإلكتروني',
           show_baladiya_field: 'إظهار حقل البلدية',
@@ -457,16 +466,31 @@
           if (sec.settings.show_quantity_selector === undefined) sec.settings.show_quantity_selector = true;
           if (sec.settings.show_pricing_tiers === undefined) sec.settings.show_pricing_tiers = true;
           if (sec.settings.tier1_enabled === undefined) sec.settings.tier1_enabled = true;
+          if (sec.settings.tier1_qty === undefined) sec.settings.tier1_qty = 1;
           if (!sec.settings.tier1_label) sec.settings.tier1_label = '1 قطعة (شراء عادي)';
+          if (sec.settings.tier1_price === undefined) sec.settings.tier1_price = '';
+          if (sec.settings.tier1_free_shipping_mode === undefined) {
+            sec.settings.tier1_free_shipping_mode = (sec.settings.tier1_free_shipping === true || sec.settings.tier1_free_shipping === 'true') ? 'both' : 'none';
+          }
           if (!sec.settings.tier1_subtext) sec.settings.tier1_subtext = 'السعر القياسي';
           if (sec.settings.tier2_enabled === undefined) sec.settings.tier2_enabled = true;
+          if (sec.settings.tier2_qty === undefined) sec.settings.tier2_qty = 2;
           if (!sec.settings.tier2_label) sec.settings.tier2_label = '2 قطع (الأكثر طلباً ⭐)';
+          if (sec.settings.tier2_price === undefined) sec.settings.tier2_price = '';
           if (!sec.settings.tier2_badge) sec.settings.tier2_badge = 'الأكثر طلباً';
+          if (sec.settings.tier2_free_shipping_mode === undefined) {
+            sec.settings.tier2_free_shipping_mode = (sec.settings.tier2_free_shipping === true || sec.settings.tier2_free_shipping === 'true') ? 'both' : 'none';
+          }
           if (!sec.settings.tier2_subtext) sec.settings.tier2_subtext = 'العرض الموصى به للمنازل';
           if (sec.settings.tier2_discount_pct === undefined) sec.settings.tier2_discount_pct = 10;
           if (sec.settings.tier3_enabled === undefined) sec.settings.tier3_enabled = true;
+          if (sec.settings.tier3_qty === undefined) sec.settings.tier3_qty = 3;
           if (!sec.settings.tier3_label) sec.settings.tier3_label = '3 قطع (توفير كلي 🎁)';
+          if (sec.settings.tier3_price === undefined) sec.settings.tier3_price = '';
           if (!sec.settings.tier3_badge) sec.settings.tier3_badge = 'توفير كلي';
+          if (sec.settings.tier3_free_shipping_mode === undefined) {
+            sec.settings.tier3_free_shipping_mode = (sec.settings.tier3_free_shipping !== false && sec.settings.tier3_free_shipping !== 'false') ? 'both' : 'none';
+          }
           if (!sec.settings.tier3_subtext) sec.settings.tier3_subtext = 'أفضل قيمة وأعلى توفير';
           if (sec.settings.tier3_discount_pct === undefined) sec.settings.tier3_discount_pct = 20;
           if (sec.settings.tier3_free_shipping === undefined) sec.settings.tier3_free_shipping = true;
@@ -476,18 +500,18 @@
           'fast-order-form': [
             'title', 'submit_btn_text', 'delivery_note',
             'show_quantity_selector', 'show_pricing_tiers',
-            'tier1_enabled', 'tier1_label', 'tier1_subtext',
-            'tier2_enabled', 'tier2_label', 'tier2_badge', 'tier2_subtext', 'tier2_discount_pct',
-            'tier3_enabled', 'tier3_label', 'tier3_badge', 'tier3_subtext', 'tier3_discount_pct', 'tier3_free_shipping',
+            'tier1_enabled', 'tier1_qty', 'tier1_label', 'tier1_price', 'tier1_free_shipping_mode', 'tier1_subtext',
+            'tier2_enabled', 'tier2_qty', 'tier2_label', 'tier2_price', 'tier2_badge', 'tier2_free_shipping_mode', 'tier2_subtext', 'tier2_discount_pct',
+            'tier3_enabled', 'tier3_qty', 'tier3_label', 'tier3_price', 'tier3_badge', 'tier3_free_shipping_mode', 'tier3_subtext', 'tier3_discount_pct',
             'show_wilaya_selector', 'show_email_field', 'show_baladiya_field',
             'show_address_field', 'show_delivery_preference', 'show_notes_field'
           ],
           'order-form': [
             'title', 'submit_btn_text', 'delivery_note',
             'show_quantity_selector', 'show_pricing_tiers',
-            'tier1_enabled', 'tier1_label', 'tier1_subtext',
-            'tier2_enabled', 'tier2_label', 'tier2_badge', 'tier2_subtext', 'tier2_discount_pct',
-            'tier3_enabled', 'tier3_label', 'tier3_badge', 'tier3_subtext', 'tier3_discount_pct', 'tier3_free_shipping',
+            'tier1_enabled', 'tier1_qty', 'tier1_label', 'tier1_price', 'tier1_free_shipping_mode', 'tier1_subtext',
+            'tier2_enabled', 'tier2_qty', 'tier2_label', 'tier2_price', 'tier2_badge', 'tier2_free_shipping_mode', 'tier2_subtext', 'tier2_discount_pct',
+            'tier3_enabled', 'tier3_qty', 'tier3_label', 'tier3_price', 'tier3_badge', 'tier3_free_shipping_mode', 'tier3_subtext', 'tier3_discount_pct',
             'show_wilaya_selector', 'show_email_field', 'show_baladiya_field',
             'show_address_field', 'show_delivery_preference', 'show_notes_field'
           ]
@@ -504,11 +528,11 @@
           var labelText = SETTING_LABELS[sKey] || sKey;
 
           if (sKey === 'tier1_enabled') {
-            html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #6366f1;border-radius:4px;font-size:0.82rem;font-weight:800;color:#a5b4fc">📦 إعدادات العرض الأول (1 قطعة / مفرد)</div>';
+            html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #6366f1;border-radius:4px;font-size:0.82rem;font-weight:800;color:#a5b4fc">📦 إعدادات العرض الأول (Tier 1)</div>';
           } else if (sKey === 'tier2_enabled') {
-            html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #f59e0b;border-radius:4px;font-size:0.82rem;font-weight:800;color:#fde68a">⭐ إعدادات العرض الثاني (عرض مع علبة / قطعتين)</div>';
+            html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #f59e0b;border-radius:4px;font-size:0.82rem;font-weight:800;color:#fde68a">⭐ إعدادات العرض الثاني (Tier 2)</div>';
           } else if (sKey === 'tier3_enabled') {
-            html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #10b981;border-radius:4px;font-size:0.82rem;font-weight:800;color:#86efac">🎁 إعدادات العرض الثالث (عرض التوفير الأقصى)</div>';
+            html += '<div style="margin:14px 0 8px;padding:6px 10px;background:#0f172a;border-right:3px solid #10b981;border-radius:4px;font-size:0.82rem;font-weight:800;color:#86efac">🎁 إعدادات العرض الثالث (Tier 3)</div>';
           }
 
           if (sKey === 'end_at') {
@@ -519,6 +543,34 @@
             html += '<button type="button" onclick="ThemeCustomizer.set24HourOffer(\'' + esc(sid) + '\')" style="background:#f59e0b;color:#111;border:none;border-radius:6px;padding:7px 10px;font-weight:800;font-size:0.78rem;cursor:pointer;white-space:nowrap;" title="تعيين العداد لينتهي بعد 24 ساعة من الآن">⚡ +24 ساعة</button>';
             html += '</div>';
             html += '<div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;">اضغط الزر لبدء عداد 24 ساعة موحد لجميع الزوار من الآن</div>';
+            html += '</div>';
+          } else if (sKey === 'tier1_qty' || sKey === 'tier2_qty' || sKey === 'tier3_qty') {
+            var defaultFallbackQty = sKey === 'tier1_qty' ? 1 : (sKey === 'tier2_qty' ? 2 : 3);
+            var qtyVal = (sVal != null && !isNaN(Number(sVal)) && Number(sVal) >= 1) ? Math.floor(Number(sVal)) : defaultFallbackQty;
+            html += '<div style="margin-bottom:10px;background:#0f172a;padding:8px 10px;border-radius:6px;border:1px solid #475569;">';
+            html += '<label style="display:block;font-size:0.8rem;color:#cbd5e1;font-weight:700;margin-bottom:4px;">' + esc(labelText) + '</label>';
+            html += '<input type="number" min="1" max="999" step="1" value="' + esc(qtyVal) + '" oninput="var v=Math.max(1,parseInt(this.value,10)||1);ThemeCustomizer.updateSectionSetting(\'' + esc(sid) + '\', \'' + esc(sKey) + '\', v)" style="width:100%;background:#1e293b;border:1px solid #475569;border-radius:6px;padding:6px 10px;color:#fff;font-size:0.9rem;font-weight:700;box-sizing:border-box;direction:ltr;text-align:right;">';
+            html += '<div style="font-size:0.7rem;color:#94a3b8;margin-top:3px;">📦 عدد القطع الفعلي المشمول في هذا العرض عند اختياره</div>';
+            html += '</div>';
+          } else if (sKey === 'tier1_price' || sKey === 'tier2_price' || sKey === 'tier3_price') {
+            var priceVal = (sVal !== null && sVal !== undefined && sVal !== '') ? sVal : '';
+            var placeholderText = sKey === 'tier1_price' ? 'مثال: 2000 (أو اتركه فارغاً للافتراضي)' : (sKey === 'tier2_price' ? 'مثال: 1800' : 'مثال: 1600');
+            html += '<div style="margin-bottom:10px;background:#0f172a;padding:8px 10px;border-radius:6px;border:1px solid #0284c7;">';
+            html += '<label style="display:block;font-size:0.8rem;color:#38bdf8;font-weight:800;margin-bottom:4px;">' + esc(labelText) + '</label>';
+            html += '<input type="number" min="0" step="10" value="' + esc(priceVal) + '" placeholder="' + placeholderText + '" oninput="var v=(this.value===\'\'?\'\':Math.max(0,Number(this.value)||0));ThemeCustomizer.updateSectionSetting(\'' + esc(sid) + '\', \'' + esc(sKey) + '\', v)" style="width:100%;background:#1e293b;border:1px solid #0284c7;border-radius:6px;padding:7px 10px;color:#38bdf8;font-size:0.95rem;font-weight:800;box-sizing:border-box;direction:ltr;text-align:right;">';
+            html += '<div style="font-size:0.7rem;color:#94a3b8;margin-top:3px;">💰 السعر الإجمالي النهائي للباقة، يحدده التاجر مباشرة دون نسب</div>';
+            html += '</div>';
+          } else if (sKey === 'tier1_free_shipping_mode' || sKey === 'tier2_free_shipping_mode' || sKey === 'tier3_free_shipping_mode') {
+            var modeVal = (sVal === 'home' || sVal === 'office' || sVal === 'both') ? sVal : 'none';
+            html += '<div style="margin-bottom:10px;background:#0f172a;padding:8px 10px;border-radius:6px;border:1px solid #059669;">';
+            html += '<label style="display:block;font-size:0.8rem;color:#34d399;font-weight:700;margin-bottom:4px;">' + esc(labelText) + '</label>';
+            html += '<select onchange="ThemeCustomizer.updateSectionSetting(\'' + esc(sid) + '\', \'' + esc(sKey) + '\', this.value)" style="width:100%;background:#1e293b;border:1px solid #059669;border-radius:6px;padding:7px 10px;color:#34d399;font-size:0.85rem;font-weight:700;box-sizing:border-box;">';
+            html += '<option value="none"' + (modeVal === 'none' ? ' selected' : '') + '>❌ بدون توصيل مجاني (مدفوع للمنزل والمكتب)</option>';
+            html += '<option value="home"' + (modeVal === 'home' ? ' selected' : '') + '>🏠 التوصيل المجاني للمنزل فقط</option>';
+            html += '<option value="office"' + (modeVal === 'office' ? ' selected' : '') + '>🏢 التوصيل المجاني للمكتب فقط</option>';
+            html += '<option value="both"' + (modeVal === 'both' ? ' selected' : '') + '>🎁 التوصيل المجاني للمنزل والمكتب معاً</option>';
+            html += '</select>';
+            html += '<div style="font-size:0.7rem;color:#94a3b8;margin-top:3px;">🚚 تحديد نوع التوصيل الذي يشمله الشحن المجاني عند اختيار العميل لهذا العرض</div>';
             html += '</div>';
           } else if (sKey === 'tier2_discount_pct' || sKey === 'tier3_discount_pct') {
             var numVal = Math.max(0, Math.min(100, parseInt(sVal, 10) || 0));

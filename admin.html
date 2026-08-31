@@ -3559,8 +3559,11 @@ function formatSingleOrderBlock(o, orderIndex) {
       var name = (it && (it.name || it.title)) ? String(it.name || it.title).trim() : 'منتج';
       var tierText = (it && it.tier_name) ? ('\n  🎁 الباقة: ' + it.tier_name) : '';
       var qty = (it && it.qty) ? it.qty : 1;
-      var unitP = (it && (it.price || it.unit_price)) ? (' (سعر الوحدة: ' + Number(it.price || it.unit_price).toLocaleString() + ' دج)') : '';
-      return '• ' + name + tierText + '\n  🔢 الكمية: ' + qty + unitP;
+      var itemTotal = Number(it.subtotal || (Number(it.price || it.unit_price || 0) * qty));
+      var priceText = (it && it.tier_name)
+        ? (' (سعر الباقة: ' + itemTotal.toLocaleString() + ' دج)')
+        : ((it && (it.price || it.unit_price)) ? (' (سعر الوحدة: ' + Number(it.price || it.unit_price).toLocaleString() + ' دج)') : '');
+      return '• ' + name + tierText + '\n  🔢 الكمية: ' + qty + priceText;
     }).join('\n\n');
   } else {
     itemsText = '• ' + (o.name || 'منتج') + ' ×1';

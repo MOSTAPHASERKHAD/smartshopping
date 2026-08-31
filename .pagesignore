@@ -1,5 +1,8 @@
 node_modules
+cloudflare-worker
 cloudflare-worker/node_modules
+backups
+.wrangler
 .git
 .gemini
 .agents

@@ -792,10 +792,12 @@
           var matchedCurrent = (activeTiers && activeTiers.length > 0) ? activeTiers.find(function(t) { return t.offer_id === currentOfferId; }) : null;
           if (!matchedCurrent && activeTiers && activeTiers.length > 0) {
             var firstT = activeTiers[0];
+            var fMode = firstT.free_shipping_mode || (firstT.free_shipping ? 'both' : 'none');
             window.selectedQuantityState = {
               qty: Number(firstT.qty || 1),
               price: Number(firstT.price != null ? firstT.price : (p.price * (firstT.qty || 1))),
               freeShipping: Boolean(firstT.free_shipping),
+              freeShippingMode: fMode,
               offerId: firstT.offer_id,
               tierName: firstT.label || firstT.name || ''
             };
@@ -814,7 +816,7 @@
         html += '</div>';
       } else {
         // When quantity selector is hidden by theme, lock quantity state to 1
-        window.selectedQuantityState = { qty: 1, tierPrice: p.price, discountPct: 0, freeShipping: false, offerId: 'tier-1', tierName: '1 قطعة' };
+        window.selectedQuantityState = { qty: 1, tierPrice: p.price, discountPct: 0, freeShipping: false, freeShippingMode: 'none', offerId: 'tier-1', tierName: '1 قطعة' };
       }
 
       var formSettings = lpCfg.form_settings || {};
@@ -1561,12 +1563,14 @@
 
       if (matchedTier) {
         var tierPrice = (matchedTier.price != null && !isNaN(Number(matchedTier.price))) ? Number(matchedTier.price) : (basePrice * qty);
-        onSelectQuantityTier(qty, tierPrice, matchedTier.free_shipping, matchedTier.offer_id, matchedTier.label || matchedTier.name);
+        var tMode = matchedTier.free_shipping_mode || (matchedTier.free_shipping ? 'both' : 'none');
+        onSelectQuantityTier(qty, tierPrice, matchedTier.free_shipping, matchedTier.offer_id, matchedTier.label || matchedTier.name, tMode);
       } else {
         window.selectedQuantityState = {
           qty: qty,
           price: basePrice * qty,
           freeShipping: false,
+          freeShippingMode: 'none',
           offerId: 'standard-' + qty,
           tierName: ''
         };
@@ -1583,14 +1587,16 @@
       }
     }
 
-    function onSelectQuantityTier(qty, tierPrice, freeShipping, offerId, tierName) {
+    function onSelectQuantityTier(qty, tierPrice, freeShipping, offerId, tierName, freeShippingMode) {
       var safeOfferId = offerId || ('tier-' + qty);
       var safeTierName = tierName || (qty + ' قطع');
+      var safeMode = freeShippingMode || (freeShipping ? 'both' : 'none');
 
       window.selectedQuantityState = {
         qty: Number(qty),
         price: Number(tierPrice),
         freeShipping: Boolean(freeShipping),
+        freeShippingMode: safeMode,
         offerId: safeOfferId,
         tierName: safeTierName
       };
@@ -1622,7 +1628,8 @@
 
     function updateFreeShippingBadges() {
       var isStoreFree = Boolean(storeSettings && (storeSettings.free_shipping_enabled === 'true' || storeSettings.free_shipping_enabled === true || storeSettings.free_shipping_enabled === '1'));
-      var isTierFree = Boolean(window.selectedQuantityState && window.selectedQuantityState.freeShipping);
+      var mode = window.selectedQuantityState ? (window.selectedQuantityState.freeShippingMode || (window.selectedQuantityState.freeShipping ? 'both' : 'none')) : 'none';
+      var isTierFree = (mode !== 'none');
       var isProdFree = Boolean(currentProduct && (currentProduct.free_shipping === true || currentProduct.free_shipping === 'true' || currentProduct.free_shipping === 1));
       var isFree = isStoreFree || isTierFree || isProdFree;
 
@@ -1630,7 +1637,15 @@
       if (heroBadge) {
         if (isFree) {
           heroBadge.style.display = 'inline-flex';
-          heroBadge.textContent = isStoreFree ? '🚚 التوصيل مجاني إلى جميع الولايات' : (isTierFree ? '🎁 شحن مجاني مع هذا العرض' : '🚚 التوصيل مجاني لهذا المنتج');
+          var badgeText = '🚚 التوصيل مجاني لهذا المنتج';
+          if (isStoreFree) {
+            badgeText = '🚚 التوصيل مجاني إلى جميع الولايات';
+          } else if (isTierFree) {
+            if (mode === 'home') badgeText = '🏠 شحن مجاني للمنزل مع هذا العرض';
+            else if (mode === 'office') badgeText = '🏢 شحن مجاني للمكتب مع هذا العرض';
+            else badgeText = '🎁 شحن مجاني مع هذا العرض';
+          }
+          heroBadge.textContent = badgeText;
         } else {
           heroBadge.style.display = 'none';
         }
@@ -1685,8 +1700,8 @@
       var curTierName = window.selectedQuantityState ? window.selectedQuantityState.tierName : null;
       var basePrice = Number(currentProduct ? (currentProduct.effectivePrice || currentProduct.price || 0) : 0);
       var tierResult = (showQtySelector && showPricingTiers && typeof calculateTierSubtotal === 'function')
-        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings, curOfferId)
-        : { subtotal: basePrice * currentQty, freeShipping: false, saveAmount: 0 };
+        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings, curOfferId, deliveryType)
+        : { subtotal: basePrice * currentQty, freeShipping: false, freeShippingMode: 'none', saveAmount: 0 };
 
       var effectiveSubtotal = tierResult.subtotal;
 
@@ -1706,22 +1721,28 @@
         prodPriceEl.textContent = formatPrice(effectiveSubtotal);
       }
 
-      // ── التوصيل المجاني (إعداد المتجر الصريح أو عرض الكميات أو إعداد المنتج) ──
+      // ── التوصيل المجاني الدقيق (المتجر، المنتج، العرض المحدد) ──
       var isStoreFreeShipping = Boolean(storeSettings && (storeSettings.free_shipping_enabled === 'true' || storeSettings.free_shipping_enabled === true || storeSettings.free_shipping_enabled === '1'));
-      var isTierFreeShipping = Boolean(tierResult.freeShipping || (window.selectedQuantityState && window.selectedQuantityState.freeShipping));
       var isProdFreeShipping = Boolean(currentProduct && (currentProduct.free_shipping === true || currentProduct.free_shipping === 'true' || currentProduct.free_shipping === 1));
-      var isFreeShipping = isStoreFreeShipping || isTierFreeShipping || isProdFreeShipping;
+      var tierMode = tierResult.freeShippingMode || (window.selectedQuantityState ? (window.selectedQuantityState.freeShippingMode || (window.selectedQuantityState.freeShipping ? 'both' : 'none')) : 'none');
+
+      var isHomeFree = isStoreFreeShipping || isProdFreeShipping || (tierMode === 'home' || tierMode === 'both');
+      var isOfficeFree = isStoreFreeShipping || isProdFreeShipping || (tierMode === 'office' || tierMode === 'both');
 
       // ── الحالة 1: قبل اختيار الولاية ──
       if (!wilayaCode) {
-        var preWilayaText = isFreeShipping
+        var preWilayaHomeText = isHomeFree
           ? '<span style="color:#10b981;font-weight:700">التوصيل مجاني</span>'
           : '<span style="color:var(--ds-text2,#64748b)">اختر ولايتك لحساب الشحن</span>';
 
-        if (homeShipLabel) homeShipLabel.innerHTML = preWilayaText;
-        if (officeShipLabel) officeShipLabel.innerHTML = preWilayaText;
-        if (homeRadioBadge) homeRadioBadge.textContent = '';
-        if (officeRadioBadge) officeRadioBadge.textContent = '';
+        var preWilayaOfficeText = isOfficeFree
+          ? '<span style="color:#10b981;font-weight:700">التوصيل مجاني</span>'
+          : '<span style="color:var(--ds-text2,#64748b)">اختر ولايتك لحساب الشحن</span>';
+
+        if (homeShipLabel) homeShipLabel.innerHTML = preWilayaHomeText;
+        if (officeShipLabel) officeShipLabel.innerHTML = preWilayaOfficeText;
+        if (homeRadioBadge) homeRadioBadge.textContent = isHomeFree ? '(مجاني)' : '';
+        if (officeRadioBadge) officeRadioBadge.textContent = isOfficeFree ? '(مجاني)' : '';
 
         if (totalLabel) totalLabel.textContent = formatPrice(effectiveSubtotal);
         if (stickyPriceEl) stickyPriceEl.textContent = formatPrice(effectiveSubtotal);
@@ -1739,8 +1760,8 @@
         ? calculateClientShippingCost(storeSettings.shipping_config, wilayaCode, 'Office', items, storeSettings)
         : { cost: 0, note: '', ok: true };
 
-      var homeCost = isFreeShipping ? 0 : Number(resHome.cost || 0);
-      var officeCost = isFreeShipping ? 0 : Number(resOffice.cost || 0);
+      var homeCost = isHomeFree ? 0 : Number(resHome.cost || 0);
+      var officeCost = isOfficeFree ? 0 : Number(resOffice.cost || 0);
 
       // السعر المعتمد في الحساب الإجمالي فقط بناءً على نوع التوصيل المختار
       var selectedShippingCost = (deliveryType === 'Office') ? officeCost : homeCost;
@@ -1748,7 +1769,7 @@
 
       // 1. تحديث نص التوصيل للمنزل في الملخص
       if (homeShipLabel) {
-        if (isFreeShipping) {
+        if (isHomeFree) {
           homeShipLabel.innerHTML = '<span style="color:#10b981;font-weight:700">التوصيل مجاني</span>' + (deliveryType === 'Home' ? ' <small style="color:var(--pl-accent,#e94560);font-weight:800">(المحدد)</small>' : '');
         } else if (resHome.ok && homeCost > 0) {
           homeShipLabel.innerHTML = '<span style="font-weight:700;' + (deliveryType === 'Home' ? 'color:var(--pl-accent,#e94560);' : '') + '">' + homeCost.toLocaleString() + ' DZD</span>' + (deliveryType === 'Home' ? ' <small style="color:var(--pl-accent,#e94560);font-weight:800">(المحدد)</small>' : '');
@@ -1761,7 +1782,7 @@
 
       // 2. تحديث نص التوصيل للمكتب في الملخص
       if (officeShipLabel) {
-        if (isFreeShipping) {
+        if (isOfficeFree) {
           officeShipLabel.innerHTML = '<span style="color:#10b981;font-weight:700">التوصيل مجاني</span>' + (deliveryType === 'Office' ? ' <small style="color:var(--pl-accent,#e94560);font-weight:800">(المحدد)</small>' : '');
         } else if (resOffice.ok && officeCost > 0) {
           officeShipLabel.innerHTML = '<span style="font-weight:700;' + (deliveryType === 'Office' ? 'color:var(--pl-accent,#e94560);' : '') + '">' + officeCost.toLocaleString() + ' DZD</span>' + (deliveryType === 'Office' ? ' <small style="color:var(--pl-accent,#e94560);font-weight:800">(المحدد)</small>' : '');
@@ -1774,7 +1795,7 @@
 
       // 3. تحديث السعر المعروض على بطاقات الاختيار (Radio Cards) إن وجدت
       if (homeRadioBadge) {
-        if (isFreeShipping) {
+        if (isHomeFree) {
           homeRadioBadge.innerHTML = '<span style="color:#10b981;font-weight:700;font-size:0.82rem;margin-right:auto">(مجاني)</span>';
         } else if (resHome.ok && homeCost > 0) {
           homeRadioBadge.innerHTML = '<span style="font-weight:700;font-size:0.82rem;color:var(--pl-accent,#e94560);margin-right:auto">(' + homeCost.toLocaleString() + ' دج)</span>';
@@ -1784,7 +1805,7 @@
       }
 
       if (officeRadioBadge) {
-        if (isFreeShipping) {
+        if (isOfficeFree) {
           officeRadioBadge.innerHTML = '<span style="color:#10b981;font-weight:700;font-size:0.82rem;margin-right:auto">(مجاني)</span>';
         } else if (resOffice.ok && officeCost > 0) {
           officeRadioBadge.innerHTML = '<span style="font-weight:700;font-size:0.82rem;color:var(--pl-accent,#e94560);margin-right:auto">(' + officeCost.toLocaleString() + ' دج)</span>';
@@ -1876,12 +1897,10 @@
       }
 
       var currentQty = showQtySelector ? (window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1) : 1;
-      var curOfferId = window.selectedQuantityState ? window.selectedQuantityState.offerId : null;
-      var curTierName = window.selectedQuantityState ? window.selectedQuantityState.tierName : null;
-      var basePrice = Number(currentProduct.effectivePrice || currentProduct.price || 0);
+      var currentDeliveryVal = deliveryRadio ? deliveryRadio.value : 'Home';
       var tierResult = (showQtySelector && showPricingTiers && typeof calculateTierSubtotal === 'function')
-        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings, curOfferId)
-        : { subtotal: basePrice * currentQty, freeShipping: false };
+        ? calculateTierSubtotal(basePrice, currentQty, currentProduct.pricing_tiers, themeTierSettings, curOfferId, currentDeliveryVal)
+        : { subtotal: basePrice * currentQty, freeShipping: false, freeShippingMode: 'none' };
 
       var finalOrderSubtotal = Number(tierResult.subtotal) || (basePrice * currentQty);
 
@@ -1894,6 +1913,7 @@
         qty: currentQty,
         offer_id: curOfferId,
         tier_name: curTierName,
+        free_shipping_mode: window.selectedQuantityState ? window.selectedQuantityState.freeShippingMode : 'none',
         variant_selection: window.selectedVariantState,
         variant_title: variantTitle,
         tier_subtotal: finalOrderSubtotal

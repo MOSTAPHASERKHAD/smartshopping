@@ -129,8 +129,22 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
   const productsMap = new Map(realProducts.map(p => [p.id, p]));
 
+  function resolveOfferFreeShippingMode(modeVal, legacyBool) {
+    if (modeVal !== undefined && modeVal !== null && modeVal !== '') {
+      const m = String(modeVal).toLowerCase().trim();
+      if (m === 'home' || m === 'office' || m === 'both' || m === 'none') {
+        return m;
+      }
+    }
+    if (legacyBool === true || legacyBool === 'true' || legacyBool === 1 || legacyBool === '1') {
+      return 'both';
+    }
+    return 'none';
+  }
+
   let realSubtotal = 0;
-  let hasTierFreeShipping = false;
+  let hasTierHomeFreeShipping = false;
+  let hasTierOfficeFreeShipping = false;
   let hasProdFreeShipping = false;
   for (const p of realProducts) {
     if (p.free_shipping === 1 || p.free_shipping === 'true' || p.free_shipping === true) {
@@ -148,13 +162,6 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
     const dbProduct = productsMap.get(pId);
     if (!dbProduct) return { ok: false, error: `المنتج رقم ${pId} غير موجود` };
     if (dbProduct.active !== 1) return { ok: false, error: `المنتج ${dbProduct.name} غير متوفر حالياً` };
-
-    // ── 🔒 حماية المخزون (Server-Side Authoritative) ──
-    const stock = Number(dbProduct.stock);
-    if (stock >= 0) {
-      if (stock === 0) return { ok: false, error: `المنتج ${dbProduct.name} نفد من المخزون` };
-      if (qty > stock) return { ok: false, error: `الكمية المطلوبة من ${dbProduct.name} تتجاوز المخزون المتاح (${stock})` };
-    }
 
     const basePrice = Number(dbProduct.price) || 0;
 
@@ -186,27 +193,41 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
     if (!isTiersDisabled) {
       if (customTiers && customTiers.length > 0) {
-        tiers = customTiers.map((t, idx) => {
-          const tQty = Number(t.qty || (idx + 1));
-          const tOfferId = t.offer_id || `tier-${tQty}${idx > 0 ? `-${idx}` : ''}`;
-          return {
-            offer_id: tOfferId,
-            qty: tQty,
-            label: t.label || t.name || `${tQty} قطع`,
-            price: t.price != null ? Number(t.price) : (basePrice * tQty),
-            badge: t.badge || '',
-            subtext: t.subtext || '',
-            free_shipping: Boolean(t.free_shipping)
-          };
-        });
+        const filtered = customTiers.filter(t => t && t.enabled !== false && t.enabled !== 'false' && t.enabled !== 0 && t.enabled !== '0');
+        if (filtered.length > 0) {
+          tiers = filtered.map((t, idx) => {
+            const tQty = (t.qty != null && !isNaN(Number(t.qty)) && Number(t.qty) >= 1) ? Math.floor(Number(t.qty)) : (idx + 1);
+            const tOfferId = t.offer_id || `tier-${tQty}${idx > 0 ? `-${idx}` : ''}`;
+            const tMode = resolveOfferFreeShippingMode(t.free_shipping_mode, t.free_shipping);
+            return {
+              offer_id: tOfferId,
+              qty: tQty,
+              label: t.label || t.name || `${tQty} قطع`,
+              price: t.price != null ? Number(t.price) : (basePrice * tQty),
+              badge: t.badge || '',
+              subtext: t.subtext || '',
+              free_shipping_mode: tMode,
+              free_shipping: (tMode !== 'none')
+            };
+          });
+        }
       } else {
         // Resolve Active Theme Settings
+        let themeShowTiers = true;
         let tier1Enabled = true;
         let tier2Enabled = true;
         let tier3Enabled = true;
+        let tier1Qty = 1;
+        let tier2Qty = 2;
+        let tier3Qty = 3;
+        let tier1Price = null;
+        let tier2Price = null;
+        let tier3Price = null;
         let tier2Pct = 10;
         let tier3Pct = 20;
-        let tier3FreeShipping = true;
+        let tier1FreeShippingMode = 'none';
+        let tier2FreeShippingMode = 'none';
+        let tier3FreeShippingMode = 'both';
         let t1Label = '1 قطعة (شراء عادي)';
         let t1Subtext = 'السعر القياسي';
         let t2Label = '2 قطع (الأكثر طلباً ⭐)';
@@ -232,35 +253,55 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
             tier1Enabled = isSettingEnabled(tsSec.settings.tier1_enabled, true);
             tier2Enabled = isSettingEnabled(tsSec.settings.tier2_enabled, true);
             tier3Enabled = isSettingEnabled(tsSec.settings.tier3_enabled, true);
+            if (tsSec.settings.tier1_qty != null && !isNaN(Number(tsSec.settings.tier1_qty)) && Number(tsSec.settings.tier1_qty) >= 1) {
+              tier1Qty = Math.floor(Number(tsSec.settings.tier1_qty));
+            }
+            if (tsSec.settings.tier2_qty != null && !isNaN(Number(tsSec.settings.tier2_qty)) && Number(tsSec.settings.tier2_qty) >= 1) {
+              tier2Qty = Math.floor(Number(tsSec.settings.tier2_qty));
+            }
+            if (tsSec.settings.tier3_qty != null && !isNaN(Number(tsSec.settings.tier3_qty)) && Number(tsSec.settings.tier3_qty) >= 1) {
+              tier3Qty = Math.floor(Number(tsSec.settings.tier3_qty));
+            }
             if (tsSec.settings.tier1_label) t1Label = String(tsSec.settings.tier1_label);
             if (tsSec.settings.tier1_subtext) t1Subtext = String(tsSec.settings.tier1_subtext);
+            if (tsSec.settings.tier1_price != null && !isNaN(Number(tsSec.settings.tier1_price)) && Number(tsSec.settings.tier1_price) > 0) {
+              tier1Price = Number(tsSec.settings.tier1_price);
+            }
+            tier1FreeShippingMode = resolveOfferFreeShippingMode(tsSec.settings.tier1_free_shipping_mode, tsSec.settings.tier1_free_shipping);
+
             if (tsSec.settings.tier2_label) t2Label = String(tsSec.settings.tier2_label);
             if (tsSec.settings.tier2_badge) t2Badge = String(tsSec.settings.tier2_badge);
             if (tsSec.settings.tier2_subtext) t2Subtext = String(tsSec.settings.tier2_subtext);
-            if (tsSec.settings.tier2_discount_pct != null && !isNaN(Number(tsSec.settings.tier2_discount_pct))) {
+            if (tsSec.settings.tier2_price != null && !isNaN(Number(tsSec.settings.tier2_price)) && Number(tsSec.settings.tier2_price) > 0) {
+              tier2Price = Number(tsSec.settings.tier2_price);
+            } else if (tsSec.settings.tier2_discount_pct != null && !isNaN(Number(tsSec.settings.tier2_discount_pct))) {
               tier2Pct = Math.max(0, Math.min(100, Number(tsSec.settings.tier2_discount_pct)));
             }
+            tier2FreeShippingMode = resolveOfferFreeShippingMode(tsSec.settings.tier2_free_shipping_mode, tsSec.settings.tier2_free_shipping);
+
             if (tsSec.settings.tier3_label) t3Label = String(tsSec.settings.tier3_label);
             if (tsSec.settings.tier3_badge) t3Badge = String(tsSec.settings.tier3_badge);
             if (tsSec.settings.tier3_subtext) t3Subtext = String(tsSec.settings.tier3_subtext);
-            if (tsSec.settings.tier3_discount_pct != null && !isNaN(Number(tsSec.settings.tier3_discount_pct))) {
+            if (tsSec.settings.tier3_price != null && !isNaN(Number(tsSec.settings.tier3_price)) && Number(tsSec.settings.tier3_price) > 0) {
+              tier3Price = Number(tsSec.settings.tier3_price);
+            } else if (tsSec.settings.tier3_discount_pct != null && !isNaN(Number(tsSec.settings.tier3_discount_pct))) {
               tier3Pct = Math.max(0, Math.min(100, Number(tsSec.settings.tier3_discount_pct)));
             }
-            if (tsSec.settings.tier3_free_shipping !== undefined) {
-              tier3FreeShipping = isSettingEnabled(tsSec.settings.tier3_free_shipping, true);
-            }
+            const legacyFs3 = (tsSec.settings.tier3_free_shipping !== undefined) ? isSettingEnabled(tsSec.settings.tier3_free_shipping, true) : false;
+            tier3FreeShippingMode = resolveOfferFreeShippingMode(tsSec.settings.tier3_free_shipping_mode, legacyFs3);
           }
         }
 
         const effectiveShow = isTiersExplicitEnabled ? true : themeShowTiers;
         if (effectiveShow) {
-          const p2 = Math.round(basePrice * 2 * (1 - tier2Pct / 100));
-          const p3 = Math.round(basePrice * 3 * (1 - tier3Pct / 100));
+          const p1 = (tier1Price != null) ? tier1Price : (basePrice * tier1Qty);
+          const p2 = (tier2Price != null) ? tier2Price : Math.round(basePrice * tier2Qty * (1 - tier2Pct / 100));
+          const p3 = (tier3Price != null) ? tier3Price : Math.round(basePrice * tier3Qty * (1 - tier3Pct / 100));
           const list = [];
-          if (tier1Enabled) list.push({ offer_id: 'tier-1', qty: 1, label: t1Label, subtext: t1Subtext, price: basePrice, free_shipping: false });
-          if (tier2Enabled) list.push({ offer_id: 'tier-2', qty: 2, label: t2Label, subtext: t2Subtext, badge: t2Badge, price: p2, free_shipping: false });
-          if (tier3Enabled) list.push({ offer_id: 'tier-3', qty: 3, label: t3Label, subtext: t3Subtext, badge: t3Badge, price: p3, free_shipping: tier3FreeShipping });
-          if (list.length === 0) list.push({ offer_id: 'tier-1', qty: 1, label: t1Label, subtext: t1Subtext, price: basePrice, free_shipping: false });
+          if (tier1Enabled) list.push({ offer_id: 'tier-1', qty: tier1Qty, label: t1Label, subtext: t1Subtext, price: p1, free_shipping_mode: tier1FreeShippingMode, free_shipping: (tier1FreeShippingMode !== 'none') });
+          if (tier2Enabled) list.push({ offer_id: 'tier-2', qty: tier2Qty, label: t2Label, subtext: t2Subtext, badge: t2Badge, price: p2, free_shipping_mode: tier2FreeShippingMode, free_shipping: (tier2FreeShippingMode !== 'none') });
+          if (tier3Enabled) list.push({ offer_id: 'tier-3', qty: tier3Qty, label: t3Label, subtext: t3Subtext, badge: t3Badge, price: p3, free_shipping_mode: tier3FreeShippingMode, free_shipping: (tier3FreeShippingMode !== 'none') });
+          if (list.length === 0) list.push({ offer_id: 'tier-1', qty: tier1Qty, label: t1Label, subtext: t1Subtext, price: p1, free_shipping_mode: tier1FreeShippingMode, free_shipping: (tier1FreeShippingMode !== 'none') });
           tiers = list;
         }
       }
@@ -278,10 +319,27 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
       }
       if (matchedTier && matchedTier.price != null && !isNaN(Number(matchedTier.price))) {
         itemSubtotal = Number(matchedTier.price);
-        if (matchedTier.free_shipping) {
-          hasTierFreeShipping = true;
+        const mode = matchedTier.free_shipping_mode || (matchedTier.free_shipping ? 'both' : 'none');
+        if (mode === 'both') {
+          hasTierHomeFreeShipping = true;
+          hasTierOfficeFreeShipping = true;
+        } else if (mode === 'home') {
+          hasTierHomeFreeShipping = true;
+        } else if (mode === 'office') {
+          hasTierOfficeFreeShipping = true;
         }
       }
+    }
+
+    const secureQty = (matchedTier && matchedTier.qty != null && Number(matchedTier.qty) >= 1)
+      ? Number(matchedTier.qty)
+      : qty;
+
+    // ── 🔒 حماية المخزون (Server-Side Authoritative على الكمية المؤكدة) ──
+    const stock = Number(dbProduct.stock);
+    if (stock >= 0) {
+      if (stock === 0) return { ok: false, error: `المنتج ${dbProduct.name} نفد من المخزون` };
+      if (secureQty > stock) return { ok: false, error: `الكمية المطلوبة من ${dbProduct.name} تتجاوز المخزون المتاح (${stock})` };
     }
 
     realSubtotal += itemSubtotal;
@@ -294,7 +352,7 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
       variantTitle = String(item.variant_title);
     }
 
-    const effectiveUnitPrice = (qty > 0) ? Math.round(itemSubtotal / qty) : itemSubtotal;
+    const effectiveUnitPrice = (secureQty > 0) ? Math.round(itemSubtotal / secureQty) : itemSubtotal;
 
     secureItems.push({
       id: dbProduct.id,
@@ -303,8 +361,8 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
       variant: item.variant_selection || null,
       variant_title: variantTitle || null,
       offer_id: matchedTier ? (matchedTier.offer_id || null) : (item.offer_id || null),
-      tier_name: matchedTier ? (matchedTier.label || `${qty} قطع`) : (item.tier_name || null),
-      qty: qty,
+      tier_name: matchedTier ? (matchedTier.label || `${secureQty} قطع`) : (item.tier_name || null),
+      qty: secureQty,
       unit_price: effectiveUnitPrice,
       price: effectiveUnitPrice,
       subtotal: itemSubtotal
@@ -350,7 +408,25 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
     for (const row of shipRows) shippingSettings[row.key] = row.value;
   } catch (e) { /* defaults remain '' */ }
 
-  const isFreeShipping = shippingSettings.free_shipping_enabled === 'true' || hasTierFreeShipping || hasProdFreeShipping;
+  const normDeliveryType = (String(deliveryType || 'home').toLowerCase() === 'office') ? 'office' : 'home';
+  const isStoreFreeShipping = (shippingSettings.free_shipping_enabled === 'true');
+
+  let isFreeShipping = false;
+  let freeShippingNote = '';
+
+  if (isStoreFreeShipping) {
+    isFreeShipping = true;
+    freeShippingNote = 'توصيل مجاني (إعداد المتجر)';
+  } else if (hasProdFreeShipping) {
+    isFreeShipping = true;
+    freeShippingNote = 'شحن مجاني (خاص بالمنتج)';
+  } else if (normDeliveryType === 'home' && hasTierHomeFreeShipping) {
+    isFreeShipping = true;
+    freeShippingNote = 'شحن مجاني للمنزل (عرض ترويجي)';
+  } else if (normDeliveryType === 'office' && hasTierOfficeFreeShipping) {
+    isFreeShipping = true;
+    freeShippingNote = 'شحن مجاني للمكتب (عرض ترويجي)';
+  }
 
   const shippingCalc = calculateShippingCost({
     shippingConfig: shippingSettings.shipping_config,
@@ -367,9 +443,7 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
   // ── التوصيل المجاني: تجاوز السعر فقط مع الحفاظ على شركة التوصيل وبيانات الولاية ──
   const shippingCost = isFreeShipping ? 0 : shippingCalc.shippingCost;
-  const shippingNote = isFreeShipping
-    ? (hasTierFreeShipping ? 'شحن مجاني (عرض ترويجي)' : (hasProdFreeShipping ? 'شحن مجاني (خاص بالمنتج)' : 'توصيل مجاني'))
-    : shippingCalc.shippingNote;
+  const shippingNote = isFreeShipping ? freeShippingNote : shippingCalc.shippingNote;
   const deliveryCompany = shippingCalc.deliveryCompany || 'yalidine';
 
   // ── حجز الكوبون ذرياً قبل كتابة الطلب (Atomic Concurrency Protection) ──
