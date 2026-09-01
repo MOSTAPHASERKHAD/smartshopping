@@ -3177,52 +3177,61 @@ function generateOrderLabelHtml(o) {
 }
 
 function printHtmlDocument(htmlContent, title) {
-  var iframe = document.getElementById('print-sandbox-iframe');
-  if (iframe) iframe.remove();
+  var printWin = window.open('', '_blank', 'width=750,height=850,menubar=no,toolbar=no,location=no,status=no');
+  if (printWin) {
+    printWin.document.open();
+    printWin.document.write('<!DOCTYPE html>' +
+      '<html lang="ar" dir="rtl">' +
+      '<head>' +
+        '<meta charset="UTF-8">' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+        '<title>' + (title || 'وصل شحن') + '</title>' +
+        '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+        '<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">' +
+        '<style>' +
+          '@page { size: A6 portrait; margin: 4mm; }' +
+          '*, *::before, *::after { box-sizing: border-box !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
+          'html, body { margin: 0; padding: 0; background: #ffffff !important; color: #000000 !important; font-family: "Cairo", "Segoe UI", Tahoma, sans-serif !important; direction: rtl !important; text-align: right !important; font-size: 11px !important; }' +
+          '.bulk-label { width: 100% !important; max-width: 100mm !important; margin: 0 auto !important; box-sizing: border-box !important; padding: 6mm !important; border: 1.5px solid #000000 !important; border-radius: 6px !important; background: #ffffff !important; color: #000000 !important; font-size: 10.5px !important; line-height: 1.4 !important; }' +
+          'table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 6px !important; }' +
+          'th, td { border: 1px solid #000000 !important; padding: 3px 5px !important; color: #000000 !important; }' +
+          '@media print { @page { size: A6 portrait; margin: 4mm; } body { padding: 0; } }' +
+        '</style>' +
+      '</head>' +
+      '<body>' +
+        htmlContent +
+        '<script>' +
+          'window.onload = function() {' +
+            'setTimeout(function() {' +
+              'window.focus();' +
+              'window.print();' +
+            '}, 200);' +
+          '};' +
+        '<\/script>' +
+      '</body>' +
+      '</html>'
+    );
+    printWin.document.close();
+    return;
+  }
 
-  iframe = document.createElement('iframe');
-  iframe.id = 'print-sandbox-iframe';
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '10px';
-  iframe.style.height = '10px';
-  iframe.style.border = '0';
-  iframe.style.opacity = '0.01';
-  iframe.style.pointerEvents = 'none';
-  document.body.appendChild(iframe);
-
-  var doc = iframe.contentWindow.document;
-  doc.open();
-  doc.write('<!DOCTYPE html>' +
-    '<html lang="ar" dir="rtl">' +
-    '<head>' +
-      '<meta charset="UTF-8">' +
-      '<title>' + (title || 'وصل شحن') + '</title>' +
-      '<style>' +
-        '@page { size: A6 portrait; margin: 4mm; }' +
-        '*, *::before, *::after { box-sizing: border-box !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
-        'html, body { margin: 0; padding: 0; background: #ffffff !important; color: #000000 !important; font-family: "Cairo", system-ui, -apple-system, sans-serif !important; direction: rtl !important; text-align: right !important; font-size: 11px !important; }' +
-        '.bulk-label { width: 100% !important; max-width: 100mm !important; margin: 0 auto !important; box-sizing: border-box !important; padding: 6mm !important; border: 1.5px solid #000000 !important; border-radius: 6px !important; background: #ffffff !important; color: #000000 !important; font-size: 10.5px !important; line-height: 1.4 !important; page-break-inside: avoid !important; break-inside: avoid !important; }' +
-        'table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 6px !important; }' +
-        'th, td { border: 1px solid #000000 !important; padding: 3px 5px !important; color: #000000 !important; }' +
-      '</style>' +
-    '</head>' +
-    '<body>' +
-      htmlContent +
-    '</body>' +
-    '</html>'
-  );
-  doc.close();
-
+  // Fallback if popup blocked
+  var existing = document.getElementById('print-overlay-sandbox');
+  if (existing) existing.remove();
+  var div = document.createElement('div');
+  div.id = 'print-overlay-sandbox';
+  div.style.position = 'fixed';
+  div.style.inset = '0';
+  div.style.zIndex = '999999';
+  div.style.background = '#ffffff';
+  div.style.padding = '20px';
+  div.style.overflow = 'auto';
+  div.innerHTML = '<div style="max-width:105mm;margin:0 auto;">' + htmlContent + '</div>';
+  document.body.appendChild(div);
   setTimeout(function() {
-    try {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    } catch (e) {
-      console.error('Print iframe error:', e);
-    }
-  }, 250);
+    window.print();
+    setTimeout(function() { div.remove(); }, 1500);
+  }, 150);
 }
 
 function printBulkOrders() {
