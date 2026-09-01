@@ -122,8 +122,8 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
   const placeholders = productIds.map(() => '?').join(',');
   const productStmt = isMaster
-    ? env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json, free_shipping FROM products WHERE id IN (${placeholders}) AND (tenant_id = ? OR tenant_id IS NULL)`).bind(...productIds, tenantId)
-    : env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json, free_shipping FROM products WHERE id IN (${placeholders}) AND tenant_id = ?`).bind(...productIds, tenantId);
+    ? env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json FROM products WHERE id IN (${placeholders}) AND (tenant_id = ? OR tenant_id IS NULL)`).bind(...productIds, tenantId)
+    : env.DB.prepare(`SELECT id, name, price, active, stock, weight, landing_config_json FROM products WHERE id IN (${placeholders}) AND tenant_id = ?`).bind(...productIds, tenantId);
 
   const { results: realProducts } = await productStmt.all();
 
