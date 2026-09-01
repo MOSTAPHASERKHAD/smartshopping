@@ -1896,6 +1896,9 @@
         showPricingTiers = themeShowTiers;
       }
 
+      var basePrice   = Number(currentProduct ? (currentProduct.effectivePrice || currentProduct.price || 0) : 0);
+      var curOfferId  = window.selectedQuantityState ? window.selectedQuantityState.offerId  : null;
+      var curTierName = window.selectedQuantityState ? window.selectedQuantityState.tierName : null;
       var currentQty = window.selectedQuantityState ? Number(window.selectedQuantityState.qty || 1) : 1;
       var currentDeliveryVal = deliveryRadio ? deliveryRadio.value : 'Home';
       var tierResult = (showPricingTiers && typeof calculateTierSubtotal === 'function')

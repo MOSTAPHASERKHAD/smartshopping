@@ -52,6 +52,9 @@
             if (saved.settings.tier3_free_shipping_mode === undefined && saved.settings.tier3_free_shipping !== undefined) {
               mergedSettings.tier3_free_shipping_mode = (saved.settings.tier3_free_shipping !== false && saved.settings.tier3_free_shipping !== 'false' && saved.settings.tier3_free_shipping !== 0 && saved.settings.tier3_free_shipping !== '0' && saved.settings.tier3_free_shipping != null) ? 'both' : 'none';
             }
+            if (saved.settings.tier3_free_shipping_mode === undefined && saved.settings.tier3_free_shipping === undefined) {
+              mergedSettings.tier3_free_shipping_mode = 'none';
+            }
           }
         }
         merged[secId] = {
@@ -210,7 +213,11 @@
     if (state.sections && state.sections[sectionId]) {
       if (!state.sections[sectionId].settings) state.sections[sectionId].settings = {};
       state.sections[sectionId].settings[key] = value;
-      if (key === 'tier3_free_shipping_mode') {
+      if (key === 'tier1_free_shipping_mode') {
+        state.sections[sectionId].settings.tier1_free_shipping = (value !== 'none');
+      } else if (key === 'tier2_free_shipping_mode') {
+        state.sections[sectionId].settings.tier2_free_shipping = (value !== 'none');
+      } else if (key === 'tier3_free_shipping_mode') {
         state.sections[sectionId].settings.tier3_free_shipping = (value !== 'none');
       }
       updated = true;
@@ -218,14 +225,22 @@
     if (sectionId === 'fast-order-form' && state.sections && state.sections['order-form']) {
       if (!state.sections['order-form'].settings) state.sections['order-form'].settings = {};
       state.sections['order-form'].settings[key] = value;
-      if (key === 'tier3_free_shipping_mode') {
+      if (key === 'tier1_free_shipping_mode') {
+        state.sections['order-form'].settings.tier1_free_shipping = (value !== 'none');
+      } else if (key === 'tier2_free_shipping_mode') {
+        state.sections['order-form'].settings.tier2_free_shipping = (value !== 'none');
+      } else if (key === 'tier3_free_shipping_mode') {
         state.sections['order-form'].settings.tier3_free_shipping = (value !== 'none');
       }
       updated = true;
     } else if (sectionId === 'order-form' && state.sections && state.sections['fast-order-form']) {
       if (!state.sections['fast-order-form'].settings) state.sections['fast-order-form'].settings = {};
       state.sections['fast-order-form'].settings[key] = value;
-      if (key === 'tier3_free_shipping_mode') {
+      if (key === 'tier1_free_shipping_mode') {
+        state.sections['fast-order-form'].settings.tier1_free_shipping = (value !== 'none');
+      } else if (key === 'tier2_free_shipping_mode') {
+        state.sections['fast-order-form'].settings.tier2_free_shipping = (value !== 'none');
+      } else if (key === 'tier3_free_shipping_mode') {
         state.sections['fast-order-form'].settings.tier3_free_shipping = (value !== 'none');
       }
       updated = true;
