@@ -95,30 +95,66 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
 
   const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
 
-  // ── 🔒 جلب إعدادات الثيم النشط للمتجر لحساب عروض الكميات بدقة ──
-  let storeThemeSections = null;
-  try {
-    const themeSettingStmt = isMaster
-      ? env.DB.prepare(`SELECT key, value FROM settings WHERE key IN ('theme_default', 'theme_config') AND (tenant_id = ? OR tenant_id IS NULL)`).bind(tenantId)
-      : env.DB.prepare(`SELECT key, value FROM settings WHERE key IN ('theme_default', 'theme_config') AND tenant_id = ?`).bind(tenantId);
-    const { results: themeSettingRows } = await themeSettingStmt.all();
-    const stMap = {};
-    for (const r of (themeSettingRows || [])) stMap[r.key] = r.value;
+  // ── 🔒 جلب إعدادات الثيم النشط والأقسام المخصصة لحساب عروض الكميات بدقة ──
+  const productSectionMap = new Map();
+  let storeGlobalThemeSections = null;
 
-    if (stMap.theme_config) {
-      const parsedThemeCfg = typeof stMap.theme_config === 'string' ? JSON.parse(stMap.theme_config) : stMap.theme_config;
-      if (parsedThemeCfg && parsedThemeCfg.sections) storeThemeSections = parsedThemeCfg.sections;
-    } else if (stMap.theme_default) {
-      const themeRowStmt = isMaster
-        ? env.DB.prepare(`SELECT config_json FROM themes WHERE name = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(stMap.theme_default, tenantId)
-        : env.DB.prepare(`SELECT config_json FROM themes WHERE name = ? AND tenant_id = ? LIMIT 1`).bind(stMap.theme_default, tenantId);
-      const themeRow = await themeRowStmt.first();
-      if (themeRow && themeRow.config_json) {
-        const parsed = typeof themeRow.config_json === 'string' ? JSON.parse(themeRow.config_json) : themeRow.config_json;
-        if (parsed && parsed.sections) storeThemeSections = parsed.sections;
+  try {
+    const targetIds = ['default', ...productIds.map(String)];
+    const targetPlaceholders = targetIds.map(() => '?').join(',');
+    const secConfigsStmt = isMaster
+      ? env.DB.prepare(`SELECT target_type, target_id, sections_json FROM theme_section_configs WHERE target_id IN (${targetPlaceholders}) AND (tenant_id = ? OR tenant_id IS NULL)`).bind(...targetIds, tenantId)
+      : env.DB.prepare(`SELECT target_type, target_id, sections_json FROM theme_section_configs WHERE target_id IN (${targetPlaceholders}) AND tenant_id = ?`).bind(...targetIds, tenantId);
+
+    const { results: secConfigRows } = await secConfigsStmt.all();
+    for (const row of (secConfigRows || [])) {
+      if (row.sections_json) {
+        const parsed = typeof row.sections_json === 'string' ? JSON.parse(row.sections_json) : row.sections_json;
+        if (row.target_type === 'product' && row.target_id) {
+          productSectionMap.set(String(row.target_id), parsed);
+        } else if (row.target_type === 'global' && row.target_id === 'default') {
+          storeGlobalThemeSections = parsed;
+        }
       }
     }
   } catch (_) {}
+
+  if (!storeGlobalThemeSections) {
+    try {
+      const v2Stmt = isMaster
+        ? env.DB.prepare(`SELECT sections_json FROM themes_v2 WHERE is_active = 1 AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(tenantId)
+        : env.DB.prepare(`SELECT sections_json FROM themes_v2 WHERE is_active = 1 AND tenant_id = ? LIMIT 1`).bind(tenantId);
+      const v2Row = await v2Stmt.first();
+      if (v2Row && v2Row.sections_json) {
+        storeGlobalThemeSections = typeof v2Row.sections_json === 'string' ? JSON.parse(v2Row.sections_json) : v2Row.sections_json;
+      }
+    } catch (_) {}
+  }
+
+  if (!storeGlobalThemeSections) {
+    try {
+      const themeSettingStmt = isMaster
+        ? env.DB.prepare(`SELECT key, value FROM settings WHERE key IN ('theme_default', 'theme_config') AND (tenant_id = ? OR tenant_id IS NULL)`).bind(tenantId)
+        : env.DB.prepare(`SELECT key, value FROM settings WHERE key IN ('theme_default', 'theme_config') AND tenant_id = ?`).bind(tenantId);
+      const { results: themeSettingRows } = await themeSettingStmt.all();
+      const stMap = {};
+      for (const r of (themeSettingRows || [])) stMap[r.key] = r.value;
+
+      if (stMap.theme_config) {
+        const parsedThemeCfg = typeof stMap.theme_config === 'string' ? JSON.parse(stMap.theme_config) : stMap.theme_config;
+        if (parsedThemeCfg && parsedThemeCfg.sections) storeGlobalThemeSections = parsedThemeCfg.sections;
+      } else if (stMap.theme_default) {
+        const themeRowStmt = isMaster
+          ? env.DB.prepare(`SELECT config_json FROM themes WHERE name = ? AND (tenant_id = ? OR tenant_id IS NULL) LIMIT 1`).bind(stMap.theme_default, tenantId)
+          : env.DB.prepare(`SELECT config_json FROM themes WHERE name = ? AND tenant_id = ? LIMIT 1`).bind(stMap.theme_default, tenantId);
+        const themeRow = await themeRowStmt.first();
+        if (themeRow && themeRow.config_json) {
+          const parsed = typeof themeRow.config_json === 'string' ? JSON.parse(themeRow.config_json) : themeRow.config_json;
+          if (parsed && parsed.sections) storeGlobalThemeSections = parsed.sections;
+        }
+      }
+    } catch (_) {}
+  }
 
   const placeholders = productIds.map(() => '?').join(',');
   const productStmt = isMaster
@@ -237,6 +273,7 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
         let t3Badge = 'توفير كلي';
         let t3Subtext = 'أفضل قيمة وأعلى توفير';
 
+        const storeThemeSections = productSectionMap.get(String(pId)) || storeGlobalThemeSections;
         if (storeThemeSections) {
           const isSettingEnabled = (val, defaultVal = true) => {
             if (val === undefined || val === null || val === '') return defaultVal;
