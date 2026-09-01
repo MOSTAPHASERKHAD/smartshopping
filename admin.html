@@ -3328,7 +3328,7 @@ function viewOrder(orderId) {
     '</div>' +
 
     '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;" class="no-print">' +
-      '<button type="button" class="btn btn-warning" onclick="printOrderLabel()" style="background:#f59e0b;color:#fff;font-weight:700">🖨️ طباعة الوصل (A6)</button>' +
+      '<button type="button" class="btn btn-warning" onclick="printSingleOrder(\'' + esc(o.order_id) + '\')" style="background:#f59e0b;color:#fff;font-weight:700">🖨️ طباعة الوصل (A6)</button>' +
       '<button type="button" class="btn btn-success" onclick="sendOrderToStaff(\'' + esc(o.order_id) + '\')" style="background:#059669;color:#fff;font-weight:700">📲 إرسال تفاصيل الطلبية لمسؤول التأكيد</button>' +
       '<a href="https://wa.me/' + esc(o.phone) + '?text=' + encodeURIComponent('مرحبا ' + (o.name || '') + '، طلبك رقم ' + (o.order_id || '') + ' قيد المعالجة') + '" target="_blank" class="btn btn-outline">📱 واتساب العميل</a>' +
       '<a href="tel:' + esc(o.phone) + '" class="btn btn-info">📞 اتصال</a>' +
@@ -3338,8 +3338,47 @@ function viewOrder(orderId) {
   document.getElementById('orderModal').classList.add('open');
 }
 
-function printOrderLabel() {
-  window.print();
+function printSingleOrder(orderId) {
+  var o = allOrders.find(function(x) { return x.order_id === orderId; });
+  if (!o) return;
+
+  var existing = document.getElementById('bulk-print-container');
+  if (existing) existing.remove();
+
+  var container = document.createElement('div');
+  container.id = 'bulk-print-container';
+  container.innerHTML = generateOrderLabelHtml(o);
+  document.body.appendChild(container);
+  document.body.classList.add('bulk-printing');
+
+  function cleanup() {
+    document.body.classList.remove('bulk-printing');
+    var el = document.getElementById('bulk-print-container');
+    if (el) el.remove();
+    window.removeEventListener('afterprint', cleanup);
+  }
+
+  window.addEventListener('afterprint', cleanup);
+
+  setTimeout(function() {
+    window.print();
+    setTimeout(cleanup, 2500);
+  }, 100);
+}
+
+function printOrderLabel(orderId) {
+  if (orderId) {
+    printSingleOrder(orderId);
+    return;
+  }
+  var modal = document.getElementById('orderModal');
+  var codeEl = modal ? modal.querySelector('strong') : null;
+  var currentId = codeEl ? codeEl.textContent.trim() : null;
+  if (currentId) {
+    printSingleOrder(currentId);
+  } else {
+    window.print();
+  }
 }
 
 function closeOrderModal() { document.getElementById('orderModal').classList.remove('open'); }
