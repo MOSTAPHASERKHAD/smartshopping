@@ -1667,7 +1667,7 @@ var ADMIN_I18N = {
     pages: 'الصفحات',
     logout: 'خروج',
     admin_panel: 'لوحة التحكم',
-    
+
     // Stats & Dashboard
     stat_products: 'المنتجات',
     stat_orders: 'الطلبات',
@@ -1697,7 +1697,7 @@ var ADMIN_I18N = {
     th_category: 'التصنيف',
     th_stock: 'المخزون',
     th_landing_url: 'رابط الهبوط',
-    
+
     // Statuses
     st_pending: 'قيد الانتظار',
     st_confirmed: 'تم التأكيد',
@@ -1722,7 +1722,7 @@ var ADMIN_I18N = {
     btn_save: 'حفظ',
     btn_cancel: 'إلغاء',
     btn_refresh: 'تحديث البيانات',
-    
+
     // Filters & Placeholders
     search_orders_ph: 'بحث برقم الطلب أو اسم العميل أو الهاتف...',
     all_statuses: 'جميع الحالات',
@@ -1732,14 +1732,14 @@ var ADMIN_I18N = {
     date_last_7d: 'آخر 7 أيام',
     empty_orders: 'لا توجد طلبات مطابقة',
     empty_products: 'لا توجد منتجات',
-    
+
     // Notifications
     notifications: 'إعدادات الإشعارات',
 
     // Shipping & Delivery
     delivery_home: 'منزل',
     delivery_office: 'مكتب',
-    
+
     lang_btn: 'English'
   },
   en: {
@@ -1759,7 +1759,7 @@ var ADMIN_I18N = {
     pages: 'Pages',
     logout: 'Logout',
     admin_panel: 'Admin Panel',
-    
+
     // Stats & Dashboard
     stat_products: 'Products',
     stat_orders: 'Orders',
@@ -1789,7 +1789,7 @@ var ADMIN_I18N = {
     th_category: 'Category',
     th_stock: 'Stock',
     th_landing_url: 'Landing Page',
-    
+
     // Statuses
     st_pending: 'Pending',
     st_confirmed: 'Confirmed',
@@ -1814,7 +1814,7 @@ var ADMIN_I18N = {
     btn_save: 'Save',
     btn_cancel: 'Cancel',
     btn_refresh: 'Refresh Data',
-    
+
     // Filters & Placeholders
     search_orders_ph: 'Search by order ID, customer name, or phone...',
     all_statuses: 'All Statuses',
@@ -1824,11 +1824,11 @@ var ADMIN_I18N = {
     date_last_7d: 'Last 7 Days',
     empty_orders: 'No matching orders found',
     empty_products: 'No products found',
-    
+
     // Shipping & Delivery
     delivery_home: 'Home',
     delivery_office: 'Office',
-    
+
     lang_btn: 'العربية'
   }
 };
@@ -1841,7 +1841,7 @@ function adminT(key) {
 function setAdminLang(lang) {
   currentAdminLang = (lang === 'en') ? 'en' : 'ar';
   try { localStorage.setItem('admin_lang', currentAdminLang); } catch(e) {}
-  
+
   document.documentElement.lang = currentAdminLang;
   document.documentElement.dir = (currentAdminLang === 'ar') ? 'rtl' : 'ltr';
   if (currentAdminLang === 'ar') {
@@ -2458,7 +2458,7 @@ function restoreDefaultLogo() {
   if(!confirm('هل أنت متأكد من استعادة شعار المتجر الافتراضي؟')) return;
   var msg = document.getElementById('logo_msg');
   msg.style.display = 'block'; msg.style.color = 'var(--text2)'; msg.innerText = 'جاري استعادة الشعار الافتراضي...';
-  
+
   apiPost('admin_update_settings', { store_logo: '' }, function(res) {
     if(res && res.ok) {
       msg.style.color = 'var(--success)'; msg.innerText = 'تم استعادة الشعار الافتراضي.';
@@ -3177,61 +3177,69 @@ function generateOrderLabelHtml(o) {
 }
 
 function printHtmlDocument(htmlContent, title) {
-  var printWin = window.open('', '_blank', 'width=750,height=850,menubar=no,toolbar=no,location=no,status=no');
-  if (printWin) {
-    printWin.document.open();
-    printWin.document.write('<!DOCTYPE html>' +
-      '<html lang="ar" dir="rtl">' +
-      '<head>' +
-        '<meta charset="UTF-8">' +
-        '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
-        '<title>' + (title || 'وصل شحن') + '</title>' +
-        '<link rel="preconnect" href="https://fonts.googleapis.com">' +
-        '<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">' +
-        '<style>' +
-          '@page { size: A6 portrait; margin: 4mm; }' +
-          '*, *::before, *::after { box-sizing: border-box !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
-          'html, body { margin: 0; padding: 0; background: #ffffff !important; color: #000000 !important; font-family: "Cairo", "Segoe UI", Tahoma, sans-serif !important; direction: rtl !important; text-align: right !important; font-size: 11px !important; }' +
-          '.bulk-label { width: 100% !important; max-width: 100mm !important; margin: 0 auto !important; box-sizing: border-box !important; padding: 6mm !important; border: 1.5px solid #000000 !important; border-radius: 6px !important; background: #ffffff !important; color: #000000 !important; font-size: 10.5px !important; line-height: 1.4 !important; }' +
-          'table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 6px !important; }' +
-          'th, td { border: 1px solid #000000 !important; padding: 3px 5px !important; color: #000000 !important; }' +
-          '@media print { @page { size: A6 portrait; margin: 4mm; } body { padding: 0; } }' +
-        '</style>' +
-      '</head>' +
-      '<body>' +
-        htmlContent +
-        '<script>' +
-          'window.onload = function() {' +
-            'setTimeout(function() {' +
-              'window.focus();' +
-              'window.print();' +
-            '}, 200);' +
-          '};' +
-        '<\/script>' +
-      '</body>' +
-      '</html>'
-    );
-    printWin.document.close();
+  if (!htmlContent) {
     return;
   }
 
-  // Fallback if popup blocked
-  var existing = document.getElementById('print-overlay-sandbox');
+  // 1. Cleanup
+  var existing = document.getElementById('bulk-print-container');
   if (existing) existing.remove();
-  var div = document.createElement('div');
-  div.id = 'print-overlay-sandbox';
-  div.style.position = 'fixed';
-  div.style.inset = '0';
-  div.style.zIndex = '999999';
-  div.style.background = '#ffffff';
-  div.style.padding = '20px';
-  div.style.overflow = 'auto';
-  div.innerHTML = '<div style="max-width:105mm;margin:0 auto;">' + htmlContent + '</div>';
-  document.body.appendChild(div);
-  setTimeout(function() {
-    window.print();
-    setTimeout(function() { div.remove(); }, 1500);
-  }, 150);
+  var oldStyle = document.getElementById('a6-print-style');
+  if (oldStyle) oldStyle.remove();
+
+  // 2. Inject CSS for A6 in the parent window, overriding admin.min.css A4 rules
+  var style = document.createElement('style');
+  style.id = 'a6-print-style';
+  style.innerHTML = '@media print { ' +
+    '@page { size: A6 portrait !important; margin: 4mm !important; } ' +
+    'body.bulk-printing #bulk-print-container { width: 100% !important; display: block !important; margin: 0 !important; padding: 0 !important; background: #ffffff !important; position: static !important; } ' +
+    'body.bulk-printing .bulk-label { width: 100% !important; max-width: 100mm !important; height: auto !important; max-height: none !important; margin: 0 auto !important; box-sizing: border-box !important; padding: 6mm !important; border: 1.5px solid #000000 !important; border-radius: 6px !important; background: #ffffff !important; color: #000000 !important; font-size: 10.5px !important; line-height: 1.4 !important; page-break-inside: avoid !important; break-inside: avoid !important; overflow: hidden !important; } ' +
+    'body.bulk-printing #bulk-print-container table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 6px !important; } ' +
+    'body.bulk-printing #bulk-print-container th, body.bulk-printing #bulk-print-container td { border: 1px solid #000000 !important; padding: 3px 5px !important; color: #000000 !important; } ' +
+  '}';
+  document.head.appendChild(style);
+
+  // 3. Create Container
+  var container = document.createElement('div');
+  container.id = 'bulk-print-container';
+  container.innerHTML = htmlContent;
+  document.body.appendChild(container);
+
+  document.body.classList.add('bulk-printing');
+
+  var oldTitle = document.title;
+  if (title) document.title = title;
+
+  // 4. Safe Cleanup bound to window.onafterprint
+  var cleanup = function() {
+    window.removeEventListener('afterprint', cleanup);
+    document.body.classList.remove('bulk-printing');
+    if (title) document.title = oldTitle;
+    setTimeout(function() {
+      if (container.parentNode) container.remove();
+      if (style.parentNode) style.remove();
+    }, 500); // slight delay to prevent UI flicker
+  };
+  window.addEventListener('afterprint', cleanup);
+
+  // 5. Trigger Print after Layout (and Fonts if possible)
+  var triggerPrint = function() {
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+
+        window.print();
+
+        // Fallback cleanup if afterprint event fails to fire
+        setTimeout(cleanup, 3000);
+      });
+    });
+  };
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(triggerPrint);
+  } else {
+    setTimeout(triggerPrint, 150);
+  }
 }
 
 function printBulkOrders() {
