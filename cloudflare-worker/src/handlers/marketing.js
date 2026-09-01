@@ -117,6 +117,23 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
       if (rawFbp) cleanFbp = rawFbp;
     }
 
+    let hashedFn, hashedLn, hashedSt, hashedCt;
+    if (userData && userData.name) {
+      const parts = String(userData.name).trim().split(/\s+/);
+      const fn = parts[0];
+      const ln = parts.length > 1 ? parts.slice(1).join(' ') : undefined;
+      if (fn) hashedFn = await hashForFB(fn);
+      if (ln) hashedLn = await hashForFB(ln);
+    }
+    if (userData && userData.wilaya) {
+      const st = String(userData.wilaya).trim();
+      if (st) hashedSt = await hashForFB(st);
+    }
+    if (userData && userData.municipality) {
+      const ct = String(userData.municipality).trim();
+      if (ct) hashedCt = await hashForFB(ct);
+    }
+
     // IP & User Agent (استخراج آمن من Cloudflare Headers)
     const clientIp = requestObj?.headers?.get('CF-Connecting-IP') || 
                      requestObj?.headers?.get('X-Forwarded-For')?.split(',')[0]?.trim() || 
@@ -144,6 +161,10 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
             fbp: cleanFbp || undefined,
             ph: hashedPhone ? [hashedPhone] : undefined,
             em: hashedEmail ? [hashedEmail] : undefined,
+            fn: hashedFn ? [hashedFn] : undefined,
+            ln: hashedLn ? [hashedLn] : undefined,
+            st: hashedSt ? [hashedSt] : undefined,
+            ct: hashedCt ? [hashedCt] : undefined,
           },
           custom_data: {
             currency: "DZD",

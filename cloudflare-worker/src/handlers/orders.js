@@ -550,6 +550,20 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
         request?.headers?.get('CF-IPCountry') || ''
       ).run().catch(() => {})
     );
+    let finalEventSourceUrl = eventSourceUrl;
+    if (finalEventSourceUrl) {
+      try {
+        const u = new URL(finalEventSourceUrl.startsWith('http') ? finalEventSourceUrl : 'https://smartshopping.click' + finalEventSourceUrl);
+        if (fbclid && !u.searchParams.has('fbclid')) u.searchParams.set('fbclid', fbclid);
+        if (utmSource && !u.searchParams.has('utm_source')) u.searchParams.set('utm_source', utmSource);
+        if (utmMedium && !u.searchParams.has('utm_medium')) u.searchParams.set('utm_medium', utmMedium);
+        if (utmCampaign && !u.searchParams.has('utm_campaign')) u.searchParams.set('utm_campaign', utmCampaign);
+        if (utmContent && !u.searchParams.has('utm_content')) u.searchParams.set('utm_content', utmContent);
+        if (utmTerm && !u.searchParams.has('utm_term')) u.searchParams.set('utm_term', utmTerm);
+        finalEventSourceUrl = u.toString();
+      } catch(e) {}
+    }
+
     ctx.waitUntil(
       sendCapiEvent(
         env,
@@ -558,9 +572,9 @@ export async function createOrder(env, params, request, ctx, token, tenantId = D
           value: realSubtotal - finalDiscount + shippingCost,
           order_id: orderId,
           content_ids: secureItems.map(i => i.id.toString()),
-          event_source_url: eventSourceUrl || undefined
+          event_source_url: finalEventSourceUrl || undefined
         },
-        { phone, email, fbc, fbp },
+        { phone, email, fbc, fbp, name, wilaya: wilayaEn || wilayaAr, municipality },
         request,
         tenantId
       )

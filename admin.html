@@ -3106,9 +3106,16 @@ function generateOrderLabelHtml(o) {
   }).join('');
 
   var rawNote = String(o.notes || '');
-  var addrMatch = rawNote.match(/\| (.+)$/);
-  var orderAddrRaw = addrMatch ? addrMatch[1] : '';
-  var orderNoteRaw = addrMatch ? rawNote.replace(' | ' + orderAddrRaw, '') : rawNote;
+  var orderAddrRaw = '';
+  var orderNoteRaw = '';
+  var splitIdx = rawNote.lastIndexOf(' | ');
+  if (splitIdx !== -1) {
+    orderNoteRaw = rawNote.substring(0, splitIdx);
+    orderAddrRaw = rawNote.substring(splitIdx + 3);
+  } else {
+    orderAddrRaw = rawNote;
+    orderNoteRaw = '';
+  }
   var orderNote = esc(orderNoteRaw.trim());
   var orderAddr = orderAddrRaw ? esc(orderAddrRaw.trim()) : '';
 
@@ -3233,9 +3240,16 @@ function viewOrder(orderId) {
   }).join('');
 
   var rawNote = String(o.notes || '');
-  var addrMatch = rawNote.match(/\| (.+)$/);
-  var orderAddrRaw = addrMatch ? addrMatch[1] : '';
-  var orderNoteRaw = addrMatch ? rawNote.replace(' | ' + orderAddrRaw, '') : rawNote;
+  var orderAddrRaw = '';
+  var orderNoteRaw = '';
+  var splitIdx = rawNote.lastIndexOf(' | ');
+  if (splitIdx !== -1) {
+    orderNoteRaw = rawNote.substring(0, splitIdx);
+    orderAddrRaw = rawNote.substring(splitIdx + 3);
+  } else {
+    orderAddrRaw = rawNote;
+    orderNoteRaw = '';
+  }
   var orderNote = esc(orderNoteRaw.trim());
   var orderAddr = orderAddrRaw ? esc(orderAddrRaw.trim()) : '';
 
@@ -3580,9 +3594,16 @@ function formatSingleOrderBlock(o, orderIndex) {
   var custWaLink = custPhoneNorm ? ('https://wa.me/' + custPhoneNorm) : '-';
 
   var rawNote = String(o.notes || '').trim();
-  var addrMatch = rawNote.match(/\| (.+)$/);
-  var exactAddr = addrMatch ? addrMatch[1].trim() : '';
-  var customerNote = addrMatch ? rawNote.replace(' | ' + exactAddr, '').trim() : rawNote;
+  var exactAddr = '';
+  var customerNote = '';
+  var splitIdx = rawNote.lastIndexOf(' | ');
+  if (splitIdx !== -1) {
+    customerNote = rawNote.substring(0, splitIdx).trim();
+    exactAddr = rawNote.substring(splitIdx + 3).trim();
+  } else {
+    exactAddr = rawNote;
+    customerNote = '';
+  }
 
   var block = header + '\n\n' +
     '👤 اسم الزبون: ' + custName + '\n' +
