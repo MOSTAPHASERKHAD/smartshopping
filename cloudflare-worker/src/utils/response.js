@@ -44,13 +44,13 @@ export function buildCorsHeaders(origin, allowedOrigins) {
     };
   }
 
-  // 2. مطابقة آمنة لـ Pages preview deployments
-  //    البنية الصحيحة الوحيدة المقبولة:
-  //    https://<hash>.smartshopping-76x.pages.dev
-  //    الحماية: التحقق من بروتوكول https + تحليل URL + hostname يجب أن يكون
-  //    subdomain مباشر لـ smartshopping-76x.pages.dev
+  // 2. مطابقة آمنة للنطاقات الفرعية الموثوقة:
+  //    أ) Pages preview deployments: https://<hash>.smartshopping-76x.pages.dev
+  //    ب) Storefront tenant subdomains: https://<slug>.smartshopping.click
   const PAGES_SUFFIX = '.smartshopping-76x.pages.dev';
-  const isPreviewAllowed = (function() {
+  const STOREFRONT_SUFFIX = '.smartshopping.click';
+
+  const isTrustedSubdomain = (function() {
     if (!origin) return false;
     // يجب أن يبدأ بـ https:// فقط — يمنع http:// downgrade
     if (!origin.startsWith('https://')) return false;
@@ -59,18 +59,28 @@ export function buildCorsHeaders(origin, allowedOrigins) {
     // يجب ألا يحتوي على path أو query أو port غير افتراضي
     if (parsed.pathname !== '/' && parsed.pathname !== '') return false;
     if (parsed.search || parsed.hash || parsed.port) return false;
-    // hostname يجب أن ينتهي بـ PAGES_SUFFIX بشكل دقيق
-    // يمنع: smartshopping-76x.pages.dev.evil.com
-    // يمنع: xsmartshopping-76x.pages.dev
+
     const host = parsed.hostname;
-    if (!host.endsWith(PAGES_SUFFIX)) return false;
-    // التحقق أن الجزء قبل السفيكس ليس فارغاً (hash subdomain)
-    const prefix = host.slice(0, host.length - PAGES_SUFFIX.length);
-    if (!prefix || prefix.includes('.')) return false; // لا nested subdomains
-    return true;
+
+    // أ) Pages preview
+    if (host.endsWith(PAGES_SUFFIX)) {
+      const prefix = host.slice(0, host.length - PAGES_SUFFIX.length);
+      if (prefix && !prefix.includes('.')) return true;
+    }
+
+    // ب) Storefront tenant subdomains (*.smartshopping.click)
+    if (host.endsWith(STOREFRONT_SUFFIX)) {
+      const prefix = host.slice(0, host.length - STOREFRONT_SUFFIX.length);
+      // التحقق: slug غير فارغ، لا يحتوي على نقاط (لا nested subdomains)، وصيغة slug صالحة
+      if (prefix && !prefix.includes('.') && /^[a-z0-9-]+$/i.test(prefix) && !prefix.startsWith('-') && !prefix.endsWith('-')) {
+        return true;
+      }
+    }
+
+    return false;
   })();
 
-  if (isPreviewAllowed) {
+  if (isTrustedSubdomain) {
     return {
       'Access-Control-Allow-Origin':  origin,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',

@@ -156,9 +156,10 @@ export const ACTION_PERMISSIONS = {
   admin_delete_product: PERMISSIONS.PRODUCTS_DELETE,
 
   // Orders
-  admin_orders:         PERMISSIONS.ORDERS_READ,
-  admin_update_order:   PERMISSIONS.ORDERS_UPDATE,
-  admin_delete_order:   PERMISSIONS.ORDERS_DELETE,
+  admin_orders:           PERMISSIONS.ORDERS_READ,
+  admin_update_order:     PERMISSIONS.ORDERS_UPDATE,
+  admin_dispatch_courier: PERMISSIONS.ORDERS_UPDATE,
+  admin_delete_order:     PERMISSIONS.ORDERS_DELETE,
 
   // Settings & Notifications
   admin_settings:          PERMISSIONS.SETTINGS_READ,
@@ -218,9 +219,13 @@ export const ACTION_PERMISSIONS = {
   auth_revoke_all:    PERMISSIONS.USERS_UPDATE,
 
   // Super Admin Platform Actions
-  admin_super_list_tenants:   PERMISSIONS.PLATFORM_MANAGE,
-  admin_super_platform_stats: PERMISSIONS.PLATFORM_MANAGE,
-  admin_super_update_tenant:  PERMISSIONS.PLATFORM_MANAGE,
+  admin_super_list_tenants:          PERMISSIONS.PLATFORM_MANAGE,
+  admin_super_platform_stats:        PERMISSIONS.PLATFORM_MANAGE,
+  admin_super_update_tenant:         PERMISSIONS.PLATFORM_MANAGE,
+  admin_super_approve_merchant:      PERMISSIONS.PLATFORM_MANAGE,
+  admin_super_reject_merchant:       PERMISSIONS.PLATFORM_MANAGE,
+  admin_super_list_tenant_services:  PERMISSIONS.PLATFORM_MANAGE,
+  admin_super_update_tenant_service: PERMISSIONS.PLATFORM_MANAGE,
 
   // Audit Logs
   admin_list_audit_logs: PERMISSIONS.AUDIT_READ,

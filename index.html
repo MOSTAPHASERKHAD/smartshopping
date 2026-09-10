@@ -694,6 +694,16 @@ var currentStoreSlug = (function() {
   return null;
 })();
 
+// --- TENANT-PRESERVING PRODUCT URL HELPER ---
+function getProductUrl(pid) {
+  var p = encodeURIComponent(pid != null ? pid : '').replace(/'/g, '%27');
+  var url = 'product.html?product=' + p;
+  if (currentStoreSlug) {
+    url += '&store=' + encodeURIComponent(currentStoreSlug).replace(/'/g, '%27');
+  }
+  return url;
+}
+
 // === Product Data Normalizer ===
 // Bridges the gap between Worker API field names and Frontend field names.
 // Applied ONCE at the API boundary so all UI code remains untouched.
@@ -1530,7 +1540,7 @@ function renderSuggested(currentId){
     section.style.display='block';
     grid.innerHTML=picked.map(function(p){
       var img=p.image1||'';
-      return '<div class="product-card" style="cursor:pointer" onclick="window.location.href=\'product.html?product=\'+p.id+\'"><div class="product-image-wrap"><img class="product-image" src="'+esc(img)+'" loading="lazy" alt=""></div><div class="product-body"><div class="product-title">'+esc(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div><div class="product-price"><span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span></div></div></div>';
+      return '<div class="product-card" style="cursor:pointer" onclick="window.location.href=\''+getProductUrl(p.id)+'\'"><div class="product-image-wrap"><img class="product-image" src="'+esc(img)+'" loading="lazy" alt=""></div><div class="product-body"><div class="product-title">'+esc(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div><div class="product-price"><span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span></div></div></div>';
     }).join('');
   }catch(e){console.warn('renderSuggested',e)}
 }
@@ -1588,14 +1598,14 @@ function renderProducts(){
         '<button type="button" class="compare-check'+(getCompare().indexOf(p.id)>-1?' active':'')+'" data-pid="'+pid+'" onclick="toggleCompare(\''+pid+'\',event)">✓</button>'+
       '</div>'+
       '<div class="product-body">'+
-        '<div class="product-title"><a href="#" onclick="window.location.href=\'product.html?product='+pid+'\';return false">'+ttl+'</a></div>'+
+        '<div class="product-title"><a href="#" onclick="window.location.href=\''+getProductUrl(p.id)+'\';return false">'+ttl+'</a></div>'+
         variantBadges+
         '<div class="product-price">'+
           '<span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span>'+
           (disc?'<span class="price-old">'+Number(p.old_price).toLocaleString()+' '+t('currency')+'</span>':'')+
         '</div>'+
         '<div class="product-actions">'+
-        '<button type="button" class="btn-add buy-now" onclick="window.location.href=\'product.html?product='+pid+'\'">'+t('buy_now')+'</button>'+
+        '<button type="button" class="btn-add buy-now" onclick="window.location.href=\''+getProductUrl(p.id)+'\'">'+t('buy_now')+'</button>'+
 
       '</div>'+
     '</div>';
@@ -1840,7 +1850,7 @@ function trackOrder(){
 var CUSTOMER_KEY = 'sk_customer';
 var pdVariantSize=null;var pdVariantColor=null;
 function showProductDetail(id){
-  window.location.href='product.html?product='+encodeURIComponent(id);
+  window.location.href=getProductUrl(id);
 }
 
 function selectPdImg(idx){
@@ -2713,7 +2723,7 @@ function checkLandingPage(){
       if(selected.length){
         html+='<div class="products-grid" style="margin-top:20px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">';
         selected.forEach(function(p){
-          html+='<div class="product-card" style="cursor:pointer" onclick="closeLanding();window.location.href=\'product.html?product=\'+p.id+\'"><div class="product-image-wrap"><img class="product-image" src="'+(p.image1||'')+'" loading="lazy" alt=""></div><div class="product-body"><div class="product-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div><div class="product-price"><span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span></div></div></div>';
+          html+='<div class="product-card" style="cursor:pointer" onclick="closeLanding();window.location.href=\''+getProductUrl(p.id)+'\'"><div class="product-image-wrap"><img class="product-image" src="'+(p.image1||'')+'" loading="lazy" alt=""></div><div class="product-body"><div class="product-title">'+(currentLang==='ar'?p.title_ar:p.title_en||p.title_ar)+'</div><div class="product-price"><span class="price-current">'+Number(p.price).toLocaleString()+' '+t('currency')+'</span></div></div></div>';
         });
         html+='</div>';
       }
@@ -3001,7 +3011,7 @@ function processChatInput(text) {
         }).slice(0, 3);
         if (found.length) {
           var html = '🔍 وجدت ' + found.length + ' منتج:' + found.map(function(p) {
-            return '<div class="chat-product-card" onclick="toggleChatbot();window.location.href=\'product.html?product=\' + p.id + \'\'"><img src="' + (p.image1 || '') + '" onerror="this.style.display=\'none\'"><div class="chat-pinfo"><div class="chat-pname">' + (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + '</div><div class="chat-pprice">' + Number(p.price).toLocaleString() + ' دج</div></div></div>';
+            return '<div class="chat-product-card" onclick="toggleChatbot();window.location.href=\'' + getProductUrl(p.id) + '\'"><img src="' + (p.image1 || '') + '" onerror="this.style.display=\'none\'"><div class="chat-pinfo"><div class="chat-pname">' + (currentLang === 'ar' ? p.title_ar : p.title_en || p.title_ar) + '</div><div class="chat-pprice">' + Number(p.price).toLocaleString() + ' دج</div></div></div>';
           }).join('');
           addBotMsg(html);
         } else {
@@ -3042,7 +3052,7 @@ function processChatInput(text) {
       var offers = allProducts.filter(function(p) { return p.old_price > 0; }).slice(0, 3);
       if (offers.length) {
         addBotMsg('🔥 عروض:' + offers.map(function(p) {
-          return '<div class="chat-product-card" onclick="toggleChatbot();window.location.href=\'product.html?product=\' + p.id + \'\'"><img src="' + (p.image1 || '') + '"><div class="chat-pinfo"><div class="chat-pname">' + (currentLang === 'ar' ? p.title_ar : p.title_en || '') + '</div><div class="chat-pprice">' + Number(p.price).toLocaleString() + ' دج</div></div></div>';
+          return '<div class="chat-product-card" onclick="toggleChatbot();window.location.href=\'' + getProductUrl(p.id) + '\'"><img src="' + (p.image1 || '') + '"><div class="chat-pinfo"><div class="chat-pname">' + (currentLang === 'ar' ? p.title_ar : p.title_en || '') + '</div><div class="chat-pprice">' + Number(p.price).toLocaleString() + ' دج</div></div></div>';
         }).join(''));
       } else {
         addBotMsg('لا توجد عروض حالياً');

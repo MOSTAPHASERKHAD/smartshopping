@@ -72,6 +72,32 @@
   width: 920px !important;
   height: 820px !important;
 }
+
+/* Super Admin Filter Pills */
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border, #cbd5e1);
+  background: var(--card, #ffffff);
+  color: var(--text2, #475569);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.filter-pill:hover {
+  background: var(--bg, #f8fafc);
+  border-color: var(--border2, #94a3b8);
+}
+.filter-pill.active {
+  background: var(--accent, #e94560) !important;
+  color: #ffffff !important;
+  border-color: var(--accent, #e94560) !important;
+}
 </style>
 
 </head>
@@ -229,6 +255,7 @@
     <a href="#" onclick="showSection('themes')" id="nav-themes"><span class="icon">🎨</span><span data-i18n="themes">الثيمات</span></a>
     <a href="#" onclick="showSection('newsletter')" id="nav-newsletter"><span class="icon">📧</span><span data-i18n="newsletter">النشرة البريدية</span></a>
     <a href="#" onclick="showSection('pages')" id="nav-pages"><span class="icon">📄</span><span data-i18n="pages">الصفحات</span></a>
+    <a href="#" onclick="showSection('merchants');return false;" id="nav-merchants" class="hidden" style="border-right:3px solid transparent"><span class="icon">🏪</span><span data-i18n="merchants">إدارة المتاجر</span></a>
   </nav>
   <div class="sidebar-footer"><span id="adminUserLabel">Admin</span> · <a href="#" onclick="doLogout()" style="color:var(--accent);text-decoration:none" data-i18n="logout">خروج</a></div>
 </div>
@@ -676,6 +703,29 @@
           <div class="form-group"><label>Facebook CAPI</label><select id="set_capi_enabled"><option value="true">مفعّل</option><option value="false">معطّل</option></select></div>
           <div class="form-group"><label>Facebook CAPI Token</label><input id="set_fb_capi_token" type="password" placeholder="EAAb... (اتركه فارغاً للحفاظ على الحالي)"></div>
           <div class="form-group"><label>Meta Ad Account ID (لمزامنة الإنفاق)</label><input id="set_fb_ad_account_id" placeholder="act_1234567890 أو 1234567890"></div>
+          <div class="form-group" style="grid-column:1/-1;background:var(--surface,#fff);padding:14px;border-radius:8px;border:1px solid var(--border,#e2e8f0);box-shadow:0 1px 3px rgba(0,0,0,0.03)">
+            <label style="font-weight:700;font-size:0.92rem;margin-bottom:8px;display:block;color:var(--text,#1e293b)">🚚 ربط شركة الشحن Anderson (EcoTrack)</label>
+            <small style="display:block;color:var(--text3,#64748b);font-size:0.75rem;margin-bottom:12px">
+              إعدادات الاتصال بمنصة شركة التوصيل Anderson لإرسال الطلبات وتوليد بوليصات وأرقام التتبع آلياً.
+            </small>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:12px">
+              <div class="form-group" style="margin-bottom:0">
+                <label>Anderson Delivery (حالة التفعيل)</label>
+                <select id="set_anderson_active">
+                  <option value="false">معطّل</option>
+                  <option value="true">مفعّل</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>رابط منصة Anderson</label>
+                <input id="set_anderson_base_url" type="url" placeholder="https://anderson-ecommerce.ecotrack.dz">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>رمز API الخاص بـ Anderson</label>
+                <input id="set_anderson_token" type="password" placeholder="اتركه فارغاً للحفاظ على الرمز الحالي">
+              </div>
+            </div>
+          </div>
           <div class="form-group"><label>سعر تحويل الدولار (1 USD = X DZD)</label><input id="set_usd_to_dzd_rate" type="number" value="230" placeholder="230"></div>
           <div class="form-group"><label>AI System Prompt (Custom instructions)</label><textarea id="set_ai_prompt" rows="5" placeholder="Leave empty for default (honest + transparent)">You are Smart Assistant for Smart Shopping Algeria. Help customers with product search, prices, shipping, returns, payment, order tracking. Reply in Arabic or Darja as the customer prefers. Be friendly and professional. If asked about a product defect, mention it honestly without exaggeration. If a product is not suitable, tell them honestly instead of pushing them to buy. If you are not sure, say you are not sure and give WhatsApp 0557543177. Do not exaggerate or make up information.</textarea></div>
         </div>
@@ -842,6 +892,99 @@
       </div>
     </div>
     <button class="btn btn-accent" onclick="savePages()" style="margin-top:8px">حفظ الصفحات</button>
+  </div>
+
+  <!-- Platform Merchants (Super Admin Only) -->
+  <div id="sec-merchants" class="hidden">
+    <div class="top-bar">
+      <h1>
+        <span>🏪</span> <span>إدارة المتاجر والتجار (Platform Merchants)</span>
+        <span class="count-badge" id="super-merchants-count-badge"></span>
+      </h1>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-outline btn-sm" id="btnRefreshMerchants" onclick="loadSuperMerchants()">
+          <span>🔄</span> <span>تحديث القائمة</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Super Admin KPI Stats -->
+    <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:20px">
+      <div class="stat-card">
+        <div class="stat-icon">🏪</div>
+        <div class="label">إجمالي المتاجر</div>
+        <div class="value" id="super-stat-total">0</div>
+      </div>
+      <div class="stat-card" style="border-right:3px solid #f59e0b">
+        <div class="stat-icon">⏳</div>
+        <div class="label">بانتظار الاعتماد</div>
+        <div class="value" id="super-stat-pending" style="color:#f59e0b">0</div>
+      </div>
+      <div class="stat-card" style="border-right:3px solid #10b981">
+        <div class="stat-icon">✅</div>
+        <div class="label">المتاجر النشطة</div>
+        <div class="value" id="super-stat-active" style="color:#10b981">0</div>
+      </div>
+      <div class="stat-card" style="border-right:3px solid #ef4444">
+        <div class="stat-icon">🚫</div>
+        <div class="label">مرفوضة / معلقة</div>
+        <div class="value" id="super-stat-other" style="color:#ef4444">0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <!-- Filter Tabs -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center" id="merchantFilterTabs">
+          <button type="button" class="filter-pill active" onclick="setMerchantFilter('all', this)">
+            <span>الكل</span> (<span id="pill-count-all">0</span>)
+          </button>
+          <button type="button" class="filter-pill" onclick="setMerchantFilter('pending', this)" style="border-color:#f59e0b;color:#d97706">
+            <span>⏳ قيد المراجعة</span> (<span id="pill-count-pending">0</span>)
+          </button>
+          <button type="button" class="filter-pill" onclick="setMerchantFilter('active', this)" style="border-color:#10b981;color:#059669">
+            <span>✅ نشط</span> (<span id="pill-count-active">0</span>)
+          </button>
+          <button type="button" class="filter-pill" onclick="setMerchantFilter('rejected', this)" style="border-color:#ef4444;color:#dc2626">
+            <span>❌ مرفوض</span> (<span id="pill-count-rejected">0</span>)
+          </button>
+          <button type="button" class="filter-pill" onclick="setMerchantFilter('suspended', this)">
+            <span>⏸️ معلق</span> (<span id="pill-count-suspended">0</span>)
+          </button>
+        </div>
+
+        <!-- Search Box -->
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="text" id="merchantSearchInput" placeholder="🔍 بحث باسم المتجر، الرابط، أو البريد..." oninput="onMerchantSearchInput()" style="padding:7px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);font-size:0.85rem;min-width:260px">
+        </div>
+      </div>
+
+      <div class="panel-body" style="padding:0">
+        <div class="table-wrap" style="max-height:600px;border:none;margin:0">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="min-width:180px">المتجر والرابط</th>
+                <th style="min-width:180px">المالك (Owner)</th>
+                <th style="width:100px">الخطة</th>
+                <th style="min-width:130px">المنتجات / الطلبات</th>
+                <th style="min-width:110px">تاريخ التسجيل</th>
+                <th style="width:120px">الحالة</th>
+                <th style="min-width:160px;text-align:center">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="super-merchants-list">
+              <tr>
+                <td colspan="7" style="text-align:center;padding:32px;color:var(--text2)">
+                  <div class="spinner" style="margin:0 auto 12px"></div>
+                  جاري تحميل قائمة المتاجر...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1308,6 +1451,101 @@
 </div>
 </div>
 
+<!-- Super Admin Reject Merchant Modal -->
+<div class="modal-overlay" id="superRejectModal" style="display:none;z-index:99999;backdrop-filter:blur(3px);background:rgba(0,0,0,0.65)">
+<div class="modal" style="max-width:460px;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5)">
+  <div class="modal-header" style="background:var(--card);border-bottom:1px solid var(--border)">
+    <h3 style="display:flex;align-items:center;gap:8px;margin:0;font-size:16px;color:var(--danger)">
+      <span>🚫</span>
+      <span>رفض طلب تسجيل المتجر</span>
+    </h3>
+    <button class="modal-close" onclick="closeSuperRejectModal()">✕</button>
+  </div>
+  <div class="modal-body" style="padding:20px">
+    <p style="font-size:13px;color:var(--text2);margin:0 0 14px;line-height:1.6">
+      أنت على وشك رفض طلب المتجر: <strong id="rejectModalStoreName" style="color:var(--text)"></strong>.
+      <br>سيتم وضع علامة "مرفوض" على المتجر وتسجيل العملية في سجل التدقيق الأمني (Audit Log).
+    </p>
+    <input type="hidden" id="rejectModalTenantId">
+    <div class="form-group full" style="margin-bottom:16px">
+      <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;display:block">سبب الرفض (اختياري / يُسجل في Audit Log):</label>
+      <textarea id="rejectModalReason" rows="3" placeholder="مثال: بيانات المتجر غير مكتملة، أو انتهاك شروط الاستخدام..." style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <button type="button" class="btn btn-outline" onclick="closeSuperRejectModal()" style="font-size:13px">إلغاء</button>
+      <button type="button" class="btn btn-danger" id="btnConfirmSuperReject" onclick="confirmSuperRejectAction()" style="font-size:13px">تأكيد رفض المتجر</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Super Admin Manage Tenant Services Modal (Phase 35.5) -->
+<div class="modal-overlay" id="superServicesModal" style="display:none;z-index:99999;backdrop-filter:blur(3px);background:rgba(0,0,0,0.65)">
+<div class="modal" style="max-width:820px;width:95%;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5)">
+  <div class="modal-header" style="background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:16px 20px">
+    <h3 style="display:flex;align-items:center;gap:8px;margin:0;font-size:16px;color:var(--text)">
+      <span>⚙️</span>
+      <span>إدارة الخدمات والتكاملات:</span>
+      <span id="superServicesModalStoreName" style="color:var(--accent);font-weight:800"></span>
+    </h3>
+    <button class="modal-close" onclick="closeSuperServicesModal()">✕</button>
+  </div>
+  <div class="modal-body" style="padding:20px;max-height:80vh;overflow-y:auto">
+    <!-- Tenant Info Banner -->
+    <div id="superServicesTenantInfo" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg);padding:10px 14px;border-radius:8px;border:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap">
+      <div>
+        <span style="font-size:0.8rem;color:var(--text3)">معرف المتجر (Tenant ID): </span>
+        <code id="superServicesModalTenantId" style="font-size:0.82rem;font-weight:700;color:var(--text)"></code>
+      </div>
+      <div id="superServicesMasterNotice" style="display:none">
+        <span class="badge" style="background:#312e81;color:#c7d2fe;font-size:0.75rem;padding:4px 10px;border-radius:6px;font-weight:700">🔒 المتجر الرئيسي — يعمل بوضع (Own) فقط</span>
+      </div>
+    </div>
+
+    <!-- Explanation Box -->
+    <div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.25);border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:0.8rem;line-height:1.6;color:var(--text)">
+      <div style="font-weight:700;color:#2563eb;margin-bottom:4px">ℹ️ أوضاع تشغيل الخدمات الخارجية (Managed Services Governance):</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:8px">
+        <div><strong style="color:#16a34a">● خاص بالمتجر (Own):</strong> يعتمد على مفاتيح وتكوينات التاجر الخاصة به.</div>
+        <div><strong style="color:#2563eb">● مُدار من المنصة (Managed):</strong> يستفيد من اشتراك وبيانات حساب المنصة الرئيسي دون الحاجة لحساب منفصل.</div>
+        <div><strong style="color:#dc2626">● معطل (Disabled):</strong> تتوقف الخدمة تماماً عن العمل لهذا المتجر.</div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="superServicesLoading" style="text-align:center;padding:36px 16px">
+      <div class="spinner" style="margin:0 auto 12px"></div>
+      <div style="font-size:0.85rem;color:var(--text2)">جاري تحميل قائمة الخدمات وحالاتها...</div>
+    </div>
+
+    <!-- Error State -->
+    <div id="superServicesError" style="display:none;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;padding:14px;border-radius:8px;font-size:0.85rem;text-align:center;margin-bottom:16px"></div>
+
+    <!-- Services Table Container -->
+    <div id="superServicesTableContainer" style="display:none">
+      <div style="overflow-x:auto">
+        <table class="table" style="width:100%;border-collapse:collapse;font-size:0.84rem">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border);background:var(--bg);text-align:right">
+              <th style="padding:10px 12px">الخدمة</th>
+              <th style="padding:10px 12px;text-align:center">الوضع الحالي</th>
+              <th style="padding:10px 12px;text-align:center">اكتمال الإعدادات</th>
+              <th style="padding:10px 12px;text-align:center">تغيير الوضع</th>
+              <th style="padding:10px 12px;text-align:center">آخر تحديث</th>
+            </tr>
+          </thead>
+          <tbody id="superServicesListBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer" style="background:var(--card);border-top:1px solid var(--border);padding:12px 20px;display:flex;justify-content:flex-end">
+    <button type="button" class="btn btn-outline" onclick="closeSuperServicesModal()" style="font-size:0.85rem">إغلاق</button>
+  </div>
+</div>
+</div>
+
+
 <!-- UTM Campaign Link Builder Modal -->
 <div class="modal-overlay" id="analyticsUtmModal" style="display:none">
 <div class="modal" style="max-width:540px">
@@ -1665,6 +1903,7 @@ var ADMIN_I18N = {
     themes: 'الثيمات',
     newsletter: 'النشرة البريدية',
     pages: 'الصفحات',
+    merchants: 'إدارة المتاجر',
     logout: 'خروج',
     admin_panel: 'لوحة التحكم',
 
@@ -1757,6 +1996,7 @@ var ADMIN_I18N = {
     themes: 'Themes',
     newsletter: 'Newsletter',
     pages: 'Pages',
+    merchants: 'Merchants',
     logout: 'Logout',
     admin_panel: 'Admin Panel',
 
@@ -1885,7 +2125,11 @@ function toggleAdminLang() {
 
 // ===== NAV =====
 function showSection(name) {
-  ['dashboard','analytics','products','orders','shipping','notifications','settings','coupons','testimonials','reviews','banners','themes','newsletter','pages'].forEach(function(s) {
+  if (name === 'merchants' && !isSuperAdminUser()) {
+    toast('غير مصرح: قسم إدارة المتاجر مخصص للمالك الرئيسي (Super Admin) فقط');
+    name = 'dashboard';
+  }
+  ['dashboard','analytics','products','orders','shipping','notifications','settings','coupons','testimonials','reviews','banners','themes','newsletter','pages','merchants'].forEach(function(s) {
     var sec = document.getElementById('sec-' + s);
     if (sec) sec.classList.toggle('hidden', s !== name);
     var nav = document.getElementById('nav-' + s);
@@ -1905,6 +2149,7 @@ function showSection(name) {
   if (name === 'themes') loadThemesSection();
   if (name === 'newsletter') loadNewsletter();
   if (name === 'pages') loadPages();
+  if (name === 'merchants') loadSuperMerchants();
 }
 
 function loadThemesSection() {
@@ -1943,6 +2188,518 @@ function playNotification() {
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
     osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
   } catch(e) {}
+}
+
+// ===== SUPER ADMIN MERCHANT MANAGEMENT (Phase 31) =====
+var allSuperMerchants = [];
+var currentMerchantFilter = 'all';
+var isMerchantActionInProgress = false;
+
+function isSuperAdminUser() {
+  try {
+    var auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
+    if (!auth || !auth.time) return false;
+    if (auth.hash) return true;
+    var role = String(auth.role || '').toUpperCase();
+    if (role === 'SUPER_ADMIN') return true;
+    var tenantId = (auth.tenant && auth.tenant.id) ? auth.tenant.id : '';
+    var tenantSlug = (auth.tenant && auth.tenant.slug) ? auth.tenant.slug : '';
+    if ((tenantId === 'tenant_master_default' || tenantSlug === 'main') && role === 'OWNER') {
+      return true;
+    }
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
+
+function loadSuperMerchants() {
+  if (!isSuperAdminUser()) {
+    toast('غير مصرح: هذا القسم مخصص للمالك الرئيسي (Super Admin) فقط');
+    showSection('dashboard');
+    return;
+  }
+
+  var tbody = document.getElementById('super-merchants-list');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:36px;color:var(--text2)"><div class="spinner" style="margin:0 auto 12px"></div>جاري تحميل قائمة المتاجر والتجار...</td></tr>';
+  }
+
+  var refreshBtn = document.getElementById('btnRefreshMerchants');
+  if (refreshBtn) {
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = '<span>⏳</span> <span>جاري التحديث...</span>';
+  }
+
+  apiPost('admin_super_list_tenants', {}, function(res) {
+    if (refreshBtn) {
+      refreshBtn.disabled = false;
+      refreshBtn.innerHTML = '<span>🔄</span> <span>تحديث القائمة</span>';
+    }
+
+    if (!res || !res.ok) {
+      var errMsg = (res && res.error) ? (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error) : 'تعذر تحميل قائمة التجار';
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:36px;color:var(--danger)">⚠️ ' + esc(errMsg) + '</td></tr>';
+      }
+      return;
+    }
+
+    allSuperMerchants = Array.isArray(res.tenants) ? res.tenants : [];
+    updateSuperMerchantStats();
+    renderSuperMerchantsTable();
+  });
+}
+
+function updateSuperMerchantStats() {
+  var total = allSuperMerchants.length;
+  var pending = 0, active = 0, rejected = 0, suspended = 0;
+  allSuperMerchants.forEach(function(m) {
+    var s = (m.status || '').toLowerCase();
+    if (s === 'pending') pending++;
+    else if (s === 'active') active++;
+    else if (s === 'rejected') rejected++;
+    else if (s === 'suspended') suspended++;
+  });
+
+  var totalEl = document.getElementById('super-stat-total');
+  var pendEl = document.getElementById('super-stat-pending');
+  var actEl = document.getElementById('super-stat-active');
+  var otherEl = document.getElementById('super-stat-other');
+  var badgeEl = document.getElementById('super-merchants-count-badge');
+
+  if (totalEl) totalEl.textContent = total;
+  if (pendEl) pendEl.textContent = pending;
+  if (actEl) actEl.textContent = active;
+  if (otherEl) otherEl.textContent = (rejected + suspended);
+  if (badgeEl) badgeEl.textContent = '(' + total + ')';
+
+  var pillAll = document.getElementById('pill-count-all');
+  var pillPend = document.getElementById('pill-count-pending');
+  var pillAct = document.getElementById('pill-count-active');
+  var pillRej = document.getElementById('pill-count-rejected');
+  var pillSusp = document.getElementById('pill-count-suspended');
+  if (pillAll) pillAll.textContent = total;
+  if (pillPend) pillPend.textContent = pending;
+  if (pillAct) pillAct.textContent = active;
+  if (pillRej) pillRej.textContent = rejected;
+  if (pillSusp) pillSusp.textContent = suspended;
+}
+
+function setMerchantFilter(filter, btn) {
+  currentMerchantFilter = filter;
+  var container = document.getElementById('merchantFilterTabs');
+  if (container) {
+    var pills = container.querySelectorAll('.filter-pill');
+    pills.forEach(function(p) { p.classList.remove('active'); });
+  }
+  if (btn) btn.classList.add('active');
+  renderSuperMerchantsTable();
+}
+
+function onMerchantSearchInput() {
+  renderSuperMerchantsTable();
+}
+
+function renderSuperMerchantsTable() {
+  var tbody = document.getElementById('super-merchants-list');
+  if (!tbody) return;
+
+  var searchEl = document.getElementById('merchantSearchInput');
+  var searchVal = (searchEl && searchEl.value) ? searchEl.value.trim().toLowerCase() : '';
+
+  var filtered = allSuperMerchants.filter(function(m) {
+    var status = (m.status || '').toLowerCase();
+    if (currentMerchantFilter !== 'all' && status !== currentMerchantFilter) {
+      return false;
+    }
+    if (searchVal) {
+      var name = (m.store_name || '').toLowerCase();
+      var slug = (m.slug || '').toLowerCase();
+      var domain = (m.domain || '').toLowerCase();
+      var ownerEmail = (m.owner && m.owner.email) ? m.owner.email.toLowerCase() : '';
+      var ownerName = (m.owner && m.owner.name) ? m.owner.name.toLowerCase() : '';
+      var tid = (m.tenant_id || '').toLowerCase();
+      if (!name.includes(searchVal) && !slug.includes(searchVal) && !domain.includes(searchVal) && !ownerEmail.includes(searchVal) && !ownerName.includes(searchVal) && !tid.includes(searchVal)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px 16px;color:var(--text2)"><div style="font-size:2rem;margin-bottom:8px">🔍</div><div style="font-weight:700;color:var(--text);margin-bottom:4px">لا توجد متاجر تطابق الفلتر أو البحث</div><div style="font-size:0.8rem;color:var(--text3)">جرب تغيير حالة الفلتر أو مسح نص البحث</div></td></tr>';
+    return;
+  }
+
+  var html = '';
+  filtered.forEach(function(m) {
+    var isMaster = (m.tenant_id === 'tenant_master_default');
+    var st = (m.status || 'pending').toLowerCase();
+    var statusBadge = '';
+    if (st === 'active') {
+      statusBadge = '<span class="status-badge" style="background:#dcfce7;color:#15803d;border:1px solid #86efac;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">✅ نشط (Active)</span>';
+    } else if (st === 'pending') {
+      statusBadge = '<span class="status-badge" style="background:#fef3c7;color:#b45309;border:1px solid #fcd34d;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">⏳ قيد المراجعة (Pending)</span>';
+    } else if (st === 'rejected') {
+      statusBadge = '<span class="status-badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">❌ مرفوض (Rejected)</span>';
+    } else if (st === 'suspended') {
+      statusBadge = '<span class="status-badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">⏸️ معلق (Suspended)</span>';
+    } else {
+      statusBadge = '<span class="status-badge">' + esc(st) + '</span>';
+    }
+
+    var planBadge = '<span class="badge" style="font-size:0.72rem;text-transform:capitalize;padding:3px 8px;border-radius:4px;border:1px solid var(--border)">' + esc(m.plan || 'free') + '</span>';
+    var createdStr = m.created_at ? new Date(m.created_at).toLocaleDateString('ar-DZ', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+    var productsCount = (m.metrics && m.metrics.products_count !== undefined) ? m.metrics.products_count : 0;
+    var ordersCount = (m.metrics && m.metrics.orders_count !== undefined) ? m.metrics.orders_count : 0;
+    var ownerEmail = (m.owner && m.owner.email) ? m.owner.email : '—';
+    var ownerName = (m.owner && m.owner.name) ? m.owner.name : '';
+    var isOwnerVerified = m.owner && m.owner.email_verified;
+
+    var actionsHtml = '';
+    var servicesBtn = '<button type="button" class="btn btn-sm btn-outline" style="padding:4px 10px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px" onclick="openSuperServicesModal(\'' + esc(m.tenant_id) + '\', \'' + esc(m.store_name || m.tenant_id) + '\')" title="إدارة الخدمات والتكاملات">' +
+      '<span>⚙️</span><span>الخدمات</span>' +
+    '</button>';
+
+    if (isMaster) {
+      actionsHtml = '<div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">' +
+        '<span class="badge" style="background:#312e81;color:#c7d2fe;font-size:0.72rem;padding:4px 10px;border-radius:6px;font-weight:700" title="المتجر الرئيسي محمي ولا يمكن تعديل حالته">🔒 المتجر الرئيسي</span>' +
+        servicesBtn +
+      '</div>';
+    } else if (st === 'pending') {
+      actionsHtml = '<div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">' +
+        '<button type="button" class="btn btn-sm btn-success" style="padding:4px 12px;font-size:0.78rem;font-weight:700" onclick="superApproveMerchantAction(\'' + esc(m.tenant_id) + '\', \'' + esc(m.store_name || m.tenant_id) + '\', this)">' +
+          '✓ قبول' +
+        '</button>' +
+        '<button type="button" class="btn btn-sm btn-danger" style="padding:4px 12px;font-size:0.78rem;font-weight:700" onclick="openSuperRejectModal(\'' + esc(m.tenant_id) + '\', \'' + esc(m.store_name || m.tenant_id) + '\')">' +
+          '✕ رفض' +
+        '</button>' +
+        servicesBtn +
+      '</div>';
+    } else if (st === 'rejected') {
+      actionsHtml = '<div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">' +
+        '<span style="font-size:0.75rem;color:var(--danger);font-weight:600">طلب مرفوض</span>' +
+        servicesBtn +
+      '</div>';
+    } else {
+      actionsHtml = '<div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">' +
+        servicesBtn +
+      '</div>';
+    }
+
+    html += '<tr>' +
+      '<td>' +
+        '<div style="font-weight:700;color:var(--text);font-size:0.9rem">' + esc(m.store_name || 'بدون اسم') + (isMaster ? ' <span style="font-size:0.68rem;background:#4338ca;color:#fff;padding:1px 6px;border-radius:4px;vertical-align:middle">Master</span>' : '') + '</div>' +
+        '<div style="font-size:0.72rem;color:var(--text3);font-family:monospace;margin-top:2px">ID: ' + esc(m.tenant_id) + '</div>' +
+        '<div style="font-size:0.75rem;color:var(--accent);margin-top:2px">' +
+          (m.slug ? 'slug: <code>' + esc(m.slug) + '</code>' : '') +
+          (m.domain && m.domain !== 'NOT_CONFIGURED' ? ' · ' + esc(m.domain) : '') +
+        '</div>' +
+      '</td>' +
+      '<td>' +
+        '<div style="font-size:0.85rem;font-weight:600">' + esc(ownerName || ownerEmail) + '</div>' +
+        (ownerName && ownerEmail ? '<div style="font-size:0.75rem;color:var(--text2)">' + esc(ownerEmail) + '</div>' : '') +
+        (isOwnerVerified ? '<span style="font-size:0.68rem;color:#16a34a">✓ بريد مفعّل</span>' : '<span style="font-size:0.68rem;color:#d97706">⚠️ بريد غير مؤكد</span>') +
+      '</td>' +
+      '<td>' + planBadge + '</td>' +
+      '<td>' +
+        '<div style="font-size:0.82rem">📦 ' + productsCount + ' منتج</div>' +
+        '<div style="font-size:0.82rem;color:var(--text2)">🛒 ' + ordersCount + ' طلب</div>' +
+      '</td>' +
+      '<td><span style="font-size:0.78rem;color:var(--text2)">' + esc(createdStr) + '</span></td>' +
+      '<td>' + statusBadge + '</td>' +
+      '<td style="text-align:center">' + actionsHtml + '</td>' +
+    '</tr>';
+  });
+
+  tbody.innerHTML = html;
+}
+
+function superApproveMerchantAction(tenantId, storeName, btnEl) {
+  if (isMerchantActionInProgress) return;
+  if (!confirm('هل أنت متأكد من اعتماد وتفعيل متجر "' + storeName + '"؟\n\nسيتم تحويل حالة المتجر والمستخدم المالك فوراً إلى (Active) والسماح للتاجر بالدخول للوحة التحكم.')) {
+    return;
+  }
+
+  isMerchantActionInProgress = true;
+  var originalText = btnEl ? btnEl.innerHTML : '';
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = 'جاري التفعيل...';
+  }
+
+  apiPost('admin_super_approve_merchant', { target_tenant_id: tenantId }, function(res) {
+    isMerchantActionInProgress = false;
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = originalText;
+    }
+    if (!res || !res.ok) {
+      var errMsg = (res && res.error) ? (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error) : 'فشل اعتماد المتجر';
+      toast('⚠️ خطأ: ' + errMsg);
+      return;
+    }
+    toast('✅ تم اعتماد متجر "' + storeName + '" وتفعيله بنجاح');
+    loadSuperMerchants();
+  });
+}
+
+function openSuperRejectModal(tenantId, storeName) {
+  var modal = document.getElementById('superRejectModal');
+  if (!modal) return;
+  var tidInput = document.getElementById('rejectModalTenantId');
+  var nameEl = document.getElementById('rejectModalStoreName');
+  var reasonInput = document.getElementById('rejectModalReason');
+  if (tidInput) tidInput.value = tenantId;
+  if (nameEl) nameEl.textContent = storeName;
+  if (reasonInput) reasonInput.value = '';
+  modal.style.display = 'flex';
+  if (reasonInput) setTimeout(function() { try { reasonInput.focus(); } catch(_) {} }, 100);
+}
+
+function closeSuperRejectModal() {
+  var modal = document.getElementById('superRejectModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function confirmSuperRejectAction() {
+  if (isMerchantActionInProgress) return;
+  var tidInput = document.getElementById('rejectModalTenantId');
+  var nameEl = document.getElementById('rejectModalStoreName');
+  var reasonInput = document.getElementById('rejectModalReason');
+  var tenantId = (tidInput && tidInput.value) ? tidInput.value.trim() : '';
+  var storeName = (nameEl && nameEl.textContent) ? nameEl.textContent : '';
+  var reason = (reasonInput && reasonInput.value) ? reasonInput.value.trim() : '';
+  var btn = document.getElementById('btnConfirmSuperReject');
+
+  if (!tenantId) return;
+
+  isMerchantActionInProgress = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'جاري الرفض...';
+  }
+
+  apiPost('admin_super_reject_merchant', { target_tenant_id: tenantId, reason: reason }, function(res) {
+    isMerchantActionInProgress = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = 'تأكيد رفض المتجر';
+    }
+    if (!res || !res.ok) {
+      var errMsg = (res && res.error) ? (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error) : 'فشل رفض المتجر';
+      toast('⚠️ خطأ: ' + errMsg);
+      return;
+    }
+    closeSuperRejectModal();
+    toast('🚫 تم رفض متجر "' + storeName + '" بنجاح');
+    loadSuperMerchants();
+  });
+}
+
+// ===== SUPER ADMIN SERVICES MANAGEMENT (Phase 35.5) =====
+var currentSuperServicesTenantId = null;
+var isSuperServiceUpdating = false;
+
+function openSuperServicesModal(tenantId, storeName) {
+  if (!isSuperAdminUser()) {
+    toast('غير مصرح: إدارة الخدمات مخصصة للمالك الرئيسي (Super Admin) فقط');
+    return;
+  }
+
+  currentSuperServicesTenantId = tenantId;
+  var modal = document.getElementById('superServicesModal');
+  if (!modal) return;
+
+  var nameEl = document.getElementById('superServicesModalStoreName');
+  var tidEl = document.getElementById('superServicesModalTenantId');
+  if (nameEl) nameEl.textContent = storeName || tenantId;
+  if (tidEl) tidEl.textContent = tenantId;
+
+  var masterNotice = document.getElementById('superServicesMasterNotice');
+  if (masterNotice) {
+    masterNotice.style.display = (tenantId === 'tenant_master_default') ? 'block' : 'none';
+  }
+
+  modal.style.display = 'flex';
+  loadTenantServices(tenantId);
+}
+
+function closeSuperServicesModal() {
+  var modal = document.getElementById('superServicesModal');
+  if (modal) modal.style.display = 'none';
+  currentSuperServicesTenantId = null;
+}
+
+function loadTenantServices(tenantId) {
+  var loadingEl = document.getElementById('superServicesLoading');
+  var errorEl = document.getElementById('superServicesError');
+  var tableContainer = document.getElementById('superServicesTableContainer');
+  var tbody = document.getElementById('superServicesListBody');
+
+  if (loadingEl) loadingEl.style.display = 'block';
+  if (errorEl) errorEl.style.display = 'none';
+  if (tableContainer) tableContainer.style.display = 'none';
+  if (tbody) tbody.innerHTML = '';
+
+  apiPost('admin_super_list_tenant_services', { target_tenant_id: tenantId }, function(res) {
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    if (!res || !res.ok) {
+      var errMsg = (res && res.error) ? (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error) : 'تعذر تحميل إعدادات الخدمات';
+      if (errorEl) {
+        errorEl.textContent = '⚠️ ' + errMsg;
+        errorEl.style.display = 'block';
+      }
+      return;
+    }
+
+    if (tableContainer) tableContainer.style.display = 'block';
+    renderTenantServicesList(tenantId, res.services || []);
+  });
+}
+
+function renderTenantServicesList(tenantId, services) {
+  var tbody = document.getElementById('superServicesListBody');
+  if (!tbody) return;
+
+  var isMaster = (tenantId === 'tenant_master_default');
+
+  var serviceIcons = {
+    'anderson': '🚚',
+    'meta_capi': '📊',
+    'meta_pixel': '🎯',
+    'whatsapp': '💬',
+    'analytics': '📈'
+  };
+
+  var serviceNamesAr = {
+    'anderson': 'أندرسون / إيكوتراك (الشحن والتوصيل)',
+    'meta_capi': 'Meta Conversions API (CAPI)',
+    'meta_pixel': 'Meta Pixel (تتبع المتصفح)',
+    'whatsapp': 'WhatsApp Business (إشعارات واتساب)',
+    'analytics': 'Google Analytics / التحليلات'
+  };
+
+  var html = '';
+  (services || []).forEach(function(s) {
+    var key = s.service_key;
+    var icon = serviceIcons[key] || '⚙️';
+    var displayName = serviceNamesAr[key] || s.name || key;
+    var mode = (s.mode || 'own').toLowerCase();
+    var supportsManaged = !!s.supportsManaged;
+    var configured = !!s.configured;
+    var updatedAt = s.updated_at ? new Date(s.updated_at).toLocaleString('ar-DZ', { dateStyle: 'short', timeStyle: 'short' }) : 'إعداد افتراضي';
+
+    // Current Mode Badge
+    var modeBadge = '';
+    if (mode === 'managed') {
+      modeBadge = '<span class="badge" style="background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">مُدار (Managed)</span>';
+    } else if (mode === 'disabled') {
+      modeBadge = '<span class="badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">معطل (Disabled)</span>';
+    } else {
+      modeBadge = '<span class="badge" style="background:#dcfce7;color:#15803d;border:1px solid #86efac;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">خاص (Own)</span>';
+    }
+
+    // Configured Status Badge
+    var configBadge = '';
+    if (mode === 'disabled') {
+      configBadge = '<span class="badge" style="background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;font-size:0.72rem;padding:2px 6px;border-radius:4px">متوقفة</span>';
+    } else if (configured) {
+      configBadge = '<span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:0.72rem;padding:2px 6px;border-radius:4px">✅ جاهزة ومكتملة</span>';
+    } else {
+      configBadge = '<span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-size:0.72rem;padding:2px 6px;border-radius:4px">⚠️ غير مهيأة</span>';
+    }
+
+    // Explanation Note
+    var modeNote = '';
+    if (mode === 'managed') {
+      modeNote = '<div style="font-size:0.72rem;color:#2563eb;margin-top:2px">يستخدم حساب وبيانات المنصة الرئيسية (Master)</div>';
+    } else if (mode === 'disabled') {
+      modeNote = '<div style="font-size:0.72rem;color:#dc2626;margin-top:2px">الخدمة محجوبة ومعطلة لهذا المتجر</div>';
+    } else {
+      modeNote = '<div style="font-size:0.72rem;color:#16a34a;margin-top:2px">يستخدم بيانات اعتماد وإعدادات المتجر المستقل</div>';
+    }
+
+    // Selector options
+    var optionsHtml = '<option value="own"' + (mode === 'own' ? ' selected' : '') + '>خاص بالمتجر (Own)</option>';
+    if (supportsManaged) {
+      optionsHtml += '<option value="managed"' + (mode === 'managed' ? ' selected' : '') + '>مُدار من المنصة (Managed)</option>';
+    } else {
+      optionsHtml += '<option value="managed" disabled title="هذه الخدمة لا تدعم الوضع المُدار">مُدار (غير مدعوم)</option>';
+    }
+    optionsHtml += '<option value="disabled"' + (mode === 'disabled' ? ' selected' : '') + '>معطل (Disabled)</option>';
+
+    var selectDisabled = (isMaster || isSuperServiceUpdating) ? 'disabled' : '';
+    var selectTitle = isMaster ? 'المتجر الرئيسي محمي ولا يمكن تغيير وضعه' : 'اختر الوضع المطلوب';
+
+    html += '<tr style="border-bottom:1px solid var(--border)">' +
+      '<td style="padding:12px 10px">' +
+        '<div style="font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">' +
+          '<span style="font-size:1.1rem">' + icon + '</span>' +
+          '<span>' + esc(displayName) + '</span>' +
+        '</div>' +
+        '<div style="font-size:0.72rem;color:var(--text3);font-family:monospace;margin-top:2px">' + esc(key) + '</div>' +
+        modeNote +
+      '</td>' +
+      '<td style="padding:12px 10px;text-align:center">' + modeBadge + '</td>' +
+      '<td style="padding:12px 10px;text-align:center">' + configBadge + '</td>' +
+      '<td style="padding:12px 10px;text-align:center">' +
+        '<select class="form-control" style="font-size:0.8rem;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer" ' +
+          selectDisabled + ' title="' + selectTitle + '" ' +
+          'onchange="updateTenantServiceMode(\'' + esc(tenantId) + '\', \'' + esc(key) + '\', this.value, this)">' +
+          optionsHtml +
+        '</select>' +
+      '</td>' +
+      '<td style="padding:12px 10px;text-align:center;font-size:0.75rem;color:var(--text2)">' + esc(updatedAt) + '</td>' +
+    '</tr>';
+  });
+
+  tbody.innerHTML = html;
+}
+
+function updateTenantServiceMode(tenantId, serviceKey, newMode, selectEl) {
+  if (isSuperServiceUpdating) return;
+
+  if (tenantId === 'tenant_master_default') {
+    toast('⚠️ تنبيه: لا يمكن تغيير وضع المتجر الرئيسي (محمي دائماً بوضع Own)');
+    loadTenantServices(tenantId);
+    return;
+  }
+
+  var modeLabels = {
+    'own': 'خاص بالمتجر (Own)',
+    'managed': 'مُدار من المنصة (Managed)',
+    'disabled': 'معطل (Disabled)'
+  };
+  var modeLabel = modeLabels[newMode] || newMode;
+
+  if (!confirm('هل أنت متأكد من تحويل خدمة "' + serviceKey + '" لهذا المتجر إلى: ' + modeLabel + '؟')) {
+    loadTenantServices(tenantId);
+    return;
+  }
+
+  isSuperServiceUpdating = true;
+  if (selectEl) selectEl.disabled = true;
+
+  apiPost('admin_super_update_tenant_service', {
+    target_tenant_id: tenantId,
+    service_key: serviceKey,
+    mode: newMode
+  }, function(res) {
+    isSuperServiceUpdating = false;
+
+    if (!res || !res.ok) {
+      var errMsg = (res && res.error) ? (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error) : 'فشل تحديث وضع الخدمة';
+      toast('⚠️ خطأ: ' + errMsg);
+      loadTenantServices(tenantId);
+      return;
+    }
+
+    toast('✅ تم تحديث وضع خدمة (' + serviceKey + ') إلى (' + modeLabel + ') بنجاح');
+    loadTenantServices(tenantId);
+  });
 }
 
 // ===== COUPONS =====
@@ -3369,6 +4126,9 @@ function viewOrder(orderId) {
         '<label style="font-size:.78rem">شركة التوصيل:</label><input id="o_ship_company" style="width:110px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);" value="' + esc(o.delivery_company || 'yalidine') + '">' +
         '<label style="font-size:.78rem">رقم التتبع:</label><input id="o_ship_tracking" style="width:140px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);" value="' + esc(o.tracking_code || '') + '">' +
         '<button class="btn btn-accent btn-xs" onclick="saveOrderShipping(\'' + esc(o.order_id) + '\')">💾 حفظ الشحن</button>' +
+        (o.tracking_code && String(o.tracking_code).trim() !== ''
+          ? '<button type="button" class="btn btn-xs" disabled style="opacity:0.65;cursor:not-allowed;background:var(--border);color:var(--text3);" title="تم إرسال الطلب لشركة الشحن مسبقاً">✅ تم الإرسال (Anderson)</button>'
+          : '<button type="button" id="btn_dispatch_anderson" class="btn btn-info btn-xs" style="background:#2563eb;color:#fff;font-weight:700" onclick="dispatchOrderToCourier(\'' + esc(o.order_id) + '\', \'anderson\')">🚀 إرسال إلى Anderson</button>') +
       '</div>' +
     '</div>' +
 
@@ -3421,6 +4181,47 @@ function saveOrderShipping(orderId) {
       toast('تم حفظ بيانات الشحن');
     } else {
       toast('خطأ في حفظ الشحن: ' + ((data && data.error) || 'خطأ غير معروف'));
+    }
+  });
+}
+
+function dispatchOrderToCourier(orderId, courier) {
+  var o = allOrders.find(function(x) { return x.order_id === orderId; });
+  if (!o) {
+    toast('الطلب غير موجود');
+    return;
+  }
+  if (o.tracking_code && String(o.tracking_code).trim() !== '') {
+    toast('الطلب يمتلك رقم تتبع بالفعل: ' + o.tracking_code);
+    return;
+  }
+
+  var btn = document.getElementById('btn_dispatch_anderson');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ جاري الإرسال...';
+  }
+
+  apiPost('admin_dispatch_courier', {
+    order_id: orderId,
+    courier: courier || 'anderson'
+  }, function(res) {
+    if (res && res.ok) {
+      o.delivery_company = res.delivery_company || 'anderson';
+      o.tracking_code = res.tracking_code;
+      o.status = res.status || 'shipped';
+      toast('تم إرسال الطلب إلى Anderson بنجاح — رقم التتبع: ' + res.tracking_code);
+      if (typeof renderOrders === 'function') renderOrders();
+      viewOrder(orderId);
+    } else {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '🚀 إرسال إلى Anderson';
+      }
+      var errMsg = (res && res.error)
+        ? (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : String(res.error))
+        : 'خطأ غير معروف';
+      toast('فشل إرسال الطلب: ' + errMsg);
     }
   });
 }
@@ -4807,6 +5608,15 @@ function loadSettings() {
     if(document.getElementById('set_usd_to_dzd_rate')) document.getElementById('set_usd_to_dzd_rate').value = data.usd_to_dzd_rate || '230';
     if(document.getElementById('set_customer_wa_template')) document.getElementById('set_customer_wa_template').value = data.customer_wa_template || DEFAULT_CUSTOMER_WA_TEMPLATE;
     document.getElementById('set_capi_enabled').value = data.capi_enabled || 'true';
+    if(document.getElementById('set_anderson_base_url')) {
+      document.getElementById('set_anderson_base_url').value = data.anderson_base_url || '';
+    }
+    if(document.getElementById('set_anderson_active')) {
+      document.getElementById('set_anderson_active').value = (data.anderson_active === 'true' || data.anderson_active === true || data.anderson_active === '1') ? 'true' : 'false';
+    }
+    if(document.getElementById('set_anderson_token')) {
+      document.getElementById('set_anderson_token').value = '';
+    }
     var logoPrev = document.getElementById('logo_preview');
     if(logoPrev) logoPrev.src = (data.store_logo && String(data.store_logo).trim()) ? data.store_logo : 'logo1.png';
   });
@@ -4870,6 +5680,16 @@ async function saveSettings() {
   if (gemKey) data.gemini_api_key = gemKey;
   var fbToken = (document.getElementById('set_fb_capi_token')||{}).value || '';
   if (fbToken) data.fb_capi_token = fbToken;
+  if (document.getElementById('set_anderson_base_url')) {
+    data.anderson_base_url = document.getElementById('set_anderson_base_url').value.trim();
+  }
+  if (document.getElementById('set_anderson_active')) {
+    data.anderson_active = document.getElementById('set_anderson_active').value;
+  }
+  var andersonToken = (document.getElementById('set_anderson_token') || {}).value || '';
+  if (andersonToken.trim()) {
+    data.anderson_token = andersonToken.trim();
+  }
   var passChanged = !!passValue;
   if (passValue) {
     data.admin_password = await hashPasswordAsync(passValue);
@@ -4882,6 +5702,9 @@ async function saveSettings() {
     if (passChanged && res && res.recovery_code) {
       document.getElementById('recoveryCodeDisplay').textContent = res.recovery_code;
       document.getElementById('recoveryModal').style.display = 'flex';
+    }
+    if (document.getElementById('set_anderson_token')) {
+      document.getElementById('set_anderson_token').value = '';
     }
     toast('تم حفظ الإعدادات');
   });
@@ -5444,6 +6267,8 @@ function doLogout() {
     autoRefreshInterval = null;
   }
   localStorage.removeItem(AUTH_KEY);
+  var navMerchants = document.getElementById('nav-merchants');
+  if (navMerchants) navMerchants.classList.add('hidden');
   document.getElementById('adminPanel').classList.add('hidden');
   hideAllAuthScreens();
   document.getElementById('loginScreen').style.display = 'flex';
@@ -5489,11 +6314,16 @@ function showAdminPanel() {
   document.getElementById('adminPanel').classList.remove('hidden');
   try {
     var auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
+    var isSuper = isSuperAdminUser();
     var labelEl = document.getElementById('adminUserLabel');
     if (labelEl) {
-      var roleName = auth.role === 'OWNER' ? 'المالك' : (auth.role || 'Admin');
+      var roleName = isSuper ? 'Super Admin' : (auth.role === 'OWNER' ? 'المالك' : (auth.role || 'Admin'));
       var storeTitle = (auth.tenant && auth.tenant.name) ? ' · ' + auth.tenant.name : '';
       labelEl.textContent = (auth.name || auth.user || 'Admin') + ' (' + roleName + ')' + storeTitle;
+    }
+    var navMerchants = document.getElementById('nav-merchants');
+    if (navMerchants) {
+      navMerchants.classList.toggle('hidden', !isSuper);
     }
   } catch(e) {}
   if (window.ThemeCustomizer) { ThemeCustomizer.autoOpen(); }

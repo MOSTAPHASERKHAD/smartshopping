@@ -1,5 +1,7 @@
 import { sanitize } from '../utils/sanitize.js';
 import { generateToken, sha256, DEFAULT_MASTER_TENANT_ID } from '../utils/auth.js';
+import { resolveServiceCredential, getServiceSecret, RESOLVER_ERROR_CODES } from '../utils/serviceResolver.js';
+import { SERVICE_MODES } from '../utils/services.js';
 
 /**
  * دالة مساعدة لعمل هاش للبيانات الشخصية قبل إرسالها للفيسبوك
@@ -57,37 +59,55 @@ export function formatFbc(fbcVal, creationTime) {
  */
 export async function sendCapiEvent(env, eventName, eventData, userData = {}, requestObj, tenantId = DEFAULT_MASTER_TENANT_ID) {
   try {
-    // 1. استعلام الإعدادات المعزولة للمستأجر
-    const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
-    const stmt = isMaster
-      ? env.DB.prepare(`
-          SELECT key, value FROM settings
-          WHERE (tenant_id = ? OR tenant_id IS NULL)
-            AND key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id', 'fb_test_event_code', 'test_event_code')
-        `).bind(tenantId)
-      : env.DB.prepare(`
-          SELECT key, value FROM settings
-          WHERE tenant_id = ?
-            AND key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id', 'fb_test_event_code', 'test_event_code')
-        `).bind(tenantId);
-
-    const { results } = await stmt.all();
-
-    const settings = {};
-    (results || []).forEach(r => settings[r.key] = r.value);
-
-    const pixelId = settings.fb_pixel_id || settings.pixel_id;
-
-    if (settings.capi_enabled !== 'true' || !settings.fb_capi_token || !pixelId) {
+    // 1. حوكمة خدمة Meta CAPI عبر Managed Services Resolver
+    const resolution = await resolveServiceCredential(env, tenantId, 'meta_capi');
+    if (!resolution.ok) {
       console.log('[CAPI Diagnostic Check]', {
         tenant_id: tenantId,
-        capi_enabled: settings.capi_enabled,
-        has_token: !settings.fb_capi_token,
-        has_pixel_id: !pixelId,
+        service_ok: false,
+        error: resolution.error,
+        errorCode: resolution.errorCode,
         aborted: true
       });
-      return; // غير مفعل أو غير مكتمل الإعدادات
+      return; // غير مفعل، غير مهيأ، أو غير نشط
     }
+
+    const { settings } = resolution;
+    const isCapiEnabled = settings.capi_enabled;
+    const pixelId = settings.fb_pixel_id;
+
+    if (isCapiEnabled !== 'true' && isCapiEnabled !== '1' && isCapiEnabled !== true && isCapiEnabled !== 1) {
+      console.log('[CAPI Diagnostic Check]', {
+        tenant_id: tenantId,
+        capi_enabled: isCapiEnabled,
+        mode: resolution.mode,
+        aborted: true
+      });
+      return;
+    }
+
+    if (!pixelId) {
+      console.log('[CAPI Diagnostic Check]', {
+        tenant_id: tenantId,
+        has_pixel_id: false,
+        aborted: true
+      });
+      return;
+    }
+
+    // 2. استخراج fb_capi_token خادمياً حصراً للتنفيذ دون تسريبه
+    const secretRes = await getServiceSecret(env, tenantId, 'meta_capi', 'fb_capi_token');
+    if (!secretRes.ok || !secretRes.secret) {
+      console.log('[CAPI Diagnostic Check]', {
+        tenant_id: tenantId,
+        has_token: false,
+        error: secretRes.error,
+        errorCode: secretRes.errorCode,
+        aborted: true
+      });
+      return;
+    }
+    const capiToken = secretRes.secret;
 
     // 2. تجهيز وتطبيع بيانات المستخدم (SHA-256 Hashing)
     let hashedPhone;
@@ -144,7 +164,14 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
     const eventSourceUrl = eventData?.event_source_url || 
                            requestObj?.headers?.get('Referer') || 
                            requestObj?.headers?.get('referer') || 
-                           undefined;
+                            undefined;
+
+    // جلب test_event_code الاختياري إن وُجد من مصدر إعدادات الخدمة
+    const testCodeStmt = env.DB.prepare(
+      `SELECT value FROM settings WHERE tenant_id = ? AND key IN ('fb_test_event_code', 'test_event_code') LIMIT 1`
+    ).bind(resolution.sourceTenantId);
+    const testCodeRow = await testCodeStmt.first();
+    const testEventCode = testCodeRow ? testCodeRow.value : undefined;
 
     const payload = {
       data: [
@@ -174,14 +201,14 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
           }
         }
       ],
-      test_event_code: settings.fb_test_event_code || settings.test_event_code || undefined
+      test_event_code: testEventCode || undefined
     };
 
     if (eventName === 'Purchase' && eventData.order_id) {
       payload.data[0].custom_data.order_id = String(eventData.order_id);
     }
 
-    const fbUrl = `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${settings.fb_capi_token}`;
+    const fbUrl = `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${capiToken}`;
 
     const res = await fetch(fbUrl, {
       method: 'POST',
@@ -200,8 +227,8 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
     }
 
     console.log('[CAPI Response Diagnostic]', {
-      capi_enabled: settings.capi_enabled,
-      has_token: !!settings.fb_capi_token,
+      capi_enabled: isCapiEnabled,
+      has_token: !!capiToken,
       pixel_id: pixelId,
       event_id: payload.data[0].event_id,
       event_name: eventName,
@@ -212,7 +239,11 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
     });
 
     if (!res.ok) {
-      console.error('Facebook CAPI Error:', resText);
+      let sanitizedErrorText = resText;
+      if (capiToken && typeof capiToken === 'string' && capiToken.length > 5) {
+        sanitizedErrorText = sanitizedErrorText.split(capiToken).join('[REDACTED_TOKEN]');
+      }
+      console.error('Facebook CAPI Error:', sanitizedErrorText);
     }
   } catch (err) {
     console.error('sendCapiEvent Error:', err.message);
@@ -224,29 +255,21 @@ export async function sendCapiEvent(env, eventName, eventData, userData = {}, re
  */
 export async function adminCapiTest(env, params, request, tenantId = DEFAULT_MASTER_TENANT_ID) {
   try {
-    const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
-    const stmt = isMaster
-      ? env.DB.prepare(`
-          SELECT key, value FROM settings
-          WHERE (tenant_id = ? OR tenant_id IS NULL)
-            AND key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id')
-        `).bind(tenantId)
-      : env.DB.prepare(`
-          SELECT key, value FROM settings
-          WHERE tenant_id = ?
-            AND key IN ('capi_enabled', 'fb_capi_token', 'fb_pixel_id', 'pixel_id')
-        `).bind(tenantId);
-
-    const { results } = await stmt.all();
-
-    const settings = {};
-    (results || []).forEach(r => settings[r.key] = r.value);
-
-    const pixelId = settings.fb_pixel_id || settings.pixel_id;
-
-    if (!settings.fb_capi_token || !pixelId) {
-      return { ok: false, error: 'إعدادات CAPI غير مكتملة (يرجى إدخال Pixel ID و Token)' };
+    const resolution = await resolveServiceCredential(env, tenantId, 'meta_capi');
+    if (!resolution.ok) {
+      return { ok: false, error: resolution.error, errorCode: resolution.errorCode };
     }
+
+    const pixelId = resolution.settings.fb_pixel_id;
+    if (!pixelId) {
+      return { ok: false, error: 'إعدادات CAPI غير مكتملة (يرجى إدخال Pixel ID)' };
+    }
+
+    const secretRes = await getServiceSecret(env, tenantId, 'meta_capi', 'fb_capi_token');
+    if (!secretRes.ok || !secretRes.secret) {
+      return { ok: false, error: secretRes.error || 'رمز CAPI غير مضبوط', errorCode: secretRes.errorCode };
+    }
+    const capiToken = secretRes.secret;
 
     const payload = {
       data: [
@@ -255,8 +278,8 @@ export async function adminCapiTest(env, params, request, tenantId = DEFAULT_MAS
           event_time: Math.floor(Date.now() / 1000),
           action_source: "website",
           user_data: {
-            client_ip_address: request.headers.get('CF-Connecting-IP') || '127.0.0.1',
-            client_user_agent: request.headers.get('User-Agent') || 'TestAgent',
+            client_ip_address: request?.headers?.get('CF-Connecting-IP') || '127.0.0.1',
+            client_user_agent: request?.headers?.get('User-Agent') || 'TestAgent',
           },
           custom_data: {
             currency: "DZD",
@@ -264,10 +287,10 @@ export async function adminCapiTest(env, params, request, tenantId = DEFAULT_MAS
           }
         }
       ],
-      test_event_code: params.test_code || undefined // إذا كان المستخدم يريد اختباره عبر Events Manager
+      test_event_code: params?.test_code || undefined // إذا كان المستخدم يريد اختباره عبر Events Manager
     };
 
-    const fbUrl = `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${settings.fb_capi_token}`;
+    const fbUrl = `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${capiToken}`;
     
     const res = await fetch(fbUrl, {
       method: 'POST',

@@ -38,7 +38,7 @@ import {
 // ── استيراد معالجات الطلبات ──
 import {
   createOrder, trackOrder, customerOrders,
-  adminListOrders, adminUpdateOrder, adminDeleteOrder,
+  adminListOrders, adminUpdateOrder, adminDispatchCourier, adminDeleteOrder,
 } from './handlers/orders.js';
 
 // ── استيراد معالجات العملاء ──
@@ -90,6 +90,8 @@ import {
 // ── استيراد معالجات الإدارة المركزية (Super Admin & Platform) ──
 import {
   superListTenants, superPlatformStats, superUpdateTenant,
+  superApproveMerchant, superRejectMerchant,
+  superListTenantServices, superUpdateTenantService,
 } from './handlers/super_admin.js';
 
 // ════════════════════════════════════════════
@@ -282,7 +284,14 @@ export default {
           action: action,
           resource_type: action.replace('admin_', '').split('_')[0],
           resource_id: params.id || params.order_id || params.code || null,
-          metadata: { ok: result?.ok },
+          metadata: action === 'admin_dispatch_courier'
+            ? {
+                courier: result?.delivery_company || params.courier || 'anderson',
+                ...(result?.tracking_code ? { tracking: result.tracking_code } : {}),
+                ok: !!result?.ok,
+                ...(!result?.ok && result?.error ? { error: String(result.error) } : {}),
+              }
+            : { ok: result?.ok },
           request,
         }));
       }
@@ -394,9 +403,10 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   if (action === 'admin_delete_product') return adminDeleteProduct(env, params, tenantId);
 
   // ── الطلبات ──
-  if (action === 'admin_orders')         return adminListOrders(env, params, tenantId);
-  if (action === 'admin_update_order')   return adminUpdateOrder(env, params, tenantId);
-  if (action === 'admin_delete_order')   return adminDeleteOrder(env, params, tenantId);
+  if (action === 'admin_orders')           return adminListOrders(env, params, tenantId);
+  if (action === 'admin_update_order')     return adminUpdateOrder(env, params, tenantId);
+  if (action === 'admin_dispatch_courier') return adminDispatchCourier(env, params, tenantId);
+  if (action === 'admin_delete_order')     return adminDeleteOrder(env, params, tenantId);
 
   // ── الإعدادات والإشعارات ──
   if (action === 'admin_settings')          return getSettings(env, tenantId);
@@ -455,9 +465,13 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   }
 
   // ── الإدارة المركزية والمنصة (Super Admin) ──
-  if (action === 'admin_super_list_tenants')   return superListTenants(env, authSession);
-  if (action === 'admin_super_platform_stats') return superPlatformStats(env, authSession);
-  if (action === 'admin_super_update_tenant')  return superUpdateTenant(env, params, authSession);
+  if (action === 'admin_super_list_tenants')          return superListTenants(env, authSession);
+  if (action === 'admin_super_platform_stats')        return superPlatformStats(env, authSession);
+  if (action === 'admin_super_update_tenant')         return superUpdateTenant(env, params, authSession);
+  if (action === 'admin_super_approve_merchant')      return superApproveMerchant(env, params, authSession, request);
+  if (action === 'admin_super_reject_merchant')       return superRejectMerchant(env, params, authSession, request);
+  if (action === 'admin_super_list_tenant_services')  return superListTenantServices(env, params, authSession);
+  if (action === 'admin_super_update_tenant_service') return superUpdateTenantService(env, params, authSession, request);
 
   // ── action غير معروف ──
   return {

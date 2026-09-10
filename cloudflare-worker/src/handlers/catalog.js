@@ -21,6 +21,7 @@
 
 import { sanitize, sanitizeNumber } from '../utils/sanitize.js';
 import { DEFAULT_MASTER_TENANT_ID } from '../utils/auth.js';
+import { resolveServiceCredential } from '../utils/serviceResolver.js';
 
 // ─────────────────────────────────────────────
 // مدة cache الكتالوج (ثانية) — 10 دقائق
@@ -130,6 +131,7 @@ export async function getSettings(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
     'admin_password_hash', 'admin_recovery_hash',
     'fb_capi_token', 'gemini_api_key',
     'login_fails', 'login_blocked_until',
+    'anderson_token',
   ]);
 
   const isMaster = tenantId === DEFAULT_MASTER_TENANT_ID;
@@ -149,6 +151,22 @@ export async function getSettings(env, tenantId = DEFAULT_MASTER_TENANT_ID) {
     if (!SECRET_KEYS.has(row.key)) {
       settings[row.key] = row.value;
     }
+  }
+
+  // ── حوكمة Meta Pixel عبر Managed Services Resolver ──
+  try {
+    const pixelRes = await resolveServiceCredential(env, tenantId, 'meta_pixel');
+    if (pixelRes.ok && pixelRes.settings && pixelRes.settings.fb_pixel_id) {
+      settings.fb_pixel_id = pixelRes.settings.fb_pixel_id;
+      settings.pixel_id = pixelRes.settings.fb_pixel_id;
+    } else {
+      // في حال كانت الخدمة معطلة (disabled) أو غير مهيأة، نضمن عدم حقن أي Pixel
+      delete settings.fb_pixel_id;
+      delete settings.pixel_id;
+    }
+  } catch (_) {
+    delete settings.fb_pixel_id;
+    delete settings.pixel_id;
   }
 
   // ── تحديد حالة تفعيل مساعد المتجر بدقة وأمان (Source of Truth & Priority) ──

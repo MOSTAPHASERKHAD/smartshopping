@@ -28,6 +28,9 @@ import {
 import { orderSpamGuard, validateCustomerToken, isValidEmail, DEFAULT_MASTER_TENANT_ID } from '../utils/auth.js';
 import { EmailProvider } from '../utils/email.js';
 import { calculateShippingCost } from '../utils/shipping.js';
+import { getCourier } from '../utils/couriers.js';
+import { resolveServiceCredential, getServiceSecret, RESOLVER_ERROR_CODES } from '../utils/serviceResolver.js';
+import { SERVICE_MODES } from '../utils/services.js';
 
 // ─────────────────────────────────────────────
 // ── معالجات العامة (Public Handlers) ──
@@ -1097,6 +1100,234 @@ export async function adminUpdateOrder(env, params, tenantId = DEFAULT_MASTER_TE
   }
 
   return { ok: true };
+}
+
+/**
+ * [ADMIN] إرسال طلب لشركة الشحن عبر Courier Registry (Anderson / EcoTrack)
+ * ─────────────────────────────────────────────────────────────
+ * معايير الأمان والثبات:
+ * 1. حماية التكرار الذري (Idempotency): رفض أي طلب يمتلك tracking_code مسبقاً قبل أي اتصال خارجي.
+ * 2. التحقق الصارم من العناوين: التأكد من رقم الهاتف، رمز الولاية، والبلدية.
+ * 3. حماية أسرار التاجر: قراءة مفاتيح الربط حصرياً من إعدادات المستأجر المعتمد (tenant_id).
+ * 4. ثبات الأسعار: استخدام قيمة التحصيل الحقيقية (montant = subtotal - discount + shipping_cost) دون إعادة حساب.
+ * 5. ثبات المخزون: تعيين الحالة إلى 'shipped' دون أي إنقاص للمخزون (إنقاص المخزون محصور عند 'delivered').
+ * 6. الفصل المعماري: التعامل مع شركات الشحن عبر couriers.js دون استيراد مباشر لأي سائق محدد.
+ *
+ * @param {Env} env
+ * @param {object} params
+ * @param {string} tenantId
+ */
+export async function adminDispatchCourier(env, params = {}, tenantId = DEFAULT_MASTER_TENANT_ID) {
+  const orderId = sanitize(params.order_id, 60);
+  if (!orderId) return { ok: false, error: 'معرّف الطلب مطلوب' };
+
+  // 1. قراءة الطلب داخل نطاق التاجر المعتمد (Strict Tenant Isolation)
+  const orderStmt = env.DB.prepare(
+    `SELECT * FROM orders WHERE order_id = ? AND tenant_id = ? LIMIT 1`
+  ).bind(orderId, tenantId);
+
+  const order = await orderStmt.first();
+  if (!order) return { ok: false, error: 'الطلب غير موجود أو لا تملك صلاحية الوصول إليه' };
+
+  // 2. حماية التكرار الصارمة (Idempotency / Duplicate Guard)
+  // إذا كان رقم التتبع موجوداً بالفعل، نرفض العملية فوراً لمنع إنشاء شحنة مكررة
+  if (order.tracking_code && String(order.tracking_code).trim() !== '') {
+    return {
+      ok: false,
+      error: `تم إرسال هذا الطلب لشركة الشحن مسبقاً برقم التتبع: ${order.tracking_code}`,
+      tracking_code: order.tracking_code,
+    };
+  }
+
+  // 3. التحقق من اكتمال بيانات العنوان والتوصيل
+  const phone = sanitizePhone(order.phone);
+  if (!phone || phone.length < 9) {
+    return { ok: false, error: 'رقم هاتف العميل غير صالح أو مفقود' };
+  }
+
+  const wilayaCode = parseInt(order.wilaya_code, 10);
+  if (isNaN(wilayaCode) || wilayaCode < 1 || wilayaCode > 58) {
+    return { ok: false, error: 'رمز ولاية العميل غير صالح (يجب أن يكون بين 1 و 58)' };
+  }
+
+  const municipality = (order.municipality || '').trim();
+  if (!municipality) {
+    return { ok: false, error: 'بلدية التوصيل مطلوبة' };
+  }
+
+  // 4. تحديد محول شركة الشحن (Courier Adapter Selection)
+  let courierId = params.courier;
+  if (!courierId) {
+    if (order.delivery_company && getCourier(order.delivery_company)) {
+      courierId = order.delivery_company;
+    } else {
+      courierId = 'anderson';
+    }
+  }
+  courierId = String(courierId).toLowerCase().trim();
+  const courier = getCourier(courierId);
+  if (!courier) {
+    return { ok: false, error: `شركة الشحن غير مدعومة: ${courierId}` };
+  }
+
+  // 5. التحقق من صلاحية الخدمة ومصدر الاعتماد عبر Managed Services Resolver
+  const resolution = await resolveServiceCredential(env, tenantId, courier.id);
+  if (!resolution.ok) {
+    return {
+      ok: false,
+      error: resolution.error,
+      errorCode: resolution.errorCode,
+    };
+  }
+
+  // التحقق من تفعيل الخدمة
+  const isActive = resolution.settings[courier.settingsKeys.active];
+  if (isActive !== 'true' && isActive !== '1' && isActive !== true && isActive !== 1) {
+    return {
+      ok: false,
+      error: resolution.mode === SERVICE_MODES.MANAGED
+        ? `خدمة الشحن (${courier.name}) معطلة على مستوى المنصة`
+        : `خدمة الشحن (${courier.name}) معطلة في إعدادات المتجر`,
+      errorCode: RESOLVER_ERROR_CODES.SERVICE_DISABLED,
+    };
+  }
+
+  const baseUrl = (resolution.settings[courier.settingsKeys.baseUrl] || '').trim();
+  if (!baseUrl) {
+    return {
+      ok: false,
+      error: `رابط خادم شركة الشحن (${courier.name}) غير مضبوط في الإعدادات`,
+      errorCode: RESOLVER_ERROR_CODES.SERVICE_CONFIGURATION_MISSING,
+    };
+  }
+
+  // 6. استخراج الرمز السري خادمياً للتنفيذ فقط (Server-Side Internal Execution Only)
+  const secretRes = await getServiceSecret(env, tenantId, courier.id, courier.settingsKeys.token);
+  if (!secretRes.ok) {
+    return {
+      ok: false,
+      error: secretRes.error,
+      errorCode: secretRes.errorCode,
+    };
+  }
+  const token = secretRes.secret;
+
+  // جلب اسم متجر التاجر حصراً لتمييز الشحنة دون كشف أي أسرار أو بيانات Master
+  let merchantStoreName = '';
+  const storeNameStmt = env.DB.prepare(
+    `SELECT value FROM settings WHERE tenant_id = ? AND key = 'store_name' LIMIT 1`
+  ).bind(tenantId);
+  const storeNameRow = await storeNameStmt.first();
+  if (storeNameRow && storeNameRow.value) {
+    merchantStoreName = storeNameRow.value;
+  } else {
+    const tenantStmt = env.DB.prepare(
+      `SELECT name FROM tenants WHERE id = ? LIMIT 1`
+    ).bind(tenantId);
+    const tenantRow = await tenantStmt.first();
+    if (tenantRow && tenantRow.name) {
+      merchantStoreName = tenantRow.name;
+    }
+  }
+
+  // 7. التحقق الأمني من الرابط الأساسي عبر سائق شركة الشحن (SSRF Guard)
+  const validateUrlFn = courier.driver.validateBaseUrl || courier.driver.validateAndersonBaseUrl;
+  if (typeof validateUrlFn !== 'function') {
+    return { ok: false, error: 'سائق شركة الشحن لا يدعم التحقق من الرابط' };
+  }
+
+  const urlCheck = validateUrlFn(baseUrl);
+  if (!urlCheck.ok) {
+    return { ok: false, error: urlCheck.error || 'رابط خادم شركة الشحن غير صالح' };
+  }
+  const cleanBaseUrl = urlCheck.url;
+
+  // 8. بناء حمولة البيانات (EcoTrack Standard 20-Field Payload)
+  // قاعدة ثبات السعر: montant = subtotal - discount + shipping_cost (لا ضرب في الكمية ولا تغيير للأسعار)
+  const montant = Number(order.subtotal) - Number(order.discount || 0) + Number(order.shipping_cost || 0);
+
+  const itemsArr = safeParseJson(order.items_json, []);
+  let productDesc = '';
+  if (Array.isArray(itemsArr) && itemsArr.length > 0) {
+    productDesc = itemsArr
+      .map(i => `${i.name || 'منتج'}${i.variant ? ` (${i.variant})` : ''}${i.qty ? ` x${i.qty}` : ''}`)
+      .join(' + ');
+  } else {
+    productDesc = `طلب #${order.order_id}`;
+  }
+  if (productDesc.length > 250) {
+    productDesc = productDesc.slice(0, 247) + '...';
+  }
+
+  const totalQty = Array.isArray(itemsArr)
+    ? itemsArr.reduce((sum, i) => sum + (parseInt(i.qty, 10) || 1), 0)
+    : 1;
+  const quantite = totalQty > 0 ? totalQty : 1;
+
+  const address = (order.address || '').trim() || `${order.wilaya_ar || order.wilaya_en || ''} - ${municipality}`;
+  const deliveryNote = order.shipping_note || order.notes || order.admin_note || '';
+  const deliveryType = String(order.delivery_type || '').trim().toLowerCase();
+  const stopDesk = deliveryType === 'office' ? 1 : 0;
+
+  const payload = {
+    reference: String(order.order_id),
+    nom_client: String(order.name),
+    telephone: String(phone),
+    telephone_2: order.phone_2 ? String(order.phone_2) : '',
+    adresse: String(address),
+    code_postal: order.postal_code ? String(order.postal_code) : '',
+    commune: String(municipality),
+    code_wilaya: wilayaCode,
+    montant: Math.round(montant),
+    remarque: String(deliveryNote),
+    produit: String(productDesc),
+    stock: 0,
+    quantite: quantite,
+    produit_a_recuperer: '',
+    boutique: merchantStoreName ? String(merchantStoreName) : '',
+    type: 1,
+    stop_desk: stopDesk,
+    weight: 1,
+    fragile: 0,
+    gps_link: '',
+  };
+
+  // 8. استدعاء واجهة شركة الشحن عبر السائق حصراً دون أي استدعاء fetch مباشر
+  const createOrderFn = courier.driver.createOrder || courier.driver.createAndersonOrder;
+  if (typeof createOrderFn !== 'function') {
+    return { ok: false, error: 'سائق شركة الشحن لا يدعم إنشاء الشحنات' };
+  }
+
+  const dispatchRes = await createOrderFn(cleanBaseUrl, token, payload);
+
+  // 9. التحقق الصارم من استلام رقم التتبع
+  if (!dispatchRes.ok || !dispatchRes.tracking || typeof dispatchRes.tracking !== 'string' || !dispatchRes.tracking.trim()) {
+    return {
+      ok: false,
+      error: dispatchRes.error || 'تعذَّر إنشاء الشحنة أو لم يُرجع خادم شركة الشحن رقم تتبع صالح',
+    };
+  }
+
+  const trackingCode = dispatchRes.tracking.trim();
+
+  // 10. تحديث سجل الطلب في D1 (حالة shipped مع شركة الشحن ورقم التتبع)
+  // لا تعديل على: subtotal, discount, shipping_cost, items_json, أو stock_decremented
+  const updateStmt = env.DB.prepare(`
+    UPDATE orders
+    SET delivery_company = ?, tracking_code = ?, status = 'shipped'
+    WHERE order_id = ? AND tenant_id = ?
+  `).bind(courier.id, trackingCode, orderId, tenantId);
+
+  await updateStmt.run();
+
+  return {
+    ok: true,
+    order_id: orderId,
+    delivery_company: courier.id,
+    tracking_code: trackingCode,
+    status: 'shipped',
+    montant: montant,
+  };
 }
 
 /**

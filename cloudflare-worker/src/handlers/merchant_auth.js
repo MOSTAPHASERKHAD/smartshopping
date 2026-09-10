@@ -81,7 +81,7 @@ export async function authRegister(env, params, request) {
   await env.DB.batch([
     env.DB.prepare(`
       INSERT INTO tenants (id, name, slug, status, plan, created_at, updated_at)
-      VALUES (?, ?, ?, 'active', 'starter', strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+      VALUES (?, ?, ?, 'pending', 'starter', strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))
     `).bind(tenantId, storeName, slug),
 
     env.DB.prepare(`
@@ -137,7 +137,7 @@ export async function authRegister(env, params, request) {
   return {
     ok: true,
     message: 'تم إنشاء الحساب بنجاح. يرجى مراجعة بريدك الإلكتروني لتأكيد الحساب.',
-    tenant: { id: tenantId, name: storeName, slug },
+    tenant: { id: tenantId, name: storeName, slug, status: 'pending' },
   };
 }
 
@@ -182,8 +182,28 @@ export async function authLogin(env, params, request) {
   }
 
   // 3. التحقق من حالة الحساب والمتجر
+  if (user.status === 'pending' || user.tenant_status === 'pending') {
+    return {
+      ok: false,
+      code: 'MERCHANT_PENDING_APPROVAL',
+      error: 'حساب المتجر قيد المراجعة والموافقة من قبل إدارة المنصة',
+    };
+  }
+
   if (user.status === 'suspended' || user.tenant_status === 'suspended') {
     return { ok: false, error: 'هذا الحساب معطل حالياً، يرجى التواصل مع الإدارة' };
+  }
+
+  if (user.tenant_status === 'rejected') {
+    return { ok: false, code: 'MERCHANT_REJECTED', error: 'تم رفض طلب هذا المتجر، يرجى التواصل مع الإدارة' };
+  }
+
+  if (user.tenant_status === 'archived' || user.status === 'inactive') {
+    return { ok: false, error: 'هذا الحساب غير نشط حالياً، يرجى التواصل مع الإدارة' };
+  }
+
+  if (user.status !== 'active' || user.tenant_status !== 'active') {
+    return { ok: false, error: 'هذا الحساب غير نشط حالياً، يرجى التواصل مع الإدارة' };
   }
 
   // 4. الترقية التلقائية للهاش إذا كان قديماً (Lazy Rehash to PBKDF2)
