@@ -1,7 +1,7 @@
 /**
  * Smart Shopping — Super Admin & Platform Handlers
  * ملف: src/handlers/super_admin.js
- * 
+ *
  * معالجات الإدارة المركزية للمنصة (Platform Oversight & Multi-Tenant Management)
  * ─────────────────────────────────────────────
  * يوفر لوحة تحكم وإحصائيات عامة للمالك الرئيسي (Super Admin)
@@ -42,7 +42,7 @@ export async function superListTenants(env, authSession) {
 
   // استعلام تجميعي لكافة المتاجر مع حساب عدد المنتجات والطلبات وإجمالي المبيعات
   const tenantsQuery = await env.DB.prepare(`
-    SELECT 
+    SELECT
       t.id as tenant_id,
       t.name as store_name,
       t.slug,
@@ -109,7 +109,7 @@ export async function superPlatformStats(env, authSession) {
 
   const [tenantStats, userStats, productStats, orderStats] = await Promise.all([
     env.DB.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as total_tenants,
         SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_tenants,
         SUM(CASE WHEN status = 'suspended' THEN 1 ELSE 0 END) as suspended_tenants,
@@ -121,7 +121,7 @@ export async function superPlatformStats(env, authSession) {
     `).first(),
 
     env.DB.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as total_users,
         SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_users,
         SUM(CASE WHEN email_verified_at IS NOT NULL THEN 1 ELSE 0 END) as verified_users
@@ -131,7 +131,7 @@ export async function superPlatformStats(env, authSession) {
     env.DB.prepare(`SELECT COUNT(*) as total_products FROM products`).first(),
 
     env.DB.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as total_orders,
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
         SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) as delivered_orders,
@@ -173,9 +173,244 @@ export async function superPlatformStats(env, authSession) {
 }
 
 /**
- * [SUPER_ADMIN] تحديث حالة أو باقة مستأجر معين
+ * تطهير الكاش الشامل للمستأجر عبر جميع المفاتيح المعتمدة (Scoped Cache Invalidation)
+ * @param {Env} env
+ * @param {string} tenantId
+ * @param {string} [slug]
+ * @param {string} [domain]
  */
-export async function superUpdateTenant(env, params, authSession) {
+export async function purgeTenantCache(env, tenantId, slug, domain) {
+  const cache = env?.CACHE || env?.KV;
+  if (!cache) return;
+  const promises = [];
+  if (slug) promises.push(cache.delete(`tenant:host:${slug}`).catch(() => {}));
+  if (domain) promises.push(cache.delete(`tenant:host:${domain}`).catch(() => {}));
+  if (tenantId) {
+    promises.push(cache.delete(`tenant:${tenantId}:settings_v1`).catch(() => {}));
+    promises.push(cache.delete(`tenant:${tenantId}:catalog_v1`).catch(() => {}));
+  }
+  await Promise.allSettled(promises);
+}
+
+/**
+ * خريطة الانتقالات المسموح بها في دورة حياة المستأجر (Strict Tenant State Machine)
+ *
+ * PENDING   ──(approve)──> ACTIVE
+ * PENDING   ──(reject)───> REJECTED
+ * ACTIVE    ──(suspend)──> SUSPENDED
+ * ACTIVE    ──(archive)──> ARCHIVED
+ * SUSPENDED ──(restore)──> ACTIVE
+ * SUSPENDED ──(archive)──> ARCHIVED
+ * ARCHIVED  ──(restore)──> ACTIVE
+ */
+const VALID_LIFECYCLE_TRANSITIONS = {
+  active: ['suspended', 'archived'],
+  suspended: ['active', 'archived'],
+  archived: ['active'],
+};
+
+/**
+ * المحرك المركزي لتنفيذ انتقالات حالة المستأجر مع التحقق الصارم وإبطال الجلسات وتطهير الكاش
+ */
+export async function executeTenantStatusTransition(env, { targetTenantId, targetStatus, reason = '', plan = null }, authSession, request) {
+  if (!isSuperAdminSession(authSession)) {
+    return {
+      ok: false,
+      error: 'غير مصرح: هذه العملية مخصصة للمالك الرئيسي للمنصة (Super Admin) فقط',
+    };
+  }
+
+  const cleanTenantId = sanitize(targetTenantId, 60);
+  if (!cleanTenantId) {
+    return { ok: false, error: 'معرف المتجر المستهدف مطلوب' };
+  }
+
+  if (cleanTenantId === DEFAULT_MASTER_TENANT_ID) {
+    return { ok: false, error: 'لا يمكن تعديل أو تعليق أو أرشفة المستأجر الرئيسي للمنصة' };
+  }
+
+  // 1. التحقق من وجود المتجر وحالته الحالية
+  const targetTenant = await env.DB.prepare(`
+    SELECT id, name, slug, domain, status, plan
+    FROM tenants
+    WHERE id = ?
+    LIMIT 1
+  `).bind(cleanTenantId).first();
+
+  if (!targetTenant) {
+    return { ok: false, error: 'المتجر المستهدف غير موجود' };
+  }
+
+  const currentStatus = targetTenant.status;
+
+  // 2. التحقق الصارم من صحة انتقال دورة الحياة (Strict State Machine)
+  if (currentStatus === 'pending') {
+    return {
+      ok: false,
+      error: 'لا يمكن تغيير حالة متجر قيد الانتظار بهذه الطريقة؛ يرجى استخدام إجراء الموافقة أو الرفض المخصص',
+    };
+  }
+
+  if (currentStatus === 'rejected') {
+    return {
+      ok: false,
+      error: 'لا يمكن تعديل حالة متجر تم رفض طلبه سابقاً',
+    };
+  }
+
+  if (currentStatus === 'archived' && targetStatus === 'suspended') {
+    return {
+      ok: false,
+      error: 'لا يمكن تعليق متجر مؤرشف مباشرة؛ يجب استعادة تفعيله أولاً',
+    };
+  }
+
+  if (currentStatus === targetStatus) {
+    if (plan && ['starter', 'pro', 'enterprise'].includes(plan) && plan !== targetTenant.plan) {
+      await env.DB.prepare(`
+        UPDATE tenants SET plan = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE id = ?
+      `).bind(plan, cleanTenantId).run();
+      await purgeTenantCache(env, cleanTenantId, targetTenant.slug, targetTenant.domain);
+      return {
+        ok: true,
+        message: 'تم تحديث باقة المتجر بنجاح',
+        tenant: { ...targetTenant, plan },
+      };
+    }
+    return { ok: false, error: `المتجر في حالة (${targetStatus}) بالفعل` };
+  }
+
+  const allowedTargets = VALID_LIFECYCLE_TRANSITIONS[currentStatus] || [];
+  if (!allowedTargets.includes(targetStatus)) {
+    return {
+      ok: false,
+      error: `انتقال غير مسموح به في دورة حياة المتجر: من (${currentStatus}) إلى (${targetStatus})`,
+    };
+  }
+
+  // 3. إبطال الجلسات الذري فوراً عند التعليق أو الأرشفة (Atomic Session Revocation)
+  if (targetStatus === 'suspended' || targetStatus === 'archived') {
+    await env.DB.prepare(`
+      UPDATE sessions
+      SET revoked_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+      WHERE tenant_id = ? AND revoked_at IS NULL
+    `).bind(cleanTenantId).run();
+  }
+
+  // 4. تحديث حالة المتجر وقاعدة البيانات
+  const updates = ['status = ?'];
+  const args = [targetStatus];
+
+  if (plan && ['starter', 'pro', 'enterprise'].includes(plan)) {
+    updates.push('plan = ?');
+    args.push(plan);
+  }
+
+  updates.push("updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now')");
+  args.push(cleanTenantId);
+
+  await env.DB.prepare(`
+    UPDATE tenants SET ${updates.join(', ')} WHERE id = ?
+  `).bind(...args).run();
+
+  // 5. تطهير الكاش الشامل لجميع المفاتيح المرتبطة بالمتجر (All 4 KV Keys)
+  await purgeTenantCache(env, cleanTenantId, targetTenant.slug, targetTenant.domain);
+
+  // 6. تحديد اسم الحدث للتدقيق الأمني
+  let auditAction = 'TENANT_STATUS_CHANGED';
+  if (targetStatus === 'suspended') auditAction = 'TENANT_SUSPENDED';
+  else if (targetStatus === 'archived') auditAction = 'TENANT_ARCHIVED';
+  else if (targetStatus === 'active') auditAction = 'TENANT_RESTORED';
+
+  const cleanReason = sanitize(reason, 500) || (
+    targetStatus === 'suspended' ? 'تعليق المتجر بواسطة إدارة المنصة' :
+    targetStatus === 'archived' ? 'أرشفة المتجر بواسطة إدارة المنصة' :
+    'استعادة تفعيل المتجر'
+  );
+
+  // 7. تسجيل العملية في سجل التدقيق الأمني (Audit Log)
+  await recordAuditLog(env.DB, {
+    tenant_id: cleanTenantId,
+    user_id: authSession?.userId || 'super_admin',
+    action: auditAction,
+    resource_type: 'tenant',
+    resource_id: cleanTenantId,
+    metadata: {
+      target_tenant_id: cleanTenantId,
+      store_name: targetTenant.name,
+      slug: targetTenant.slug,
+      domain: targetTenant.domain || null,
+      previous_status: currentStatus,
+      new_status: targetStatus,
+      reason: cleanReason,
+      plan: plan || targetTenant.plan,
+      actor_id: authSession?.userId || 'super_admin',
+      actor_role: authSession?.role || 'OWNER',
+    },
+    request,
+  });
+
+  const successMessage =
+    targetStatus === 'suspended' ? 'تم تعليق المتجر وإبطال جلسات مستخدميه بنجاح' :
+    targetStatus === 'archived' ? 'تمت أرشفة المتجر وإبطال جلسات مستخدميه بنجاح' :
+    'تمت استعادة تفعيل المتجر بنجاح';
+
+  return {
+    ok: true,
+    message: successMessage,
+    tenant: {
+      id: targetTenant.id,
+      name: targetTenant.name,
+      slug: targetTenant.slug,
+      status: targetStatus,
+      plan: plan || targetTenant.plan,
+    },
+  };
+}
+
+/**
+ * [SUPER_ADMIN] تعليق متجر نشط مؤقتاً (ACTIVE -> SUSPENDED)
+ */
+export async function superSuspendTenant(env, params, authSession, request) {
+  const targetTenantId = params.target_tenant_id || params.tenant_id;
+  const reason = params.reason;
+  return executeTenantStatusTransition(env, {
+    targetTenantId,
+    targetStatus: 'suspended',
+    reason,
+  }, authSession, request);
+}
+
+/**
+ * [SUPER_ADMIN] أرشفة متجر متوقف (ACTIVE / SUSPENDED -> ARCHIVED)
+ */
+export async function superArchiveTenant(env, params, authSession, request) {
+  const targetTenantId = params.target_tenant_id || params.tenant_id;
+  const reason = params.reason;
+  return executeTenantStatusTransition(env, {
+    targetTenantId,
+    targetStatus: 'archived',
+    reason,
+  }, authSession, request);
+}
+
+/**
+ * [SUPER_ADMIN] استعادة متجر معلق أو مؤرشف (SUSPENDED / ARCHIVED -> ACTIVE)
+ */
+export async function superRestoreTenant(env, params, authSession, request) {
+  const targetTenantId = params.target_tenant_id || params.tenant_id;
+  const reason = params.reason;
+  return executeTenantStatusTransition(env, {
+    targetTenantId,
+    targetStatus: 'active',
+    reason,
+  }, authSession, request);
+}
+
+/**
+ * [SUPER_ADMIN] تحديث حالة أو باقة مستأجر معين مع التحقق من State Machine
+ */
+export async function superUpdateTenant(env, params, authSession, request) {
   if (!isSuperAdminSession(authSession)) {
     return {
       ok: false,
@@ -185,7 +420,8 @@ export async function superUpdateTenant(env, params, authSession) {
 
   const targetTenantId = params.target_tenant_id || params.tenant_id;
   const status = params.status;
-  const plan   = params.plan;
+  const plan = params.plan;
+  const reason = params.reason;
 
   if (!targetTenantId) {
     return { ok: false, error: 'معرف المتجر (target_tenant_id) مطلوب' };
@@ -195,35 +431,52 @@ export async function superUpdateTenant(env, params, authSession) {
     return { ok: false, error: 'لا يمكن تعديل أو تعليق المستأجر الرئيسي للمنصة' };
   }
 
-  const updates = [];
-  const args = [];
-
-  if (status && ['active', 'suspended', 'archived'].includes(status)) {
-    updates.push('status = ?');
-    args.push(status);
+  // إذا تم تحديد حالة جديدة، نمر عبر محرك الانتقال الصارم
+  if (status) {
+    return executeTenantStatusTransition(env, {
+      targetTenantId,
+      targetStatus: status,
+      reason,
+      plan,
+    }, authSession, request);
   }
 
-  if (plan && ['starter', 'pro', 'enterprise'].includes(plan)) {
-    updates.push('plan = ?');
-    args.push(plan);
+  // إذا تم تحديد باقة فقط دون تغيير الحالة
+  if (plan) {
+    if (!['starter', 'pro', 'enterprise'].includes(plan)) {
+      return { ok: false, error: 'الباقة المحددة غير صالحة' };
+    }
+
+    const cleanId = sanitize(targetTenantId, 60);
+    const targetTenant = await env.DB.prepare(`SELECT id, name, slug, domain, plan FROM tenants WHERE id = ? LIMIT 1`).bind(cleanId).first();
+    if (!targetTenant) {
+      return { ok: false, error: 'المتجر غير موجود' };
+    }
+
+    await env.DB.prepare(`
+      UPDATE tenants SET plan = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE id = ?
+    `).bind(plan, cleanId).run();
+
+    await purgeTenantCache(env, cleanId, targetTenant.slug, targetTenant.domain);
+
+    await recordAuditLog(env.DB, {
+      tenant_id: cleanId,
+      user_id: authSession?.userId || 'super_admin',
+      action: 'TENANT_PLAN_UPDATED',
+      resource_type: 'tenant',
+      resource_id: cleanId,
+      metadata: {
+        target_tenant_id: cleanId,
+        old_plan: targetTenant.plan,
+        new_plan: plan,
+      },
+      request,
+    });
+
+    return { ok: true, message: 'تم تحديث باقة المتجر بنجاح' };
   }
 
-  if (updates.length === 0) {
-    return { ok: false, error: 'لم يتم توفير حقول صالحة للتعديل (status أو plan)' };
-  }
-
-  updates.push("updated_at = strftime('%Y-%m-%dT%H:%M:%SZ','now')");
-  args.push(targetTenantId);
-
-  const result = await env.DB.prepare(`
-    UPDATE tenants SET ${updates.join(', ')} WHERE id = ?
-  `).bind(...args).run();
-
-  if (result.meta?.changes === 0) {
-    return { ok: false, error: 'المتجر غير موجود' };
-  }
-
-  return { ok: true, message: 'تم تحديث بيانات المتجر بنجاح' };
+  return { ok: false, error: 'لم يتم توفير حقول صالحة للتعديل (status أو plan)' };
 }
 
 /**
@@ -282,12 +535,7 @@ export async function superApproveMerchant(env, params, authSession, request) {
   ]);
 
   // 3. تطهير الكاش الخاص بالمتجر فقط (Scoped Cache Invalidation)
-  const cache = env.CACHE || env.KV;
-  if (cache) {
-    if (targetTenant.slug) await cache.delete(`tenant:host:${targetTenant.slug}`).catch(() => {});
-    if (targetTenant.domain) await cache.delete(`tenant:host:${targetTenant.domain}`).catch(() => {});
-    await cache.delete(`tenant:${targetTenantId}:settings_v1`).catch(() => {});
-  }
+  await purgeTenantCache(env, targetTenantId, targetTenant.slug, targetTenant.domain);
 
   // 4. تسجيل في سجل التدقيق الأمني
   await recordAuditLog(env.DB, {
@@ -369,12 +617,8 @@ export async function superRejectMerchant(env, params, authSession, request) {
     WHERE id = ? AND status = 'pending'
   `).bind(targetTenantId).run();
 
-  // 3. تطهير الكاش الخاص بالمتجر فقط
-  const cache = env.CACHE || env.KV;
-  if (cache) {
-    if (targetTenant.slug) await cache.delete(`tenant:host:${targetTenant.slug}`).catch(() => {});
-    if (targetTenant.domain) await cache.delete(`tenant:host:${targetTenant.domain}`).catch(() => {});
-  }
+  // 3. تطهير الكاش الخاص بالمتجر فقط (Scoped Cache Invalidation)
+  await purgeTenantCache(env, targetTenantId, targetTenant.slug, targetTenant.domain);
 
   // 4. تسجيل في سجل التدقيق الأمني متضمناً سبب الرفض
   await recordAuditLog(env.DB, {

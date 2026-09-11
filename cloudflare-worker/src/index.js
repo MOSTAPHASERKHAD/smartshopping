@@ -6,7 +6,7 @@
  * ║  يُحاكي سلوك Google Apps Script (doGet + doPost) تماماً         ║
  * ║  مع دعم action-based routing، CORS، Auth، و JSON موحد          ║
  * ╚══════════════════════════════════════════════════════════════════╝
- * 
+ *
  * الفلسفة المعمارية:
  * ─────────────────
  * 1. كل الطلبات (GET و POST) تمر عبر نقطة دخول واحدة: fetch()
@@ -14,7 +14,7 @@
  * 3. يُطبَّق adminGate() قبل تنفيذ أي action محمي
  * 4. كل استجابة بصيغة JSON موحدة { ok, data } أو { ok, error }
  * 5. CORS يُطبَّق على جميع الاستجابات بما فيها OPTIONS (preflight)
- * 
+ *
  * توافق الـ Frontend الحالي:
  * ─────────────────────────
  * - يرسل action=catalog, action=order, action=admin_orders ...إلخ
@@ -92,6 +92,7 @@ import {
   superListTenants, superPlatformStats, superUpdateTenant,
   superApproveMerchant, superRejectMerchant,
   superListTenantServices, superUpdateTenantService,
+  superSuspendTenant, superArchiveTenant, superRestoreTenant,
 } from './handlers/super_admin.js';
 
 // ════════════════════════════════════════════
@@ -467,7 +468,10 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   // ── الإدارة المركزية والمنصة (Super Admin) ──
   if (action === 'admin_super_list_tenants')          return superListTenants(env, authSession);
   if (action === 'admin_super_platform_stats')        return superPlatformStats(env, authSession);
-  if (action === 'admin_super_update_tenant')         return superUpdateTenant(env, params, authSession);
+  if (action === 'admin_super_update_tenant')         return superUpdateTenant(env, params, authSession, request);
+  if (action === 'admin_super_suspend_tenant' || action === 'admin_super_suspend_merchant') return superSuspendTenant(env, params, authSession, request);
+  if (action === 'admin_super_archive_tenant' || action === 'admin_super_archive_merchant') return superArchiveTenant(env, params, authSession, request);
+  if (action === 'admin_super_restore_tenant' || action === 'admin_super_restore_merchant') return superRestoreTenant(env, params, authSession, request);
   if (action === 'admin_super_approve_merchant')      return superApproveMerchant(env, params, authSession, request);
   if (action === 'admin_super_reject_merchant')       return superRejectMerchant(env, params, authSession, request);
   if (action === 'admin_super_list_tenant_services')  return superListTenantServices(env, params, authSession);
@@ -536,7 +540,7 @@ async function addPublicReview(env, params, request = null, tenantId = DEFAULT_M
  * 2. application/x-www-form-urlencoded body (الصيغة القديمة في GAS)
  * 3. application/json body (للتطبيقات المحمولة)
  * 4. multipart/form-data (لرفع الملفات مستقبلاً)
- * 
+ *
  * @param {Request} request
  * @returns {Promise<object>}
  */

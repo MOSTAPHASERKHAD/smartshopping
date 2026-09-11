@@ -1,7 +1,7 @@
 /**
  * Smart Shopping — Cloudflare Worker
  * ملف: src/utils/auth.js
- * 
+ *
  * نظام المصادقة والأمان متعدد المستأجرين (Multi-Tenant Auth & Security)
  * ─────────────────────────────────────────────
  * - توليد وتحقق tokens الموحدة والمشفرة (SHA-256 Hashed Tokens)
@@ -227,8 +227,10 @@ export async function validateSession(db, token) {
     `).bind(tokenHash).first();
 
     if (session) {
-      if (Date.now() > session.expires_at || session.tenant_status === 'suspended') {
-        return { valid: false, reason: 'EXPIRED_OR_SUSPENDED' };
+      if (Date.now() > session.expires_at || session.tenant_status !== 'active') {
+        const reason = session.tenant_status === 'suspended' ? 'EXPIRED_OR_SUSPENDED' :
+                       (session.tenant_status === 'archived' ? 'EXPIRED_OR_ARCHIVED' : 'EXPIRED_OR_INACTIVE');
+        return { valid: false, reason };
       }
       // تحديث last_seen_at بشكل غير متزامن
       db.prepare(`UPDATE sessions SET last_seen_at = strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE token_hash = ?`)
@@ -281,9 +283,9 @@ export async function revokeSession(db, token, reason = 'user_logout') {
   const tokenHash = await sha256(token);
   try {
     await db.prepare(`
-      UPDATE sessions 
+      UPDATE sessions
       SET revoked_at = strftime('%Y-%m-%dT%H:%M:%SZ','now'),
-          revoke_reason = ? 
+          revoke_reason = ?
       WHERE token_hash = ?
     `).bind(reason, tokenHash).run();
   } catch (e) {}
@@ -433,7 +435,8 @@ async function resolveTenantBySlug(env, slug, hostKey = null) {
       const cached = await env.CACHE.get(cacheKey, { type: 'json' });
       if (cached && cached.tenantId) {
         if (cached.status === 'suspended') return { error: 'STORE_SUSPENDED', tenantId: cached.tenantId };
-        return cached.tenantId;
+        if (cached.status === 'active') return cached.tenantId;
+        return null;
       }
     } catch (e) { /* KV failure fallback to D1 */ }
   }
@@ -467,7 +470,8 @@ async function resolveTenantByDomain(env, domain) {
       const cached = await env.CACHE.get(cacheKey, { type: 'json' });
       if (cached && cached.tenantId) {
         if (cached.status === 'suspended') return { error: 'STORE_SUSPENDED', tenantId: cached.tenantId };
-        return cached.tenantId;
+        if (cached.status === 'active') return cached.tenantId;
+        return null;
       }
     } catch (e) { /* KV failure fallback to D1 */ }
   }
