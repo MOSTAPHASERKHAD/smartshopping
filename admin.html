@@ -1006,11 +1006,14 @@
           <button type="button" class="filter-pill" onclick="setMerchantFilter('active', this)" style="border-color:#10b981;color:#059669">
             <span>✅ نشط</span> (<span id="pill-count-active">0</span>)
           </button>
+          <button type="button" class="filter-pill" onclick="setMerchantFilter('suspended', this)" style="border-color:#64748b;color:#475569">
+            <span>⏸️ معلق</span> (<span id="pill-count-suspended">0</span>)
+          </button>
+          <button type="button" class="filter-pill" onclick="setMerchantFilter('archived', this)" style="border-color:#94a3b8;color:#64748b">
+            <span>📁 مؤرشف</span> (<span id="pill-count-archived">0</span>)
+          </button>
           <button type="button" class="filter-pill" onclick="setMerchantFilter('rejected', this)" style="border-color:#ef4444;color:#dc2626">
             <span>❌ مرفوض</span> (<span id="pill-count-rejected">0</span>)
-          </button>
-          <button type="button" class="filter-pill" onclick="setMerchantFilter('suspended', this)">
-            <span>⏸️ معلق</span> (<span id="pill-count-suspended">0</span>)
           </button>
         </div>
 
@@ -1535,6 +1538,38 @@
     <div style="display:flex;justify-content:flex-end;gap:10px">
       <button type="button" class="btn btn-outline" onclick="closeSuperRejectModal()" style="font-size:13px">إلغاء</button>
       <button type="button" class="btn btn-danger" id="btnConfirmSuperReject" onclick="confirmSuperRejectAction()" style="font-size:13px">تأكيد رفض المتجر</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Super Admin Tenant Lifecycle Modal (Step 40.30) -->
+<div class="modal-overlay" id="superLifecycleModal" style="display:none;z-index:99999;backdrop-filter:blur(3px);background:rgba(0,0,0,0.65)">
+<div class="modal" style="max-width:480px;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5)">
+  <div class="modal-header" style="background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:16px 20px">
+    <h3 id="lifecycleModalHeaderTitle" style="display:flex;align-items:center;gap:8px;margin:0;font-size:16px">
+      <span id="lifecycleModalIcon">⏸️</span>
+      <span id="lifecycleModalTitle">تعليق المتجر</span>
+    </h3>
+    <button class="modal-close" onclick="closeSuperLifecycleModal()">✕</button>
+  </div>
+  <div class="modal-body" style="padding:20px">
+    <div style="font-size:13px;color:var(--text);margin-bottom:12px">
+      المتجر المستهدف: <strong id="lifecycleModalStoreName" style="color:var(--accent)"></strong>
+      <div id="lifecycleModalTenantIdDisplay" style="font-size:11px;color:var(--text3);font-family:monospace;margin-top:2px"></div>
+    </div>
+    <div id="lifecycleModalNotice" style="font-size:12.5px;color:var(--text2);margin-bottom:14px;line-height:1.65;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+    </div>
+    <input type="hidden" id="lifecycleModalTenantId">
+    <input type="hidden" id="lifecycleModalActionType">
+    <div class="form-group full" style="margin-bottom:14px">
+      <label id="lifecycleModalReasonLabel" style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;display:block">سبب الإجراء (إلزامي):</label>
+      <textarea id="lifecycleModalReason" rows="3" placeholder="..." style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px;resize:vertical"></textarea>
+      <div id="lifecycleModalReasonError" style="color:var(--danger);font-size:12px;margin-top:4px;display:none;font-weight:600">⚠️ يرجى كتابة سبب الإجراء أولاً</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
+      <button type="button" class="btn btn-outline" onclick="closeSuperLifecycleModal()" style="font-size:13px;min-height:38px">إلغاء</button>
+      <button type="button" class="btn" id="btnConfirmSuperLifecycle" onclick="confirmSuperLifecycleAction()" style="font-size:13px;min-height:38px">تأكيد</button>
     </div>
   </div>
 </div>
@@ -2361,13 +2396,14 @@ function loadSuperMerchants() {
 
 function updateSuperMerchantStats() {
   var total = allSuperMerchants.length;
-  var pending = 0, active = 0, rejected = 0, suspended = 0;
+  var pending = 0, active = 0, rejected = 0, suspended = 0, archived = 0;
   allSuperMerchants.forEach(function(m) {
     var s = (m.status || '').toLowerCase();
     if (s === 'pending') pending++;
     else if (s === 'active') active++;
     else if (s === 'rejected') rejected++;
     else if (s === 'suspended') suspended++;
+    else if (s === 'archived') archived++;
   });
 
   var totalEl = document.getElementById('super-stat-total');
@@ -2379,19 +2415,21 @@ function updateSuperMerchantStats() {
   if (totalEl) totalEl.textContent = total;
   if (pendEl) pendEl.textContent = pending;
   if (actEl) actEl.textContent = active;
-  if (otherEl) otherEl.textContent = (rejected + suspended);
+  if (otherEl) otherEl.textContent = (rejected + suspended + archived);
   if (badgeEl) badgeEl.textContent = '(' + total + ')';
 
   var pillAll = document.getElementById('pill-count-all');
   var pillPend = document.getElementById('pill-count-pending');
   var pillAct = document.getElementById('pill-count-active');
-  var pillRej = document.getElementById('pill-count-rejected');
   var pillSusp = document.getElementById('pill-count-suspended');
+  var pillArch = document.getElementById('pill-count-archived');
+  var pillRej = document.getElementById('pill-count-rejected');
   if (pillAll) pillAll.textContent = total;
   if (pillPend) pillPend.textContent = pending;
   if (pillAct) pillAct.textContent = active;
-  if (pillRej) pillRej.textContent = rejected;
   if (pillSusp) pillSusp.textContent = suspended;
+  if (pillArch) pillArch.textContent = archived;
+  if (pillRej) pillRej.textContent = rejected;
 }
 
 function setMerchantFilter(filter, btn) {
@@ -2446,13 +2484,15 @@ function renderSuperMerchantsTable() {
     var st = (m.status || 'pending').toLowerCase();
     var statusBadge = '';
     if (st === 'active') {
-      statusBadge = '<span class="status-badge" style="background:#dcfce7;color:#15803d;border:1px solid #86efac;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">✅ نشط (Active)</span>';
+      statusBadge = '<span class="status-badge" style="background:#dcfce7;color:#15803d;border:1px solid #86efac;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">✅ نشط</span>';
     } else if (st === 'pending') {
-      statusBadge = '<span class="status-badge" style="background:#fef3c7;color:#b45309;border:1px solid #fcd34d;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">⏳ قيد المراجعة (Pending)</span>';
+      statusBadge = '<span class="status-badge" style="background:#fef3c7;color:#b45309;border:1px solid #fcd34d;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">⏳ قيد المراجعة</span>';
     } else if (st === 'rejected') {
-      statusBadge = '<span class="status-badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">❌ مرفوض (Rejected)</span>';
+      statusBadge = '<span class="status-badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">❌ مرفوض</span>';
     } else if (st === 'suspended') {
-      statusBadge = '<span class="status-badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">⏸️ معلق (Suspended)</span>';
+      statusBadge = '<span class="status-badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">⏸️ معلق</span>';
+    } else if (st === 'archived') {
+      statusBadge = '<span class="status-badge" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;font-size:0.75rem;padding:3px 8px;border-radius:6px;font-weight:700">📁 مؤرشف</span>';
     } else {
       statusBadge = '<span class="status-badge">' + esc(st) + '</span>';
     }
@@ -2489,6 +2529,32 @@ function renderSuperMerchantsTable() {
       actionsHtml = '<div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">' +
         '<span style="font-size:0.75rem;color:var(--danger);font-weight:600">طلب مرفوض</span>' +
         servicesBtn +
+      '</div>';
+    } else if (st === 'active') {
+      actionsHtml = '<div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">' +
+        servicesBtn +
+        '<button type="button" class="btn btn-sm btn-outline" style="padding:4px 10px;font-size:0.75rem;border-color:#f59e0b;color:#d97706;display:inline-flex;align-items:center;gap:4px" onclick="openSuperLifecycleModal(\'' + esc(m.tenant_id) + '\', \'' + esc(m.store_name || m.tenant_id) + '\', \'suspend\')" title="تعليق المتجر مؤقتاً">' +
+          '<span>⏸️</span><span>تعليق</span>' +
+        '</button>' +
+        '<button type="button" class="btn btn-sm btn-outline" style="padding:4px 10px;font-size:0.75rem;border-color:#64748b;color:#475569;display:inline-flex;align-items:center;gap:4px" onclick="openSuperLifecycleModal(\'' + esc(m.tenant_id) + '\', \'' + esc(m.store_name || m.tenant_id) + '\', \'archive\')" title="أرشفة المتجر">' +
+          '<span>📁</span><span>أرشفة</span>' +
+        '</button>' +
+      '</div>';
+    } else if (st === 'suspended') {
+      actionsHtml = '<div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">' +
+        servicesBtn +
+        '<button type="button" class="btn btn-sm btn-success" style="padding:4px 10px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:4px" onclick="openSuperLifecycleModal(\'' + esc(m.tenant_id) + '\', \'' + esc(m.store_name || m.tenant_id) + '\', \'restore\')" title="استعادة تفعيل المتجر">' +
+          '<span>🔄</span><span>استعادة</span>' +
+        '</button>' +
+        '<button type="button" class="btn btn-sm btn-outline" style="padding:4px 10px;font-size:0.75rem;border-color:#64748b;color:#475569;display:inline-flex;align-items:center;gap:4px" onclick="openSuperLifecycleModal(\'' + esc(m.tenant_id) + '\', \'' + esc(m.store_name || m.tenant_id) + '\', \'archive\')" title="أرشفة المتجر">' +
+          '<span>📁</span><span>أرشفة</span>' +
+        '</button>' +
+      '</div>';
+    } else if (st === 'archived') {
+      actionsHtml = '<div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">' +
+        '<button type="button" class="btn btn-sm btn-success" style="padding:4px 10px;font-size:0.75rem;font-weight:700;display:inline-flex;align-items:center;gap:4px" onclick="openSuperLifecycleModal(\'' + esc(m.tenant_id) + '\', \'' + esc(m.store_name || m.tenant_id) + '\', \'restore\')" title="استعادة تفعيل المتجر">' +
+          '<span>🔄</span><span>استعادة</span>' +
+        '</button>' +
       '</div>';
     } else {
       actionsHtml = '<div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap">' +
@@ -2604,6 +2670,213 @@ function confirmSuperRejectAction() {
     toast('🚫 تم رفض متجر "' + storeName + '" بنجاح');
     loadSuperMerchants();
   });
+}
+
+// ===== SUPER ADMIN TENANT LIFECYCLE MANAGEMENT (Step 40.30) =====
+function openSuperLifecycleModal(tenantId, storeName, actionType) {
+  if (!isSuperAdminUser()) {
+    toast('غير مصرح: هذا الإجراء مخصص للمالك الرئيسي (Super Admin) فقط');
+    return;
+  }
+  var modal = document.getElementById('superLifecycleModal');
+  if (!modal) return;
+
+  var tidInput = document.getElementById('lifecycleModalTenantId');
+  var actionInput = document.getElementById('lifecycleModalActionType');
+  var nameEl = document.getElementById('lifecycleModalStoreName');
+  var idDisplay = document.getElementById('lifecycleModalTenantIdDisplay');
+  var iconEl = document.getElementById('lifecycleModalIcon');
+  var titleEl = document.getElementById('lifecycleModalTitle');
+  var headerTitle = document.getElementById('lifecycleModalHeaderTitle');
+  var noticeEl = document.getElementById('lifecycleModalNotice');
+  var reasonLabel = document.getElementById('lifecycleModalReasonLabel');
+  var reasonInput = document.getElementById('lifecycleModalReason');
+  var reasonErr = document.getElementById('lifecycleModalReasonError');
+  var confirmBtn = document.getElementById('btnConfirmSuperLifecycle');
+
+  if (tidInput) tidInput.value = tenantId;
+  if (actionInput) actionInput.value = actionType;
+  if (nameEl) nameEl.textContent = storeName || tenantId;
+  if (idDisplay) idDisplay.textContent = 'ID: ' + tenantId;
+  if (reasonInput) reasonInput.value = '';
+  if (reasonErr) {
+    reasonErr.textContent = '';
+    reasonErr.style.display = 'none';
+  }
+
+  if (actionType === 'suspend') {
+    if (iconEl) iconEl.textContent = '⏸️';
+    if (titleEl) titleEl.textContent = 'تعليق المتجر';
+    if (headerTitle) headerTitle.style.color = '#d97706';
+    if (noticeEl) {
+      noticeEl.innerHTML =
+        '<div style="font-weight:700;color:#b45309;margin-bottom:6px">تنبيهات تعليق المتجر:</div>' +
+        '<ul style="margin:0;padding-right:18px;list-style-type:disc">' +
+          '<li>سيتم تعليق المتجر ومنع تسجيل دخول التاجر.</li>' +
+          '<li>سيتم إلغاء جميع جلساته النشطة فورًا.</li>' +
+          '<li>سيصبح المتجر غير متاح للعملاء.</li>' +
+          '<li>يمكن استعادة المتجر لاحقًا.</li>' +
+        '</ul>';
+    }
+    if (reasonLabel) reasonLabel.innerHTML = 'سبب التعليق <span style="color:var(--danger)">* (إلزامي)</span>:';
+    if (reasonInput) reasonInput.placeholder = 'اكتب سبب تعليق المتجر (مثال: انتهاك شروط الخدمة أو عدم سداد الرسوم)...';
+    if (confirmBtn) {
+      confirmBtn.className = 'btn btn-warning';
+      confirmBtn.style.background = '#d97706';
+      confirmBtn.style.color = '#ffffff';
+      confirmBtn.innerHTML = '<span>⏸️</span> <span>تأكيد تعليق المتجر</span>';
+    }
+  } else if (actionType === 'archive') {
+    if (iconEl) iconEl.textContent = '📁';
+    if (titleEl) titleEl.textContent = 'أرشفة المتجر';
+    if (headerTitle) headerTitle.style.color = '#dc2626';
+    if (noticeEl) {
+      noticeEl.innerHTML =
+        '<div style="font-weight:700;color:#b91c1c;margin-bottom:6px">تنبيهات أرشفة المتجر:</div>' +
+        '<ul style="margin:0;padding-right:18px;list-style-type:disc">' +
+          '<li>سيتم أرشفة المتجر ومنع تسجيل الدخول.</li>' +
+          '<li>سيتم إلغاء الجلسات النشطة.</li>' +
+          '<li>سيصبح المتجر غير متاح للعملاء.</li>' +
+          '<li>لن يتم حذف الطلبات أو العملاء أو المنتجات.</li>' +
+          '<li>يمكن استعادة المتجر لاحقًا.</li>' +
+        '</ul>';
+    }
+    if (reasonLabel) reasonLabel.innerHTML = 'سبب الأرشفة <span style="color:var(--danger)">* (إلزامي)</span>:';
+    if (reasonInput) reasonInput.placeholder = 'اكتب سبب أرشفة المتجر (مثال: إغلاق المتجر نهائياً بناءً على طلب التاجر)...';
+    if (confirmBtn) {
+      confirmBtn.className = 'btn btn-danger';
+      confirmBtn.style.background = '#dc2626';
+      confirmBtn.style.color = '#ffffff';
+      confirmBtn.innerHTML = '<span>📁</span> <span>تأكيد أرشفة المتجر</span>';
+    }
+  } else if (actionType === 'restore') {
+    if (iconEl) iconEl.textContent = '🔄';
+    if (titleEl) titleEl.textContent = 'استعادة تفعيل المتجر';
+    if (headerTitle) headerTitle.style.color = '#16a34a';
+    if (noticeEl) {
+      noticeEl.innerHTML =
+        '<div style="font-weight:700;color:#15803d;margin-bottom:6px">تنبيهات استعادة المتجر:</div>' +
+        '<ul style="margin:0;padding-right:18px;list-style-type:disc">' +
+          '<li>سيتم إعادة المتجر إلى الحالة النشطة.</li>' +
+          '<li>الجلسات القديمة التي تم إلغاؤها لن تعود.</li>' +
+          '<li>يجب على التاجر تسجيل الدخول من جديد.</li>' +
+        '</ul>';
+    }
+    if (reasonLabel) reasonLabel.innerHTML = 'سبب الاستعادة (اختياري):';
+    if (reasonInput) reasonInput.placeholder = 'اكتب ملاحظة أو سبب الاستعادة (اختياري)...';
+    if (confirmBtn) {
+      confirmBtn.className = 'btn btn-success';
+      confirmBtn.style.background = '#16a34a';
+      confirmBtn.style.color = '#ffffff';
+      confirmBtn.innerHTML = '<span>🔄</span> <span>تأكيد استعادة المتجر</span>';
+    }
+  }
+
+  modal.classList.add('open');
+  modal.style.display = 'flex';
+  if (reasonInput) setTimeout(function() { try { reasonInput.focus(); } catch(_) {} }, 100);
+}
+
+function closeSuperLifecycleModal() {
+  var modal = document.getElementById('superLifecycleModal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+  var reasonErr = document.getElementById('lifecycleModalReasonError');
+  if (reasonErr) {
+    reasonErr.textContent = '';
+    reasonErr.style.display = 'none';
+  }
+}
+
+function confirmSuperLifecycleAction() {
+  if (isMerchantActionInProgress) return;
+
+  var tidInput = document.getElementById('lifecycleModalTenantId');
+  var actionInput = document.getElementById('lifecycleModalActionType');
+  var nameEl = document.getElementById('lifecycleModalStoreName');
+  var reasonInput = document.getElementById('lifecycleModalReason');
+  var errEl = document.getElementById('lifecycleModalReasonError');
+  var btn = document.getElementById('btnConfirmSuperLifecycle');
+
+  var tenantId = (tidInput && tidInput.value) ? tidInput.value.trim() : '';
+  var actionType = (actionInput && actionInput.value) ? actionInput.value.trim() : '';
+  var storeName = (nameEl && nameEl.textContent) ? nameEl.textContent : '';
+  var reason = (reasonInput && reasonInput.value) ? reasonInput.value.trim() : '';
+
+  if (!tenantId || !actionType) return;
+
+  // التحقق من إلزامية السبب للتعليق والأرشفة
+  if ((actionType === 'suspend' || actionType === 'archive') && !reason) {
+    if (errEl) {
+      errEl.textContent = '⚠️ سبب ' + (actionType === 'suspend' ? 'التعليق' : 'الأرشفة') + ' إلزامي قبل المتابعة';
+      errEl.style.display = 'block';
+    }
+    if (reasonInput) reasonInput.focus();
+    return;
+  }
+  if (errEl) {
+    errEl.textContent = '';
+    errEl.style.display = 'none';
+  }
+
+  var apiAction = '';
+  var payload = { target_tenant_id: tenantId };
+  if (actionType === 'suspend') {
+    apiAction = 'admin_super_suspend_tenant';
+    payload.reason = reason;
+  } else if (actionType === 'archive') {
+    apiAction = 'admin_super_archive_tenant';
+    payload.reason = reason;
+  } else if (actionType === 'restore') {
+    apiAction = 'admin_super_restore_tenant';
+    if (reason) payload.reason = reason;
+  } else {
+    return;
+  }
+
+  isMerchantActionInProgress = true;
+  var originalHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span> <span>جاري التنفيذ...</span>';
+  }
+
+  try {
+    apiPost(apiAction, payload, function(res) {
+      isMerchantActionInProgress = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+
+      if (!res || !res.ok) {
+        var errMsg = (res && res.error) ? (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error) : 'فشلت العملية';
+        toast('⚠️ خطأ: ' + errMsg);
+        if (errEl) {
+          errEl.textContent = '⚠️ ' + errMsg;
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+
+      closeSuperLifecycleModal();
+      var defaultSuccessMsg =
+        actionType === 'suspend' ? 'تم تعليق المتجر بنجاح' :
+        actionType === 'archive' ? 'تمت أرشفة المتجر بنجاح' :
+        'تمت استعادة تفعيل المتجر بنجاح';
+      toast('✅ ' + (res.message || defaultSuccessMsg));
+      loadSuperMerchants();
+    });
+  } catch (ex) {
+    isMerchantActionInProgress = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+    toast('⚠️ حدث استثناء غير متوقع أثناء معالجة الطلب');
+  }
 }
 
 // ===== SUPER ADMIN SERVICES MANAGEMENT (Phase 35.5) =====
