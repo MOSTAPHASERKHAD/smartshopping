@@ -963,6 +963,9 @@
         <span class="count-badge" id="super-merchants-count-badge"></span>
       </h1>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary btn-sm" id="btnOpenCreateMerchantModal" onclick="openSuperCreateTenantModal()" style="display:inline-flex;align-items:center;gap:6px">
+          <span>➕</span> <span>إضافة متجر جديد</span>
+        </button>
         <button class="btn btn-outline btn-sm" id="btnRefreshMerchants" onclick="loadSuperMerchants()">
           <span>🔄</span> <span>تحديث القائمة</span>
         </button>
@@ -1538,6 +1541,127 @@
     <div style="display:flex;justify-content:flex-end;gap:10px">
       <button type="button" class="btn btn-outline" onclick="closeSuperRejectModal()" style="font-size:13px">إلغاء</button>
       <button type="button" class="btn btn-danger" id="btnConfirmSuperReject" onclick="confirmSuperRejectAction()" style="font-size:13px">تأكيد رفض المتجر</button>
+    </div>
+  </div>
+<!-- Super Admin Create Tenant Modal -->
+<div class="modal-overlay" id="superCreateTenantModal" style="display:none;z-index:99999;backdrop-filter:blur(3px);background:rgba(0,0,0,0.65)">
+<div class="modal" style="max-width:540px;width:95%;border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5)">
+  <div class="modal-header" style="background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:16px 20px">
+    <h3 style="display:flex;align-items:center;gap:8px;margin:0;font-size:16px;color:var(--text)">
+      <span>🏪</span>
+      <span>إضافة متجر جديد (Add Store)</span>
+    </h3>
+    <button class="modal-close" onclick="closeSuperCreateTenantModal()">✕</button>
+  </div>
+  <div class="modal-body" style="padding:20px;max-height:80vh;overflow-y:auto">
+    <div id="createTenantError" style="display:none;margin-bottom:14px;padding:10px 12px;background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:8px;color:var(--danger);font-size:13px;font-weight:600"></div>
+
+    <div style="font-weight:700;font-size:13px;color:var(--accent);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:4px">
+      بيانات المتجر (Store Details)
+    </div>
+
+    <div class="form-group full" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;display:block">اسم المتجر *</label>
+      <input type="text" id="new_tenant_name" placeholder="مثال: متجر النور للإلكترونيات" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px">
+    </div>
+
+    <div class="form-group full" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;display:block">معرف الرابط (Slug) *</label>
+      <input type="text" id="new_tenant_slug" placeholder="مثال: al-nour-store" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px;direction:ltr;text-align:left">
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">أحرف إنجليزية صغيرة وأرقام وشرطة فقط (سيكون الرابط: slug.smartshopping.click)</div>
+    </div>
+
+    <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="form-group">
+        <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;display:block">خطة الاشتراك (Plan)</label>
+        <select id="new_tenant_plan" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px">
+          <option value="starter" selected>Starter</option>
+          <option value="pro">Pro</option>
+          <option value="enterprise">Enterprise</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;display:block">حالة المتجر</label>
+        <select id="new_tenant_status" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px">
+          <option value="active" selected>✅ نشط (Active)</option>
+          <option value="pending">⏳ قيد المراجعة (Pending)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group full" style="margin-bottom:16px">
+      <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;display:block">النطاق المخصص (Custom Domain) — اختياري</label>
+      <input type="text" id="new_tenant_domain" placeholder="مثال: store.com أو dukan.dz" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px;direction:ltr;text-align:left">
+    </div>
+
+    <div style="font-weight:700;font-size:13px;color:var(--accent);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:4px">
+      بيانات المالك الرئيسي (Store Owner)
+    </div>
+
+    <div class="form-group full" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;display:block">اسم المالك</label>
+      <input type="text" id="new_owner_name" placeholder="مثال: محمد العمري" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px">
+    </div>
+
+    <div class="form-group full" style="margin-bottom:12px">
+      <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;display:block">البريد الإلكتروني للمالك *</label>
+      <input type="email" id="new_owner_email" placeholder="owner@example.com" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px;direction:ltr;text-align:left">
+    </div>
+
+    <div class="form-group full" style="margin-bottom:16px">
+      <label style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;display:block">كلمة المرور الأولية *</label>
+      <input type="password" id="new_owner_password" placeholder="8 أحرف على الأقل" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-family:inherit;font-size:13px;direction:ltr;text-align:left">
+    </div>
+
+    <div style="font-weight:700;font-size:13px;color:var(--accent);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:4px;margin-top:16px">
+      طريقة تهيئة المتجر (Store Setup)
+    </div>
+
+    <div class="form-group full" style="margin-bottom:16px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+          <input type="radio" name="new_tenant_setup_mode" id="setup_mode_template" value="template" checked onchange="toggleSuperCreateSetupOptions()" style="margin-top:3px">
+          <div>
+            <div style="font-weight:700;font-size:13px;color:var(--text)">📋 استخدام إعدادات المتجر الرئيسي كقالب (Master Template)</div>
+            <div style="color:var(--text3);font-size:11px;margin-top:2px;line-height:1.4">
+              نسخ فوري (Initial Snapshot) لإعدادات الثيم، أسعار الشحن، ونصوص المساعد الذكي، وقالب رسالة واتساب كبداية جاهزة. المتجر الجديد يصبح مستقلاً تماماً ولا تُنسخ أي أسرار أو كلمات مرور.
+            </div>
+          </div>
+        </label>
+
+        <div id="superCreatePixelOptions" style="margin-right:26px;padding:8px 12px;border-radius:6px;background:var(--bg);border:1px dashed var(--border)">
+          <label style="font-weight:600;font-size:12px;color:var(--text);display:block;margin-bottom:6px">
+            📊 إعدادات Meta Pixel للمتجر الجديد:
+          </label>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px">
+              <input type="radio" name="new_tenant_pixel_setup" id="pixel_setup_new" value="new" checked>
+              <span>إعداد Pixel مستقل جديد (موصى به - فارغ)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px">
+              <input type="radio" name="new_tenant_pixel_setup" id="pixel_setup_master" value="master">
+              <span>استخدام Pixel المتجر الرئيسي (Shared Master Pixel)</span>
+            </label>
+          </div>
+        </div>
+
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card)">
+          <input type="radio" name="new_tenant_setup_mode" id="setup_mode_independent" value="independent" onchange="toggleSuperCreateSetupOptions()" style="margin-top:3px">
+          <div>
+            <div style="font-weight:700;font-size:13px;color:var(--text)">⚙️ إعداد المتجر بشكل مستقل (Configure Independently)</div>
+            <div style="color:var(--text3);font-size:11px;margin-top:2px;line-height:1.4">
+              إنشاء المتجر بإعداداته الأساسية الافتراضية فقط، دون نسخ أي إعدادات أو قوالب من المتجر الرئيسي.
+            </div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px">
+      <button type="button" class="btn btn-outline" onclick="closeSuperCreateTenantModal()" style="font-size:13px;min-height:38px">إلغاء</button>
+      <button type="button" class="btn btn-primary" id="btnSubmitCreateTenant" onclick="submitSuperCreateTenant()" style="font-size:13px;min-height:38px">
+        <span>➕</span> <span>إنشاء المتجر وحساب المالك</span>
+      </button>
     </div>
   </div>
 </div>
@@ -2876,6 +3000,189 @@ function confirmSuperLifecycleAction() {
       btn.innerHTML = originalHtml;
     }
     toast('⚠️ حدث استثناء غير متوقع أثناء معالجة الطلب');
+  }
+}
+
+// ===== SUPER ADMIN CREATE TENANT MODAL =====
+var isSuperCreateTenantInProgress = false;
+
+function toggleSuperCreateSetupOptions() {
+  var isTemplate = document.getElementById('setup_mode_template') && document.getElementById('setup_mode_template').checked;
+  var pixelBox = document.getElementById('superCreatePixelOptions');
+  if (pixelBox) {
+    pixelBox.style.display = isTemplate ? 'block' : 'none';
+  }
+}
+
+function openSuperCreateTenantModal() {
+  if (!isSuperAdminUser()) {
+    toast('غير مصرح: إنشاء المتاجر مخصص للمالك الرئيسي (Super Admin) فقط');
+    return;
+  }
+  var modal = document.getElementById('superCreateTenantModal');
+  if (!modal) return;
+
+  // Reset fields
+  var nameInp = document.getElementById('new_tenant_name');
+  var slugInp = document.getElementById('new_tenant_slug');
+  var domainInp = document.getElementById('new_tenant_domain');
+  var planInp = document.getElementById('new_tenant_plan');
+  var statusInp = document.getElementById('new_tenant_status');
+  var ownerNameInp = document.getElementById('new_owner_name');
+  var ownerEmailInp = document.getElementById('new_owner_email');
+  var ownerPassInp = document.getElementById('new_owner_password');
+  var errEl = document.getElementById('createTenantError');
+  var btn = document.getElementById('btnSubmitCreateTenant');
+
+  if (nameInp) nameInp.value = '';
+  if (slugInp) slugInp.value = '';
+  if (domainInp) domainInp.value = '';
+  if (planInp) planInp.value = 'starter';
+  if (statusInp) statusInp.value = 'active';
+  if (ownerNameInp) ownerNameInp.value = '';
+  if (ownerEmailInp) ownerEmailInp.value = '';
+  if (ownerPassInp) ownerPassInp.value = '';
+
+  var tmplRadio = document.getElementById('setup_mode_template');
+  if (tmplRadio) tmplRadio.checked = true;
+  var pixelNewRadio = document.getElementById('pixel_setup_new');
+  if (pixelNewRadio) pixelNewRadio.checked = true;
+  toggleSuperCreateSetupOptions();
+
+  if (errEl) {
+    errEl.textContent = '';
+    errEl.style.display = 'none';
+  }
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<span>➕</span> <span>إنشاء المتجر وحساب المالك</span>';
+  }
+
+  isSuperCreateTenantInProgress = false;
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+  if (nameInp) nameInp.focus();
+}
+
+function closeSuperCreateTenantModal() {
+  var modal = document.getElementById('superCreateTenantModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('open');
+  }
+  isSuperCreateTenantInProgress = false;
+}
+
+function submitSuperCreateTenant() {
+  if (isSuperCreateTenantInProgress) return;
+
+  var nameInp = document.getElementById('new_tenant_name');
+  var slugInp = document.getElementById('new_tenant_slug');
+  var domainInp = document.getElementById('new_tenant_domain');
+  var planInp = document.getElementById('new_tenant_plan');
+  var statusInp = document.getElementById('new_tenant_status');
+  var ownerNameInp = document.getElementById('new_owner_name');
+  var ownerEmailInp = document.getElementById('new_owner_email');
+  var ownerPassInp = document.getElementById('new_owner_password');
+  var errEl = document.getElementById('createTenantError');
+  var btn = document.getElementById('btnSubmitCreateTenant');
+
+  var storeName = (nameInp && nameInp.value) ? nameInp.value.trim() : '';
+  var slug = (slugInp && slugInp.value) ? slugInp.value.trim().toLowerCase() : '';
+  var domain = (domainInp && domainInp.value) ? domainInp.value.trim() : '';
+  var plan = (planInp && planInp.value) ? planInp.value : 'starter';
+  var status = (statusInp && statusInp.value) ? statusInp.value : 'active';
+  var ownerName = (ownerNameInp && ownerNameInp.value) ? ownerNameInp.value.trim() : '';
+  var ownerEmail = (ownerEmailInp && ownerEmailInp.value) ? ownerEmailInp.value.trim() : '';
+  var ownerPassword = (ownerPassInp && ownerPassInp.value) ? ownerPassInp.value : '';
+
+  var setupMode = (document.getElementById('setup_mode_independent') && document.getElementById('setup_mode_independent').checked) ? 'independent' : 'template';
+  var pixelSetup = (document.getElementById('pixel_setup_master') && document.getElementById('pixel_setup_master').checked) ? 'master' : 'new';
+
+  function showError(msg) {
+    if (errEl) {
+      errEl.textContent = '⚠️ ' + msg;
+      errEl.style.display = 'block';
+    }
+  }
+
+  if (errEl) {
+    errEl.textContent = '';
+    errEl.style.display = 'none';
+  }
+
+  // Client-side validations
+  if (!storeName || storeName.length < 2) {
+    showError('اسم المتجر مطلوب (حرفان على الأقل)');
+    if (nameInp) nameInp.focus();
+    return;
+  }
+  if (!slug || slug.length < 2) {
+    showError('معرف الرابط (Slug) مطلوب (حرفان على الأقل بالإنجليزية والأرقام)');
+    if (slugInp) slugInp.focus();
+    return;
+  }
+  if (!/^[a-z0-9_-]+$/.test(slug)) {
+    showError('معرف الرابط يجب أن يحتوي على أحرف إنجليزية صغيرة وأرقام وشرطة فقط');
+    if (slugInp) slugInp.focus();
+    return;
+  }
+  if (!ownerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail)) {
+    showError('البريد الإلكتروني لمالك المتجر غير صالح');
+    if (ownerEmailInp) ownerEmailInp.focus();
+    return;
+  }
+  if (!ownerPassword || ownerPassword.length < 8) {
+    showError('كلمة المرور يجب أن تتكون من 8 أحرف على الأقل');
+    if (ownerPassInp) ownerPassInp.focus();
+    return;
+  }
+
+  var payload = {
+    store_name: storeName,
+    slug: slug,
+    domain: domain || null,
+    plan: plan,
+    status: status,
+    owner_name: ownerName || storeName,
+    owner_email: ownerEmail,
+    owner_password: ownerPassword,
+    setup_mode: setupMode,
+    pixel_setup: pixelSetup,
+  };
+
+  isSuperCreateTenantInProgress = true;
+  var originalHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span> <span>جاري إنشاء المتجر...</span>';
+  }
+
+  try {
+    apiPost('admin_super_create_tenant', payload, function(res) {
+      isSuperCreateTenantInProgress = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+
+      if (!res || !res.ok) {
+        var errMsg = (res && res.error) ? (typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error) : 'تعذر إنشاء المتجر';
+        showError(errMsg);
+        return;
+      }
+
+      closeSuperCreateTenantModal();
+      toast('✅ ' + (res.message || 'تم إنشاء المتجر بنجاح'));
+      loadSuperMerchants();
+    });
+  } catch (ex) {
+    isSuperCreateTenantInProgress = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+    showError('حدث استثناء غير متوقع أثناء معالجة الطلب');
   }
 }
 

@@ -93,6 +93,7 @@ import {
   superApproveMerchant, superRejectMerchant,
   superListTenantServices, superUpdateTenantService,
   superSuspendTenant, superArchiveTenant, superRestoreTenant,
+  superCreateTenant,
 } from './handlers/super_admin.js';
 
 // ════════════════════════════════════════════
@@ -468,6 +469,7 @@ async function route(action, params, token, env, ctx, request, tenantId, authSes
   // ── الإدارة المركزية والمنصة (Super Admin) ──
   if (action === 'admin_super_list_tenants')          return superListTenants(env, authSession);
   if (action === 'admin_super_platform_stats')        return superPlatformStats(env, authSession);
+  if (action === 'admin_super_create_tenant')         return superCreateTenant(env, params, authSession, request);
   if (action === 'admin_super_update_tenant')         return superUpdateTenant(env, params, authSession, request);
   if (action === 'admin_super_suspend_tenant' || action === 'admin_super_suspend_merchant') return superSuspendTenant(env, params, authSession, request);
   if (action === 'admin_super_archive_tenant' || action === 'admin_super_archive_merchant') return superArchiveTenant(env, params, authSession, request);

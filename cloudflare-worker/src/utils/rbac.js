@@ -221,6 +221,7 @@ export const ACTION_PERMISSIONS = {
   // Super Admin Platform Actions
   admin_super_list_tenants:          PERMISSIONS.PLATFORM_MANAGE,
   admin_super_platform_stats:        PERMISSIONS.PLATFORM_MANAGE,
+  admin_super_create_tenant:         PERMISSIONS.PLATFORM_MANAGE,
   admin_super_update_tenant:         PERMISSIONS.PLATFORM_MANAGE,
   admin_super_approve_merchant:      PERMISSIONS.PLATFORM_MANAGE,
   admin_super_reject_merchant:       PERMISSIONS.PLATFORM_MANAGE,

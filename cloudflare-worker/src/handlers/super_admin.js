@@ -8,7 +8,17 @@
  * مع ضمان عزل البيانات بنسبة 100% ومنع التجار العاديين من الوصول لبيانات المنصة.
  */
 
-import { DEFAULT_MASTER_TENANT_ID, recordAuditLog } from '../utils/auth.js';
+import {
+  DEFAULT_MASTER_TENANT_ID,
+  recordAuditLog,
+  generateToken,
+  normalizeEmail,
+  isValidEmail,
+  validatePasswordStrength,
+  hashMerchantPassword,
+  RESERVED_SLUGS,
+  normalizeHostname,
+} from '../utils/auth.js';
 import { ROLES } from '../utils/rbac.js';
 import { sanitize } from '../utils/sanitize.js';
 import { getServiceDefinition, getRegisteredServiceKeys, SERVICE_MODES, SERVICE_REGISTRY } from '../utils/services.js';
@@ -405,6 +415,301 @@ export async function superRestoreTenant(env, params, authSession, request) {
     targetStatus: 'active',
     reason,
   }, authSession, request);
+}
+
+/**
+ * [SUPER_ADMIN] إنشاء متجر جديد ومالك المتجر مباشرة من لوحة الإدارة الرئيسية
+ * @param {Env} env
+ * @param {object} params
+ * @param {object} authSession
+ * @param {Request} [request]
+ * @returns {Promise<object>}
+ */
+export async function superCreateTenant(env, params, authSession, request) {
+  if (!isSuperAdminSession(authSession)) {
+    return {
+      ok: false,
+      error: 'غير مصرح: هذه العملية مخصصة للمالك الرئيسي للمنصة (Super Admin) فقط',
+      errorCode: 'FORBIDDEN',
+    };
+  }
+
+  // 1. تنظيف واستخراج المدخلات
+  const storeName = sanitize(params.store_name || params.name || '', 100);
+  let slug = sanitize(params.slug || '', 60).toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  const ownerEmail = normalizeEmail(params.owner_email || params.email);
+  const ownerPassword = params.owner_password || params.password || '';
+  const ownerName = sanitize(params.owner_name || '', 100) || storeName;
+  const rawPlan = (params.plan || 'starter').toLowerCase();
+  const rawStatus = (params.status || 'active').toLowerCase();
+  const rawDomain = params.domain ? normalizeHostname(params.domain) : null;
+
+  // 2. التحقق من صحة الحقول الأساسية
+  if (!storeName || storeName.length < 2) {
+    return { ok: false, error: 'اسم المتجر مطلوب (حرفان على الأقل)' };
+  }
+
+  if (!slug || slug.length < 2) {
+    return { ok: false, error: 'معرف الرابط (Slug) مطلوب (حرفان على الأقل بالإنجليزية أو الأرقام)' };
+  }
+
+  if (slug === 'main' || slug === 'default' || RESERVED_SLUGS.has(slug)) {
+    return { ok: false, error: `الرابط (${slug}) محجوز للمنصة ولا يمكن استخدامه` };
+  }
+
+  if (!ownerEmail || !isValidEmail(ownerEmail)) {
+    return { ok: false, error: 'البريد الإلكتروني للمالك غير صالح' };
+  }
+
+  const pwCheck = validatePasswordStrength(ownerPassword);
+  if (!pwCheck.valid) {
+    return { ok: false, error: pwCheck.error };
+  }
+
+  const allowedPlans = ['starter', 'pro', 'enterprise'];
+  if (!allowedPlans.includes(rawPlan)) {
+    return { ok: false, error: `الباقة المحددة غير صالحة. الباقات المتاحة: ${allowedPlans.join(', ')}` };
+  }
+
+  const allowedStatuses = ['active', 'pending'];
+  if (!allowedStatuses.includes(rawStatus)) {
+    return { ok: false, error: 'حالة المتجر الأولية يجب أن تكون إما (active) أو (pending)' };
+  }
+
+  const rawSetupMode = sanitize(params?.setup_mode || 'template', 30).toLowerCase();
+  if (!['template', 'independent'].includes(rawSetupMode)) {
+    return { ok: false, error: 'طريقة تهيئة المتجر يجب أن تكون (template) أو (independent)' };
+  }
+
+  const rawPixelSetup = sanitize(params?.pixel_setup || 'new', 30).toLowerCase();
+  if (!['new', 'master'].includes(rawPixelSetup)) {
+    return { ok: false, error: 'إعدادات البكسل يجب أن تكون (new) أو (master)' };
+  }
+
+  if (rawDomain) {
+    if (rawDomain === 'smartshopping.click' || rawDomain === 'www.smartshopping.click' || rawDomain.endsWith('.pages.dev') || rawDomain.endsWith('.workers.dev')) {
+      return { ok: false, error: 'لا يمكن استخدام نطاقات المنصة كنطاق مخصص لمتجر فرعي' };
+    }
+  }
+
+  // 3. التحقق من فرادة البريد والـ slug والـ domain
+  const existingEmail = await env.DB.prepare(
+    `SELECT id FROM users WHERE email = ? COLLATE NOCASE LIMIT 1`
+  ).bind(ownerEmail).first();
+  if (existingEmail) {
+    return { ok: false, error: 'البريد الإلكتروني لمالك المتجر مسجل بالفعل في النظام' };
+  }
+
+  const existingSlug = await env.DB.prepare(
+    `SELECT id FROM tenants WHERE slug = ? COLLATE NOCASE LIMIT 1`
+  ).bind(slug).first();
+  if (existingSlug) {
+    return { ok: false, error: `معرف الرابط (${slug}) مستخدم بالفعل لمتجر آخر` };
+  }
+
+  if (rawDomain) {
+    const existingDomain = await env.DB.prepare(
+      `SELECT id FROM tenants WHERE domain = ? COLLATE NOCASE LIMIT 1`
+    ).bind(rawDomain).first();
+    if (existingDomain) {
+      return { ok: false, error: `النطاق المخصص (${rawDomain}) مستخدم بالفعل لمتجر آخر` };
+    }
+  }
+
+  // 4. توليد المعرفات الآمنة وتشفير كلمة المرور
+  const tenantId = 'tenant_' + generateToken(8);
+  const userId = 'user_' + generateToken(8);
+  const passwordHash = await hashMerchantPassword(ownerPassword);
+
+  // 5. بناء عمليات الإدخال الذرية بحسب وضع التهيئة (Setup Mode)
+  const batchStatements = [
+    env.DB.prepare(`
+      INSERT INTO tenants (id, name, slug, domain, status, plan, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    `).bind(tenantId, storeName, slug, rawDomain, rawStatus, rawPlan),
+
+    env.DB.prepare(`
+      INSERT INTO users (id, tenant_id, email, name, password_hash, role, status, email_verified_at, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 'OWNER', 'active', strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    `).bind(userId, tenantId, ownerEmail, ownerName, passwordHash),
+
+    env.DB.prepare(`
+      INSERT INTO settings (tenant_id, key, value)
+      VALUES (?, 'store_name', ?)
+    `).bind(tenantId, storeName),
+  ];
+
+  if (rawSetupMode === 'template') {
+    // ── جلب إعدادات المتجر الرئيسي كـ Snapshot أولي آمن ──
+    const masterSettingsRes = await env.DB.prepare(`
+      SELECT key, value FROM settings
+      WHERE tenant_id = ? OR tenant_id IS NULL
+    `).bind(DEFAULT_MASTER_TENANT_ID).all();
+
+    const masterSettings = {};
+    for (const row of (masterSettingsRes?.results || [])) {
+      masterSettings[row.key] = row.value;
+    }
+
+    // القائمة الصارمة للمفاتيح غير السرية المسموح بنسخها من القالب
+    const ALLOWED_TEMPLATE_KEYS = [
+      'primary_color',
+      'secondary_color',
+      'font_family',
+      'shipping_home',
+      'shipping_office',
+      'shipping_remote',
+      'minimum_order_amount',
+      'free_delivery_min',
+      'free_shipping_min',
+      'shipping_config',
+      'usd_to_dzd_rate',
+      'estimated_product_cost_pct',
+      'ai_prompt',
+      'ai_enabled',
+      'ai_assistant_enabled',
+      'customer_wa_template',
+      'seo_description',
+      'anderson_base_url',
+      'capi_enabled',
+    ];
+
+    // حظر قطعي لكافة الأسرار والبيانات الحساسة
+    const STRICT_SECRET_BLOCKLIST = new Set([
+      'admin_password_hash',
+      'admin_password',
+      'admin_recovery_hash',
+      'admin_recovery_code',
+      'login_fails',
+      'login_blocked_until',
+      'fb_capi_token',
+      'gemini_api_key',
+      'anderson_token',
+      'notif_emails',
+      'whatsapp_number',
+      'whatsapp',
+      'phone',
+      'store_phone',
+      'staff_whatsapp_list',
+      'set_staff_whatsapp',
+      'store_url',
+      'store_logo',
+      'store_favicon',
+    ]);
+
+    // نسخ العملة والثيم الافتراضي من المتجر الرئيسي
+    const storeCurrency = masterSettings.store_currency || masterSettings.currency || 'DZD';
+    const themeDefault = masterSettings.theme_default || 'smartkiosk-default';
+
+    batchStatements.push(
+      env.DB.prepare(`INSERT INTO settings (tenant_id, key, value) VALUES (?, 'store_currency', ?)`).bind(tenantId, storeCurrency),
+      env.DB.prepare(`INSERT INTO settings (tenant_id, key, value) VALUES (?, 'theme_default', ?)`).bind(tenantId, themeDefault)
+    );
+
+    for (const key of ALLOWED_TEMPLATE_KEYS) {
+      if (STRICT_SECRET_BLOCKLIST.has(key)) continue;
+      if (masterSettings[key] !== undefined && masterSettings[key] !== null) {
+        batchStatements.push(
+          env.DB.prepare(`INSERT INTO settings (tenant_id, key, value) VALUES (?, ?, ?)`).bind(tenantId, key, String(masterSettings[key]))
+        );
+      }
+    }
+
+    // Anderson active يُضبط كمعطّل افتراضياً لحين إدخال التوكن الخاص بالمتجر
+    batchStatements.push(
+      env.DB.prepare(`INSERT INTO settings (tenant_id, key, value) VALUES (?, 'anderson_active', 'false')`).bind(tenantId)
+    );
+
+    // معالجة اختيار Meta Pixel
+    if (rawPixelSetup === 'master') {
+      const masterPixel = masterSettings.fb_pixel_id || masterSettings.pixel_id || '';
+      if (masterPixel) {
+        batchStatements.push(
+          env.DB.prepare(`INSERT INTO settings (tenant_id, key, value) VALUES (?, 'fb_pixel_id', ?)`).bind(tenantId, masterPixel),
+          env.DB.prepare(`INSERT INTO settings (tenant_id, key, value) VALUES (?, 'pixel_id', ?)`).bind(tenantId, masterPixel)
+        );
+      }
+      try {
+        batchStatements.push(
+          env.DB.prepare(`
+            INSERT INTO tenant_service_configs (tenant_id, service_key, mode, updated_at)
+            VALUES (?, 'meta_pixel', 'managed', strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+          `).bind(tenantId)
+        );
+      } catch (_) {}
+    }
+
+    // نسخ تكوين أقسام الثيم العامة (Global Theme Sections) إن وجدت
+    try {
+      const masterSectionConfig = await env.DB.prepare(`
+        SELECT theme_id, sections_json FROM theme_section_configs
+        WHERE (tenant_id = ? OR tenant_id IS NULL) AND target_type = 'global' AND target_id = 'default'
+        LIMIT 1
+      `).bind(DEFAULT_MASTER_TENANT_ID).first();
+
+      if (masterSectionConfig && masterSectionConfig.sections_json) {
+        batchStatements.push(
+          env.DB.prepare(`
+            INSERT INTO theme_section_configs (tenant_id, target_type, target_id, theme_id, sections_json, created_at, updated_at)
+            VALUES (?, 'global', 'default', ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+          `).bind(tenantId, masterSectionConfig.theme_id || null, masterSectionConfig.sections_json)
+        );
+      }
+    } catch (_) {}
+
+  } else {
+    // ── الوضع المستقل (Independent Setup): إعدادات أولية أساسية فقط ──
+    batchStatements.push(
+      env.DB.prepare(`INSERT INTO settings (tenant_id, key, value) VALUES (?, 'store_currency', 'DZD')`).bind(tenantId),
+      env.DB.prepare(`INSERT INTO settings (tenant_id, key, value) VALUES (?, 'theme_default', 'smartkiosk-default')`).bind(tenantId)
+    );
+  }
+
+  // التنفيذ الذري لجميع البيانات في دفعة واحدة (Atomic Batch)
+  await env.DB.batch(batchStatements);
+
+  // 6. تسجيل العملية في سجل التدقيق الأمني (Audit Log)
+  await recordAuditLog(env.DB, {
+    tenant_id: tenantId,
+    user_id: authSession?.userId || 'super_admin',
+    action: 'TENANT_CREATED',
+    resource_type: 'tenant',
+    resource_id: tenantId,
+    metadata: {
+      tenant_id: tenantId,
+      store_name: storeName,
+      slug,
+      domain: rawDomain,
+      plan: rawPlan,
+      status: rawStatus,
+      owner_email: ownerEmail,
+      setup_mode: rawSetupMode,
+      pixel_setup: rawPixelSetup,
+      actor_id: authSession?.userId || 'super_admin',
+    },
+    request,
+  });
+
+  return {
+    ok: true,
+    message: 'تم إنشاء المتجر وحساب المالك بنجاح',
+    tenant: {
+      id: tenantId,
+      name: storeName,
+      slug,
+      domain: rawDomain,
+      status: rawStatus,
+      plan: rawPlan,
+      setup_mode: rawSetupMode,
+      pixel_setup: rawPixelSetup,
+      owner: {
+        id: userId,
+        name: ownerName,
+        email: ownerEmail,
+      },
+      created_at: new Date().toISOString(),
+    }
+  };
 }
 
 /**
