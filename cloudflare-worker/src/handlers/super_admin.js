@@ -59,7 +59,7 @@ export async function superListTenants(env, authSession) {
       u.last_login_at,
       (SELECT COUNT(*) FROM products p WHERE p.tenant_id = t.id) as products_count,
       (SELECT COUNT(*) FROM orders o WHERE o.tenant_id = t.id) as orders_count,
-      COALESCE((SELECT SUM(o.total) FROM orders o WHERE o.tenant_id = t.id AND o.status != 'cancelled'), 0) as total_revenue
+      COALESCE((SELECT SUM(COALESCE(o.subtotal, 0) - COALESCE(o.discount, 0) + COALESCE(o.shipping_cost, 0)) FROM orders o WHERE o.tenant_id = t.id AND o.status != 'cancelled'), 0) as total_revenue
     FROM tenants t
     LEFT JOIN users u ON u.tenant_id = t.id AND u.role = 'OWNER'
     ORDER BY t.created_at DESC
@@ -135,7 +135,7 @@ export async function superPlatformStats(env, authSession) {
         COUNT(*) as total_orders,
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
         SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) as delivered_orders,
-        COALESCE(SUM(CASE WHEN status != 'cancelled' THEN total ELSE 0 END), 0) as total_platform_gmv
+        COALESCE(SUM(CASE WHEN status != 'cancelled' THEN (COALESCE(subtotal, 0) - COALESCE(discount, 0) + COALESCE(shipping_cost, 0)) ELSE 0 END), 0) as total_platform_gmv
       FROM orders
     `).first(),
   ]);
